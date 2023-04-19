@@ -1,7 +1,9 @@
-# Media-DL
-
 <div align="center">
-	A simple front end for all the "DL" family. 
+	
+# Media-DL
+	
+A simple front end for all the "DL" family. 
+	
 </div
 
 ## Dependencies
