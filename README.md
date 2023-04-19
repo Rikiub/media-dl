@@ -1,6 +1,8 @@
 # Media-DL
 
-<center> A simple front end for all the "DL" family. </center>
+<center> 
+  A simple front end for all the "DL" family. 
+</center>
 
 ## Dependencies
 
