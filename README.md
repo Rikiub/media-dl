@@ -3,6 +3,9 @@
 # Media-DL
 	
 > A simple CLI front-end for all the "DL" family.
+	<summary>
+		[yt-dlp](https://github.com/yt-dlp/yt-dlp) | [spotDL](https://github.com/spotDL/spotify-downloader)
+	</summary>
 	
 </div>
 
