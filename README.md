@@ -2,9 +2,9 @@
 	
 # Media-DL
 	
-A simple front end for all the "DL" family. 
+A simple CLI front-end for all the "DL" family.
 	
-</div
+</div>
 
 ## Dependencies
 
