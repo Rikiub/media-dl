@@ -1,6 +1,8 @@
 # Media-DL
 
-## Dependences
+<center> A simple front end for all the "DL" family. </center>
+
+## Dependencies
 
 - [Python 3.7](https://www.python.org/downloads/)
   - [Rich](https://pypi.org/project/rich/)
