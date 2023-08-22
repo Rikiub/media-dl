@@ -8,11 +8,11 @@ readme = "README.md"
 packages = [{include = "media-dl"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
-spotdl = "^4.1.11"
+python = "^3.7"
 yt-dlp = "^2023.7.6"
 rich = "^13.4.2"
-textual = {extras = ["dev"], version = "^0.28.1"}
+textual-dev = "^1.1.0"
+platformdirs = "^3.10.0"
 
 [build-system]
 requires = ["poetry-core"]
