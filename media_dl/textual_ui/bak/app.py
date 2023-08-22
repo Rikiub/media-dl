@@ -14,25 +14,25 @@ from textual.widgets import (
 	Input,
 	TabbedContent,
 	Select,
-	TextLog,
+	Log,
 	Label,
 	Placeholder,
 	LoadingIndicator
 )
 
-from downloader import Downloader
-from providers._yt_dlp import FORMAT_EXTS, VIDEO_QUALITY, YDL
+from _yt_dlp import FORMAT_EXTS, VIDEO_QUALITY, YDL
 
-CWD = Path.cwd()
-OUTPUT_PATH = Path("tests", "downloads")
-CACHE_PATH = Path("tests", ".temp")
-dl = Downloader(OUTPUT_PATH, CACHE_PATH)
+dl = YDL(
+	output_path=Path(Path.home(), "media-dl")
+)
 
-MODE = ("video", "audio", "music")
+MODE = {
+	"video": "video",
+	"audio": "audio"
+}
 MODE_TEXT = {
 	"video": "📹Video",
-	"audio": "🔊Audio",
-	"music": "🎵Music"
+	"audio": "🔊Audio"
 }
 
 STATUS = ("error", "fetch", "ready", "downloading", "completed")
@@ -105,7 +105,7 @@ class QueryInfo(Static):
 
 class Operation(Center):
 	"""Main Widget to get the QueryBox settings"""
-	mode = reactive(MODE[0])
+	mode = reactive(MODE["video"])
 
 	def get_info(self) -> dict:
 		"""Use this function to get the Widget information"""
@@ -129,10 +129,10 @@ class Operation(Center):
 		self.query_one("#operation-video-quality").value = None
 
 	def watch_mode(self, mode: str) -> None:
-		"""If 'mode' variable change the Widget also will change"""
-		self.query_one("#operation-audio-ext").set_class(not(mode in (MODE[1], MODE[2])), "hidden")
-		self.query_one("#operation-video-ext").set_class(not(mode in MODE[0]), "hidden")
-		self.query_one("#operation-video-quality").set_class(not(mode in MODE[0]), "hidden")
+		"""If 'mode' variable change, Widget also will change"""
+		self.query_one("#operation-audio-ext").set_class(not(mode in MODE["audio"]), "hidden")
+		self.query_one("#operation-video-ext").set_class(not(mode in MODE["video"]), "hidden")
+		self.query_one("#operation-video-quality").set_class(not(mode in MODE["video"]), "hidden")
 
 	async def on_button_pressed(self, event: Button.Pressed) -> None:
 		"""The changer to the 'mode' variable"""
@@ -147,7 +147,6 @@ class Operation(Center):
 		with Static(id="operations"):
 			yield Button(MODE_TEXT["video"], id="video")
 			yield Button(MODE_TEXT["audio"], id="audio")
-			yield Button(MODE_TEXT["music"], id="music")
 
 		with Center():
 			# Selectors
@@ -191,7 +190,7 @@ class MediaDLApp(App):
 			with TabbedContent("Queries", "Progress", "Console", id="output"):
 				yield ScrollableContainer(Placeholder(), id="output-queries")
 				yield Static("2", id="output-progress")
-				yield TextLog(id="output-console")
+				yield Log(id="output-console")
 
 	"""
 	def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -260,7 +259,7 @@ class MediaDLApp(App):
 		queries = self.query(QueryInfo)
 		worker = get_current_worker()
 
-		console: TextLog = self.query_one("#output-console")
+		console: Log = self.query_one("#output-console")
 
 		for item in queries:
 			if item.type == "video":
@@ -269,10 +268,6 @@ class MediaDLApp(App):
 					self.call_from_thread(console.write, "COMPLETED")
 			elif item.type == "audio":
 				dl.audio(item.query, item.ext)
-				if not worker.is_cancelled:
-					self.call_from_thread(console.write, "COMPLETED")
-			elif item.type == "music":
-				dl.music(item.query, item.ext)
 				if not worker.is_cancelled:
 					self.call_from_thread(console.write, "COMPLETED")
 

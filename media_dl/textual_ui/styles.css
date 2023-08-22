@@ -1,0 +1,35 @@
+$border: round white;
+
+.hidden {
+    display: none;
+}
+
+#operations {
+    background: $boost;
+    layout: horizontal;
+    align: center top;
+    padding: 1;
+}
+
+#operation {
+    layout: horizontal;
+    align: center middle;
+    margin: 1 2;
+    max-width: 50;
+}
+
+#inputbox {
+    background: $boost;
+    align: center middle;
+    margin: 1 3;
+    max-width: 75;
+    border: $border;
+}
+#inputbox-log {
+    margin: 1 2;
+}
+#inputbox-confirm {
+    layer: above;
+    dock: right;
+    width: -10;
+}
