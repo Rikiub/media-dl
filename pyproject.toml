@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "media-dl"
+name = "media_dl"
 version = "0.1.0"
 description = "The universal CLI tool to download any type of media file"
 authors = ["Rikiub <rikiub.dev@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "media-dl"}]
+packages = [{include = "media_dl"}]
 
 [tool.poetry.dependencies]
 python = "^3.7"
