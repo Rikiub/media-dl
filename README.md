@@ -31,18 +31,5 @@
 	- [x] Embed metadata to file from search.
 	- [x] Music metadata extractors.
 		- [x] Spotify
-		- [x] MusicBrainz
+		- [x] MusicBrainz (Broken: Need more validations)
 	- [x] Music lyrics extractor.
-
-## Interface
-
-- **download**: URLs
-	- **output**: Path to save. Default: ==cwd==.
-	- **extension**: File extension to detect. Default: ==mp4==.
-	- **quality**: Quality of file by range of 0 to 9. Default: ==5==.
-	- **threads**: Number of threads to use when download. Default: ==3==.
-- **search**: Text
-	- **source**: Source to search. Default: ==Spotify==.
-		- Spotify
-		- SoundCloud
-- **meta**: File
