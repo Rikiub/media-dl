@@ -176,7 +176,4 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 # CUSTOM CONFIG
-tests/
-*.mp4
-*.mp3
-*.ogg
+temp/
