@@ -1,4 +1,5 @@
 import concurrent.futures as cf
+from dataclasses import dataclass
 from typing import Annotated
 from pathlib import Path
 import time
@@ -7,6 +8,7 @@ from rich.live import Live
 from rich.align import Align
 from rich.panel import Panel
 from rich.console import Group
+from rich.markdown import HorizontalRule
 from rich.progress import (
     TransferSpeedColumn,
     MofNCompleteColumn,
@@ -31,6 +33,7 @@ from ._ui import check_ydl_formats
 from ..theme import *
 
 app = Typer()
+
 SPEED = 1.5
 PROGRESS_OVERFLOW_LIMIT = 100
 
@@ -90,6 +93,11 @@ def download(
     if no_metadata:
         no_metadata = not False
 
+    try:
+        output = output.relative_to(Path.cwd())
+    except:
+        pass
+
     ydl = YDL(quiet=True, cachedir=DIR_CACHE)
 
     with Live(console=console) as live:
@@ -101,8 +109,17 @@ def download(
         )
         panel_queue = Align.center(
             Panel(
-                progress_queue,
+                Group(
+                    Align.center(f"[text.label]Output:[/] [text.desc]{output}[/]"),
+                    Align.center(
+                        f"[text.label]Extension:[/] [text.desc]{extension}[/] | [text.label]Quality:[/] [text.desc]{quality}[/]"
+                    ),
+                    HorizontalRule(),
+                    progress_queue,
+                ),
                 title="Downloads",
+                width=100,
+                padding=(0, 2),
                 expand=False,
                 border_style="panel.queue",
             )
@@ -123,6 +140,7 @@ def download(
             BarColumn(),
             DownloadColumn(),
             TransferSpeedColumn(),
+            transient=True,
             expand=True,
             console=console,
         )
@@ -136,7 +154,7 @@ def download(
 
         live.update(panel_queue)
 
-        # 1. Task list
+        # 1. Queue list
         item_list = []
         for task in url_list:
             url, queue_task_id = task
@@ -153,14 +171,17 @@ def download(
                 progress_queue.update(
                     queue_task_id, completed=100, description=f"[status.error]{url}"
                 )
-
         if not item_list:
             live.update(Group(panel_queue, Panel("Too many errors to continue")))
             raise SystemExit(1)
 
         # Main downloader used for section 3.
-        def download_process(info: IEData, extension: str, output: Path, id: TaskID):
-            def progress_hook(d, task_id):
+        def download_process(
+            info: IEData, extension: str, output: Path, task_id: TaskID
+        ) -> bool:
+            return_code = True
+
+            def progress_hook(d):
                 if d["status"] == "downloading":
                     total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
                     progress_download.update(
@@ -174,84 +195,91 @@ def download(
                     quality,
                     output=output,
                     exist_ok=False,
-                    progress=[lambda d: progress_hook(d, id)],
+                    progress=[lambda d: progress_hook(d)],
                 )
-                progress_download.update(id, description="[status.success]Completed")
-            except DownloadError as e:
-                text = str(e)[:PROGRESS_OVERFLOW_LIMIT] + "..."
-                progress_download.update(id, description=f"[status.error]{text}")
+                progress_download.update(
+                    task_id, description="[status.success]Completed"
+                )
+            except DownloadError as err:
+                text = "[status.error]" + str(err.msg)[:PROGRESS_OVERFLOW_LIMIT] + "..."
+                progress_download.update(task_id, description=text)
+                return_code = False
             except FileExistsError as e:
                 text = f'[status.warn][bold underline]"{e}"[/] already exist, ignoring'
                 text = text[:PROGRESS_OVERFLOW_LIMIT] + "..."
-                progress_download.update(id, description=text)
+                progress_download.update(task_id, description=text)
             finally:
                 time.sleep(SPEED)
                 if progress_playlist:
-                    task_id = progress_playlist.task_ids[0]
-                    progress_playlist.advance(task_id, 1)
-                progress_download.remove_task(id)
+                    progress_playlist.advance(TaskID(0), 1)
+                progress_download.remove_task(task_id)
+                return return_code
 
         # 2. Status
+        @dataclass(slots=True)
+        class ErrorReport:
+            name: str
+            success: int
+            errors: int
+
+        error_list: list[ErrorReport] = []
 
         # Load UI
-        content = ()
-        progress_playlist = None
-
         for queue_item, queue_task_id in item_list:
             live.update(Group(panel_queue, panel_loading))
             time.sleep(SPEED)
-
             progress_queue.reset(
                 queue_task_id,
                 description=f"[status.work][bold italic underline]{queue_item.url}",
                 total=None,
             )
 
-            ie_items = []
+            aux_downloads = []
+            content = ()
+            progress_playlist = None
 
-            if isinstance(queue_item, IEData):
-                content = (
-                    Group(
-                        f"[text.label]Title:[/]     [text.desc]{queue_item.title}[/]\n"
-                        f"[text.label]Creator:[/]   [text.desc]{queue_item.creator}[/]\n"
-                        f"[text.label]Extractor:[/] [text.desc]{queue_item.extractor}[/]\n"
-                        f"[text.label]URL:[/]       [text.desc][underline]{queue_item.url}[/]"
-                    ),
-                    "Item",
-                )
-                ie_items = [queue_item]
+            match queue_item:
+                case IEData():
+                    content = (
+                        Group(
+                            f"[text.label]Title:[/]   [text.desc]{queue_item.title}[/]\n"
+                            f"[text.label]Creator:[/] [text.desc]{queue_item.creator}[/]\n"
+                            f"[text.label]Source:[/]  [text.desc]{queue_item.extractor}[/]"
+                        ),
+                        "Item",
+                    )
+                    aux_downloads = [queue_item]
+                case IEPlaylist():
+                    progress_playlist = Progress(
+                        TextColumn(
+                            "[progress.percentage]{task.description}",
+                        ),
+                        MofNCompleteColumn(),
+                        console=console,
+                    )
+                    progress_playlist.add_task(
+                        "[text.label]Total:[/]", total=queue_item.total_count
+                    )
 
-            elif isinstance(queue_item, IEPlaylist):
-                progress_playlist = Progress(
-                    TextColumn(
-                        "[progress.percentage]{task.description}",
-                    ),
-                    MofNCompleteColumn(),
-                    console=console,
-                )
-
-                content = (
-                    Group(
-                        f"[text.label]Title:[/]     [text.desc]{queue_item.title}[/]\n"
-                        f"[text.label]Extractor:[/] [text.desc]{queue_item.extractor}[/]\n"
-                        f"[text.label]URL:[/]       [text.desc][underline]{queue_item.url}[/]\n",
-                        progress_playlist,
-                    ),
-                    "Playlist",
-                )
-
-                progress_playlist.add_task(
-                    "[text.label]Total:[/]", total=queue_item.total_count
-                )
-                ie_items = queue_item.ie_list
-            else:
-                raise ValueError()
+                    content = (
+                        Group(
+                            f"[text.label]Title:[/]  [text.desc]{queue_item.title}[/]\n"
+                            f"[text.label]Source:[/] [text.desc]{queue_item.extractor}[/]",
+                            HorizontalRule(),
+                            progress_playlist,
+                        ),
+                        "Playlist",
+                    )
+                    aux_downloads = queue_item.ie_list
+                case _:
+                    raise ValueError()
 
             text, title = content
             panel_status = Panel(
                 text,
-                expand=False,
                 padding=(1, 3),
+                width=75,
+                expand=False,
                 border_style="panel.status",
             )
             panel_status.title = title
@@ -260,38 +288,74 @@ def download(
             # 3. Downloader
 
             # Prepare Downloader UI
-            downloads = []
-            for item in ie_items:
-                id = progress_download.add_task(
+            download_list = []
+            for item in aux_downloads:
+                task_id = progress_download.add_task(
                     f"[downloader.creator]{item.creator}[/] - [downloader.title]{item.title}[/]",
                     total=None,
                 )
-                downloads.append((item, id))
+                download_list.append((item, task_id))
 
             live.update(Group(panel_queue, panel_status, panel_download))
 
             # Start Download
             with cf.ThreadPoolExecutor(max_workers=threads) as executor:
-                futures = []
-                for item, task_id in downloads:
-                    future = executor.submit(
-                        download_process, item, extension, output, task_id
-                    )
-                    futures.append(future)
-                cf.wait(futures)
+                try:
+                    futures = []
+                    for item, task_id in download_list:
+                        future = executor.submit(
+                            download_process, item, extension, output, task_id
+                        )
+                        futures.append(future)
+                    cf.wait(futures)
+                except KeyboardInterrupt:
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise SystemExit(1)
+
+                success = 0
+                errors = 0
+                for future in futures:
+                    result: bool = future.result()
+                    if result:
+                        success += 1
+                    else:
+                        errors += 1
+
+                error_list.append(
+                    ErrorReport(name=queue_item.url, success=success, errors=errors)
+                )
+
+            if errors >= 1:
+                queue_status = f"[status.warn][bold]({errors})"
+            else:
+                queue_status = ""
 
             # Update current Queue status
             progress_queue.update(
                 queue_task_id,
                 completed=100,
-                description=f"[status.success][bold strike]{queue_item.url}",
+                description=f"[status.success][bold strike]{queue_item.url}[/][/] "
+                + queue_status,
             )
 
         # 3. All tasks completed
+        errors_pretty = []
+        for report in error_list:
+            if report.errors >= 1:
+                errors_pretty.append(
+                    f"[status.warn]Catched [text.label][bold]{report.errors}[/][/] errors in [downloader.title][bold underline]{report.name}"
+                )
+
         live.update(
             Group(
                 panel_queue,
-                Panel("[status.success][bold]Completed!", border_style="panel.status"),
+                Panel(
+                    Group(
+                        "[status.success][bold]Completed\n",
+                        *errors_pretty,
+                    ),
+                    border_style="panel.status",
+                ),
             )
         )
 

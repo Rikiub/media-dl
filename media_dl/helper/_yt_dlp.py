@@ -1,4 +1,4 @@
-from typing import Callable, NewType, cast
+from typing import cast, Callable, NewType
 from dataclasses import dataclass
 import concurrent.futures as cf
 from pathlib import Path
@@ -69,27 +69,31 @@ class IEData:
 
     @property
     def info_dict(self) -> InfoDict:
-        self.generate_info_dict(force_process=False)
-        info_dict = cast(InfoDict, self._info_dict)
-        return info_dict
-
-    def generate_info_dict(self, force_process=False) -> None:
-        """Fill missed data if not found info_dict.
-
-        Raises:
-            ConnectionError: Can't fetch the info_dict.
         """
+        Raises:
+            DownloadError: Failed to fetch data.
+        """
+
+        if self._create_info_dict(force_process=False) and self._info_dict:
+            info_dict = cast(InfoDict, self._info_dict)
+            return info_dict
+        else:
+            raise DownloadError("Failed to fetch info data.")
+
+    def _create_info_dict(self, force_process=False) -> bool:
+        """Fill missed data if not found info_dict."""
 
         ydl = YDL(quiet=True)
         if self._info_dict and not force_process:
-            pass
+            return True
         else:
             if info_dict := ydl._get_info_dict(self.url):
                 self.creator = info_dict.get("uploader", self.creator)
                 self.thumbnail_url = info_dict.get("thumbnail", self.thumbnail_url)
                 self._info_dict = info_dict
+                return True
             else:
-                raise DownloadError("Failed to fetch info data.")
+                return False
 
 
 @dataclass(slots=True)
@@ -104,9 +108,7 @@ class IEPlaylist:
     def fetch_ie_all(self) -> None:
         with cf.ThreadPoolExecutor(max_workers=8) as pool:
             try:
-                futures = [
-                    pool.submit(item.generate_info_dict) for item in self.ie_list
-                ]
+                futures = [pool.submit(item._create_info_dict) for item in self.ie_list]
                 cf.wait(futures)
             except DownloadError:
                 pool.shutdown(wait=False)
@@ -201,7 +203,7 @@ class YDL:
 
             if len(ie_list) == 1:
                 ie = ie_list[0]
-                ie.generate_info_dict()
+                ie._create_info_dict()
                 return ie
             else:
                 playlist = IEPlaylist(
@@ -448,28 +450,28 @@ class YDL:
             ydl_opts.update({"progress_hooks": progress, "noprogress": True})
 
         # start download
+        downloads: list[IEData] = []
+
         try:
-            downloads: list[IEData] = []
-
             # Convert URL string to IE object.
-            if isinstance(query, str):
-                if info := self.extract_info(query):
-                    query = info
-                else:
-                    raise DownloadError("Failed to fetch data.")
-
-            if isinstance(query, IEData):
-                downloads.append(query)
-            elif isinstance(query, IEPlaylist):
-                for item in query.ie_list:
-                    downloads.append(item)
-            elif isinstance(query, list):
-                for item in query:
-                    downloads.append(item)
-            else:
-                raise ValueError(
-                    f"Must be `str`, `list[IEData]`, `IEData` or `IEPlaylist` object."
-                )
+            match query:
+                case str():
+                    if info := self.extract_info(query):
+                        query = info
+                    else:
+                        raise DownloadError("Failed to fetch data.")
+                case IEData():
+                    downloads.append(query)
+                case IEPlaylist():
+                    for item in query.ie_list:
+                        downloads.append(item)
+                case list():
+                    for item in query:
+                        downloads.append(item)
+                case _:
+                    raise ValueError(
+                        f"Must be `str`, `list[IEData]`, `IEData` or `IEPlaylist` object."
+                    )
 
             with YoutubeDL(params=ydl_opts) as ydl:
                 for item in downloads:
@@ -504,7 +506,10 @@ if __name__ == "__main__":
         print(info)
 
         print("> Downloading...")
-        ydl.download(info, "m4a")
+        try:
+            ydl.download(info, "m4a")
+        except DownloadError as e:
+            print(e.msg)
 
     print("> Playlist")
     if info := ydl.extract_info(

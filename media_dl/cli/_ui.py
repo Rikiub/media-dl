@@ -1,8 +1,6 @@
 from typer import BadParameter
 
-from ..helper._yt_dlp import (
-    FORMAT_EXTS,
-)
+from ..helper._yt_dlp import FORMAT_EXTS
 
 
 def check_ydl_formats(fmt: str) -> str:
