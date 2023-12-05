@@ -28,7 +28,7 @@ from ..helper._yt_dlp import (
     IEPlaylist,
     DownloadError,
 )
-from ..config import DIR_DOWNLOAD, DIR_CACHE
+from ..config import DIR_DOWNLOAD, DIR_TEMP
 from ._ui import check_ydl_formats
 from ..theme import *
 
@@ -36,6 +36,18 @@ app = Typer()
 
 SPEED = 1.5
 PROGRESS_OVERFLOW_LIMIT = 100
+
+
+class UIStatus:
+    pass
+
+
+class UIDownloads:
+    pass
+
+
+class UIPool:
+    pass
 
 
 @app.command()
@@ -98,7 +110,13 @@ def download(
     except:
         pass
 
-    ydl = YDL(quiet=True, cachedir=DIR_CACHE)
+    ydl = YDL(
+        quiet=True,
+        tempdir=DIR_TEMP,
+        outputdir=output,
+        ext=extension,
+        ext_quality=quality,
+    )
 
     with Live(console=console) as live:
         # Main UI Components
@@ -110,9 +128,11 @@ def download(
         panel_queue = Align.center(
             Panel(
                 Group(
-                    Align.center(f"[text.label]Output:[/] [text.desc]{output}[/]"),
                     Align.center(
-                        f"[text.label]Extension:[/] [text.desc]{extension}[/] | [text.label]Quality:[/] [text.desc]{quality}[/]"
+                        f"[text.label][bold]Output:[/][/] [text.desc]{output}[/]"
+                    ),
+                    Align.center(
+                        f"[text.label][bold]Extension:[/][/] [text.desc]{extension}[/] | [text.label][bold]Quality:[/][/] [text.desc]{quality}[/]"
                     ),
                     HorizontalRule(),
                     progress_queue,
@@ -176,24 +196,26 @@ def download(
             raise SystemExit(1)
 
         # Main downloader used for section 3.
-        def download_process(
-            info: IEData, extension: str, output: Path, task_id: TaskID
-        ) -> bool:
+        def download_process(info: IEData, task_id: TaskID) -> bool:
             return_code = True
 
             def progress_hook(d):
-                if d["status"] == "downloading":
-                    total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
-                    progress_download.update(
-                        task_id, completed=d["downloaded_bytes"], total=total_bytes
-                    )
+                match d["status"]:
+                    case "downloading":
+                        total_bytes = d.get("total_bytes") or d.get(
+                            "total_bytes_estimate"
+                        )
+                        progress_download.update(
+                            task_id, completed=d["downloaded_bytes"], total=total_bytes
+                        )
+                    case "finished":
+                        progress_download.update(
+                            task_id, description="[status.wait][bold]Converting"
+                        )
 
             try:
-                ydl.download(
+                ydl.download_single(
                     info,
-                    extension,
-                    quality,
-                    output=output,
                     exist_ok=False,
                     progress=[lambda d: progress_hook(d)],
                 )
@@ -201,13 +223,19 @@ def download(
                     task_id, description="[status.success]Completed"
                 )
             except DownloadError as err:
-                text = "[status.error]" + str(err.msg)[:PROGRESS_OVERFLOW_LIMIT] + "..."
+                text = (
+                    "[status.error][bold]"
+                    + str(err.msg)[:PROGRESS_OVERFLOW_LIMIT]
+                    + "..."
+                )
                 progress_download.update(task_id, description=text)
                 return_code = False
             except FileExistsError as e:
                 text = f'[status.warn][bold underline]"{e}"[/] already exist, ignoring'
                 text = text[:PROGRESS_OVERFLOW_LIMIT] + "..."
-                progress_download.update(task_id, description=text)
+                progress_download.update(
+                    task_id, description=text, completed=100, total=100
+                )
             finally:
                 time.sleep(SPEED)
                 if progress_playlist:
@@ -242,9 +270,9 @@ def download(
                 case IEData():
                     content = (
                         Group(
-                            f"[text.label]Title:[/]   [text.desc]{queue_item.title}[/]\n"
-                            f"[text.label]Creator:[/] [text.desc]{queue_item.creator}[/]\n"
-                            f"[text.label]Source:[/]  [text.desc]{queue_item.extractor}[/]"
+                            f"[text.label][bold]Title:[/][/]   [text.desc]{queue_item.title}[/]\n"
+                            f"[text.label][bold]Creator:[/][/] [text.desc]{queue_item.creator}[/]\n"
+                            f"[text.label][bold]Source:[/][/]  [text.desc]{queue_item.extractor}[/]"
                         ),
                         "Item",
                     )
@@ -258,19 +286,19 @@ def download(
                         console=console,
                     )
                     progress_playlist.add_task(
-                        "[text.label]Total:[/]", total=queue_item.total_count
+                        "[text.label][bold]Total:[/][/]", total=queue_item.total_count
                     )
 
                     content = (
                         Group(
-                            f"[text.label]Title:[/]  [text.desc]{queue_item.title}[/]\n"
-                            f"[text.label]Source:[/] [text.desc]{queue_item.extractor}[/]",
+                            f"[text.label][bold]Title:[/][/]  [text.desc]{queue_item.title}[/]\n"
+                            f"[text.label][bold]Source:[/][/] [text.desc]{queue_item.extractor}[/]",
                             HorizontalRule(),
                             progress_playlist,
                         ),
                         "Playlist",
                     )
-                    aux_downloads = queue_item.ie_list
+                    aux_downloads = queue_item.data_list
                 case _:
                     raise ValueError()
 
@@ -291,7 +319,7 @@ def download(
             download_list = []
             for item in aux_downloads:
                 task_id = progress_download.add_task(
-                    f"[downloader.creator]{item.creator}[/] - [downloader.title]{item.title}[/]",
+                    f"[text.meta.creator]{item.creator}[/] - [text.meta.title]{item.title}[/]",
                     total=None,
                 )
                 download_list.append((item, task_id))
@@ -303,9 +331,7 @@ def download(
                 try:
                     futures = []
                     for item, task_id in download_list:
-                        future = executor.submit(
-                            download_process, item, extension, output, task_id
-                        )
+                        future = executor.submit(download_process, item, task_id)
                         futures.append(future)
                     cf.wait(futures)
                 except KeyboardInterrupt:
@@ -343,7 +369,7 @@ def download(
         for report in error_list:
             if report.errors >= 1:
                 errors_pretty.append(
-                    f"[status.warn]Catched [text.label][bold]{report.errors}[/][/] errors in [downloader.title][bold underline]{report.name}"
+                    f"[status.warn]Catched [status.warn][bold]({report.errors})[/][/] errors in [text.meta.title][bold underline]{report.name}"
                 )
 
         live.update(

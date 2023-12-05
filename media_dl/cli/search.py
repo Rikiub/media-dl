@@ -7,7 +7,7 @@ from rich.panel import Panel
 
 from ..theme import *
 from ._ui import check_ydl_formats
-from ..config import DIR_DOWNLOAD, DIR_CACHE
+from ..config import DIR_DOWNLOAD, DIR_TEMP
 from ..meta import get_song_list, song_to_file
 from ..helper._yt_dlp import YDL
 
@@ -44,7 +44,7 @@ def search(
         else:
             raise BadParameter("Failed.")
 
-        ydl = YDL(quiet=True, cachedir=DIR_CACHE)
+        ydl = YDL(quiet=True, cachedir=DIR_TEMP)
         file_query = f"{song.artists[0]} - {song.title}"
 
         live.update(Panel("Fetching file..."))
@@ -53,7 +53,7 @@ def search(
         ):
             ydl_opts = ydl._generate_ydl_opts(output, extension)
             file_path = ydl._prepare_filename(data[0], ydl_opts)
-            ydl.download(data, extension=extension, output=output)
+            ydl.download_multiple(data, extension=extension, output=output)
 
             live.update(Panel("Parsing metadata..."))
 

@@ -1,4 +1,4 @@
-from typing import cast, Callable, NewType
+from typing import cast, Callable, NewType, TypedDict
 from dataclasses import dataclass
 import concurrent.futures as cf
 from pathlib import Path
@@ -8,24 +8,55 @@ from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 from yt_dlp.extractor import gen_extractors
 
-__all__ = ["FORMAT_EXTS", "QUALITY", "YDL"]
 
-FORMAT_EXTS: dict = YoutubeDL._format_selection_exts
+class FormatExtsDict(TypedDict):
+    video: set[str]
+    audio: set[str]
+    storyboards: set[str]
+
+
+FORMAT_EXTS = cast(FormatExtsDict, YoutubeDL._format_selection_exts)
+_THUMBNAIL_EXTS = (
+    "mp3",
+    "mkv",
+    "mka",
+    "ogg",
+    "opus",
+    "flac",
+    "m4a",
+    "mp4",
+    "mov",
+)
+
+_SEARCH_LIMIT = 50
 PROVIDERS = {
-    "soundcloud": "scsearch:",
-    "youtube": "ytsearch:",
+    "soundcloud": f"scsearch{_SEARCH_LIMIT}:",
+    "youtube": f"ytsearch{_SEARCH_LIMIT}:",
     "ytmusic": "https://music.youtube.com/search?q=",
-    "bilibili": "bilisearch:",
-    "nicovideo": "nicosearch:",
-    "rokfin": "rkfnsearch:",
-    "yahoo": "yvsearch:",
-    "googlevideo": "gvsearch:",
-    "netverse": "netsearch:",
-    "prxstories": "prxstories:",
-    "prxseries": "prxseries:",
+    "bilibili": f"bilisearch{_SEARCH_LIMIT}:",
+    "nicovideo": f"nicosearch{_SEARCH_LIMIT}:",
+    "rokfin": f"rkfnsearch{_SEARCH_LIMIT}:",
+    "yahoo": f"yvsearch{_SEARCH_LIMIT}:",
+    "googlevideo": f"gvsearch{_SEARCH_LIMIT}:",
+    "netverse": f"netsearch{_SEARCH_LIMIT}:",
+    "prxstories": f"prxstories{_SEARCH_LIMIT}:",
+    "prxseries": f"prxseries{_SEARCH_LIMIT}:",
 }
+
 QUALITY = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-DEFAULT_QUALITY = 9
+_QUALITY_VIDEO = (
+    "144",
+    "240",
+    "360",
+    "480",
+    "720",
+    "1080",
+    "1440",
+    "2160",
+    "4320",
+    "5250",
+)
+
 
 InfoDict = NewType("InfoDict", dict)
 YDLOpts = NewType("YDLOpts", dict)
@@ -56,13 +87,17 @@ class FakeLogger:
 
 
 @dataclass(slots=True)
-class IEData:
-    """InfoExtractor dict but more simple and dynamic."""
-
+class IEBase:
     url: str
     id: str
     extractor: str
     title: str
+
+
+@dataclass(slots=True)
+class IEData(IEBase):
+    """yt-dlp InfoDict but more simple and dynamic."""
+
     creator: str | None = None
     thumbnail_url: str | None = None
     _info_dict: InfoDict | None = None
@@ -71,7 +106,7 @@ class IEData:
     def info_dict(self) -> InfoDict:
         """
         Raises:
-            DownloadError: Failed to fetch data.
+            DownloadError: Failed to fetch info data.
         """
 
         if self._create_info_dict(force_process=False) and self._info_dict:
@@ -84,6 +119,7 @@ class IEData:
         """Fill missed data if not found info_dict."""
 
         ydl = YDL(quiet=True)
+
         if self._info_dict and not force_process:
             return True
         else:
@@ -97,18 +133,16 @@ class IEData:
 
 
 @dataclass(slots=True)
-class IEPlaylist:
-    url: str
-    id: str
-    extractor: str
-    title: str
+class IEPlaylist(IEBase):
     total_count: int
-    ie_list: list[IEData]
+    data_list: list[IEData]
 
-    def fetch_ie_all(self) -> None:
+    def fetch_data_all(self) -> None:
         with cf.ThreadPoolExecutor(max_workers=8) as pool:
             try:
-                futures = [pool.submit(item._create_info_dict) for item in self.ie_list]
+                futures = [
+                    pool.submit(item._create_info_dict) for item in self.data_list
+                ]
                 cf.wait(futures)
             except DownloadError:
                 pool.shutdown(wait=False)
@@ -116,23 +150,26 @@ class IEPlaylist:
 
 
 class YDL:
-    """module main class"""
-
     def __init__(
         self,
         quiet: bool = False,
         logger: Callable | None = None,
-        cachedir: Path | None = None,
+        tempdir: Path | None = None,
+        outputdir: Path = Path.cwd(),
+        ext: str = "mp4",
+        ext_quality: int = 9,
     ):
-        if not cachedir:
-            cachedir = Path("").absolute()
+        self.output_path = outputdir
 
-        self.cachedir = cachedir
+        if not tempdir:
+            self.temp_path = outputdir
+        else:
+            self.temp_path = tempdir
 
-        self.ydl_opts: dict = {
+        self.ydl_opts = {
             "paths": {
-                "home": "",
-                "temp": str(cachedir),
+                "temp": str(self.temp_path),
+                "home": str(self.output_path),
             },
             "quiet": quiet,
             "noprogress": quiet,
@@ -146,6 +183,7 @@ class YDL:
             "outtmpl": "%(uploader)s - %(title)s.%(ext)s",
             "postprocessors": [],
         }
+        self.ydl_opts = self._generate_ydl_opts(ext, ext_quality)
 
         if logger:
             self.ydl_opts.update({"logger": logger})
@@ -160,184 +198,41 @@ class YDL:
                 return True
         return False
 
-    def _prepare_filename(self, info: IEData, ydl_opts: YDLOpts) -> Path:
-        with YoutubeDL(ydl_opts) as ydl:
-            info_dict = info.info_dict
-            info_dict["ext"] = ydl_opts["final_ext"]
-            filename = ydl.prepare_filename(info_dict)
-            return Path(filename)
+    def __enter__(self):
+        return self
 
-    def _convert_info_dict(
-        self, info_dict: InfoDict, force_process: bool = False
-    ) -> IEData | IEPlaylist:
-        """Convert yt-dlp info_dict to dataclass object
-
-        Args:
-            info_dict: Valid info_dict to parse.
-        """
-
-        if "entries" in info_dict:
-            ie_list = []
-
-            for item in info_dict["entries"]:
-                if not item.get("title"):
-                    continue
-
-                thumbnail = (
-                    item.get("thumbnail")
-                    or item.get("thumbnails")
-                    and item["thumbnails"][-1]["url"]
-                    or None
-                )
-
-                ie_list.append(
-                    IEData(
-                        url=item["url"],
-                        extractor=item["ie_key"],
-                        id=item["id"],
-                        title=item["title"],
-                        creator=item.get("uploader", None),
-                        thumbnail_url=thumbnail,
-                    )
-                )
-
-            if len(ie_list) == 1:
-                ie = ie_list[0]
-                ie._create_info_dict()
-                return ie
-            else:
-                playlist = IEPlaylist(
-                    url=info_dict["original_url"],
-                    id=info_dict["id"],
-                    extractor=info_dict["extractor_key"],
-                    title=info_dict["title"],
-                    total_count=info_dict["playlist_count"],
-                    ie_list=ie_list,
-                )
-                if force_process:
-                    playlist.fetch_ie_all()
-                return playlist
-        else:
-            return IEData(
-                url=info_dict["original_url"],
-                id=info_dict["id"],
-                extractor=info_dict["extractor"],
-                title=info_dict["title"],
-                creator=info_dict.get("uploader", None),
-                thumbnail_url=info_dict.get("thumbnail", None),
-                _info_dict=info_dict,
-            )
-
-    def _get_info_dict(self, url: str, limit: int | None = None) -> InfoDict | None:
-        """Fetch info_dict from valid URL"""
-
-        ydl_opts = self.ydl_opts
-        if limit:
-            ydl_opts.update({"playlist_items": f"0:{limit}"})
-
-        with YoutubeDL(ydl_opts) as ydl:
-            try:
-                if info := ydl.extract_info(url, download=False):
-                    if "entries" in info and not any(info["entries"]):
-                        return None
-                    return InfoDict(info)
-                else:
-                    return None
-            except DownloadError:
-                raise
-
-    def extract_info(
-        self, url: str, force_process: bool = False
-    ) -> IEData | IEPlaylist | None:
-        """Simple search to get a yt-dlp info_dict
-
-        Args:
-            url: URL to process.
-
-        Returns:
-            If the extraction is succesful, return its info dict, otherwise return None.
-        """
-
-        if info := self._get_info_dict(url):
-            return self._convert_info_dict(info, force_process=force_process)
-        else:
-            return None
-
-    def extract_info_from_search(
-        self, query: str, provider: str, limit: int = 5, force_process: bool = False
-    ) -> list[IEData] | None:
-        """Get one/multiple yt-dlp info dict from custom provider like YouTube or SoundCloud.
-
-        Args:
-            query: Query to process.
-            provider: Provider where do the searchs.
-            limit: Max of searchs to do.
-        """
-
-        if provider in PROVIDERS.keys():
-            provider = PROVIDERS[provider]
-        else:
-            raise ValueError(
-                f"{provider} is not a valid provider. Available options:",
-                PROVIDERS.keys(),
-            )
-
-        if info := self._get_info_dict(f"{provider}{query}", limit=limit):
-            if (
-                data := self._convert_info_dict(info, force_process=force_process)
-            ) and isinstance(data, IEPlaylist):
-                return [item for item in data.ie_list]
-            else:
-                return [data]
-        else:
-            return None
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
 
     def _generate_ydl_opts(
         self,
-        output: Path,
         extension: str,
-        quality: int = DEFAULT_QUALITY,
+        quality: int,
     ) -> YDLOpts:
-        """Generate custom `ydl_opts` dict by provided arguments.
+        """Generate custom YDLOpts by provided arguments.
 
         Args:
-            extension: Wanted file extension. `ydl_opts` options will be generated by the extension type.
-            extension_quality: Wanted file quality. Range between [0-9].
+            extension: Wanted file extension. Custom options will be generated by the extension type.
+            quality: Wanted file quality. Range between [0-9].
 
         Raises:
             ExtTypeError: `extension` is not compatible.
             QualityTypeError: `extension_quality` is out of range.
         """
 
-        ydl_opts = self.ydl_opts
-        ydl_opts["paths"]["home"] = str(output)
-        ydl_opts.update({"final_ext": extension})
-
-        # validate `extension_quality`
         if not quality in QUALITY:
             raise QualityTypeError(
                 'Failed to determine "quality" range. Expected range between:',
                 *QUALITY,
             )
 
-        # embed metadata
+        ydl_opts = self.ydl_opts
+        ydl_opts.update({"final_ext": extension})
         ydl_opts["postprocessors"].append(
             {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True}
         )
 
-        # check if `extension` is thumbnail compatible.
-        THUMBNAIL_EXTS = (
-            "mp3",
-            "mkv",
-            "mka",
-            "ogg",
-            "opus",
-            "flac",
-            "m4a",
-            "mp4",
-            "mov",
-        )
-        if extension in THUMBNAIL_EXTS:
+        if extension in _THUMBNAIL_EXTS:
             ydl_opts.update(
                 {
                     "writethumbnail": True,
@@ -349,19 +244,7 @@ class YDL:
 
         # VIDEO
         if extension in FORMAT_EXTS["video"]:
-            VIDEO_QUALITY = (
-                "144",
-                "240",
-                "360",
-                "480",
-                "720",
-                "1080",
-                "1440",
-                "2160",
-                "4320",
-                "5250",
-            )
-            new_quality = VIDEO_QUALITY[quality]
+            new_quality = _QUALITY_VIDEO[quality]
 
             ydl_opts.update(
                 {
@@ -415,116 +298,223 @@ class YDL:
 
         return YDLOpts(ydl_opts)
 
-    def download(
-        self,
-        query: str | list[IEData] | IEData | IEPlaylist,
-        extension: str,
-        quality: int = DEFAULT_QUALITY,
-        output: Path = Path.cwd(),
-        exist_ok: bool = True,
-        progress: list[Callable] | bool = True,
-    ) -> None:
-        """Generate custom config by `extension` type and download.
+    def _prepare_filename(self, info: IEData) -> Path:
+        ydl_opts = self.ydl_opts
+
+        with YoutubeDL(ydl_opts) as ydl:
+            info_dict = info.info_dict
+            info_dict["ext"] = ydl_opts["final_ext"]
+            filename = ydl.prepare_filename(info_dict)
+            return Path(filename)
+
+    def _convert_info_dict(
+        self, info_dict: InfoDict, force_process: bool = False
+    ) -> IEData | IEPlaylist:
+        """Convert raw InfoDict to IEData object
 
         Args:
-            query: String with a supported yt-dlp URL. Use `IEData` as cache.
-            extension: Prefered file extension.
-            quality: Prefered file quality. Default is max quality (9).
-            output_path: Directory where save the downloads. Default is cwd.
-            exist_ok: Ignore exception if one file exist in output.
+            info_dict: Valid info_dict to parse.
+        """
+
+        if "entries" in info_dict:
+            ie_list = []
+
+            for item in info_dict["entries"]:
+                if not item.get("title"):
+                    continue
+
+                thumbnail = (
+                    item.get("thumbnail")
+                    or item.get("thumbnails")
+                    and item["thumbnails"][-1]["url"]
+                    or None
+                )
+
+                ie_list.append(
+                    IEData(
+                        url=item["url"],
+                        extractor=item["ie_key"],
+                        id=item["id"],
+                        title=item["title"],
+                        creator=item.get("uploader", None),
+                        thumbnail_url=thumbnail,
+                    )
+                )
+            if len(ie_list) == 1:
+                ie = ie_list[0]
+                ie._create_info_dict()
+                return ie
+            else:
+                playlist = IEPlaylist(
+                    url=info_dict["original_url"],
+                    id=info_dict["id"],
+                    extractor=info_dict["extractor_key"],
+                    title=info_dict["title"],
+                    total_count=info_dict["playlist_count"],
+                    data_list=ie_list,
+                )
+                if force_process:
+                    playlist.fetch_data_all()
+                return playlist
+
+        else:
+            return IEData(
+                url=info_dict["original_url"],
+                id=info_dict["id"],
+                extractor=info_dict["extractor"],
+                title=info_dict["title"],
+                creator=info_dict.get("uploader", None),
+                thumbnail_url=info_dict.get("thumbnail", None),
+                _info_dict=info_dict,
+            )
+
+    def _get_info_dict(self, query: str, limit: int | None = None) -> InfoDict | None:
+        """Fetch InfoDict from valid URL"""
+
+        ydl_opts = self.ydl_opts
+
+        if limit:
+            ydl_opts.update({"playlist_items": f"0:{limit}"})
+
+        with YoutubeDL(ydl_opts) as ydl:
+            try:
+                if info := ydl.extract_info(query, download=False):
+                    if "entries" in info and not any(info["entries"]):
+                        return None
+                    return InfoDict(info)
+                else:
+                    return None
+            except DownloadError:
+                raise
+
+    def extract_info(
+        self, url: str, force_process: bool = False
+    ) -> IEData | IEPlaylist | None:
+        """Simple search to get a InfoDict
+
+        Args:
+            url: URL to process.
+
+        Returns:
+            If the extraction is succesful, return its InfoDict, otherwise return None.
+        """
+
+        if info := self._get_info_dict(url):
+            return self._convert_info_dict(info, force_process=force_process)
+        else:
+            return None
+
+    def extract_info_from_search(
+        self, query: str, provider: str, limit: int = 5, force_process: bool = False
+    ) -> list[IEData] | None:
+        """Get one/multiple InfoDict from custom provider like YouTube or SoundCloud.
+
+        Args:
+            query: Query to process.
+            provider: Provider where do the searchs.
+            limit: Max of searchs to do.
+        """
+
+        try:
+            provider = PROVIDERS[provider]
+        except:
+            raise ValueError(
+                f"{provider} is not a valid provider. Available options:",
+                PROVIDERS.keys(),
+            )
+
+        if info := self._get_info_dict(f"{provider}{query}", limit=limit):
+            data = self._convert_info_dict(info, force_process=force_process)
+
+            if isinstance(data, IEPlaylist):
+                return data.data_list
+            else:
+                return [data]
+        else:
+            return None
+
+    def convert_info(
+        self, query: list[str | list[IEData] | IEData | IEPlaylist]
+    ) -> list[IEData]:
+        item_list: list[IEData] = []
+
+        for process in query:
+            if isinstance(process, str):
+                if info := self.extract_info(process):
+                    data = info
+                else:
+                    raise DownloadError("Failed to fetch data.")
+            else:
+                data = process
+
+            match data:
+                case IEData():
+                    item_list.append(data)
+                case IEPlaylist():
+                    for item in data.data_list:
+                        item_list.append(item)
+                case list():
+                    for item in data:
+                        item_list.append(item)
+                case _:
+                    raise ValueError(
+                        f"Must be `str`, `list[IEData]`, `IEData` or `IEPlaylist` object."
+                    )
+        return item_list
+
+    def download_multiple(
+        self, query: str | list[IEData] | IEData | IEPlaylist
+    ) -> list[Path]:
+        """Simple download without checks"""
+
+        final_downloads: list[Path] = []
+
+        try:
+            for item in self.convert_info([query]):
+                filename = self.download_single(item, exist_ok=True)
+                final_downloads.append(filename)
+            return final_downloads
+        except DownloadError:
+            raise
+
+    def download_single(
+        self,
+        data: IEData,
+        exist_ok: bool = True,
+        progress: list[Callable] | bool = True,
+    ) -> Path:
+        """Download from a IEData object.
+
+        Args:
+            data: IEData to download.
+            exist_ok: Ignore exception if file exist in output.
             progress: Callable which can get download information.
 
         Raises:
-            DownloadError: When yt-dlp throw an error.
-            FileExistsError: If exist_ok is set, throw error when the file exist in output.
+            DownloadError: yt-dlp throw an error.
+            FileExistsError: If exist_ok is False, throw error when the file exist in output.
         """
 
-        # set custom ydl_opts
-        ydl_opts = self._generate_ydl_opts(
-            output=output, extension=extension, quality=quality
-        )
+        ydl_opts = self.ydl_opts
 
         if isinstance(progress, bool):
             ydl_opts.update({"noprogress": not progress})
         else:
             ydl_opts.update({"progress_hooks": progress, "noprogress": True})
 
-        # start download
-        downloads: list[IEData] = []
+        with YoutubeDL(params=ydl_opts) as ydl:
+            temp = Path(self.temp_path / f"{data.extractor} {data.id}")
+            temp.parent.mkdir(parents=True, exist_ok=True)
 
-        try:
-            # Convert URL string to IE object.
-            match query:
-                case str():
-                    if info := self.extract_info(query):
-                        query = info
-                    else:
-                        raise DownloadError("Failed to fetch data.")
-                case IEData():
-                    downloads.append(query)
-                case IEPlaylist():
-                    for item in query.ie_list:
-                        downloads.append(item)
-                case list():
-                    for item in query:
-                        downloads.append(item)
-                case _:
-                    raise ValueError(
-                        f"Must be `str`, `list[IEData]`, `IEData` or `IEPlaylist` object."
-                    )
+            try:
+                filename = self._prepare_filename(data)
+                if filename.is_file():
+                    if not exist_ok:
+                        raise FileExistsError(filename.name)
 
-            with YoutubeDL(params=ydl_opts) as ydl:
-                for item in downloads:
-                    temp = Path(self.cachedir / f"{item.extractor} {item.id}")
-                    temp.parent.mkdir(parents=True, exist_ok=True)
-
-                    try:
-                        filename = self._prepare_filename(item, ydl_opts)
-                        if filename.is_file():
-                            if not exist_ok:
-                                raise FileExistsError(filename.name)
-                            continue
-
-                        info = item.info_dict
-                        temp.write_text(json.dumps(info))
-                        ydl.download_with_info_file(temp)
-                    finally:
-                        temp.unlink(missing_ok=True)
-        except DownloadError:
-            raise
-
-
-if __name__ == "__main__":
-    from rich import print
-
-    ydl = YDL(quiet=True, cachedir=Path("/tmp/media-dl"))
-
-    print("> Playlist + Errors")
-    if info := ydl.extract_info(
-        "https://www.youtube.com/playlist?list=PL59FEE129ADFF2B12",
-    ):
-        print(info)
-
-        print("> Downloading...")
-        try:
-            ydl.download(info, "m4a")
-        except DownloadError as e:
-            print(e.msg)
-
-    print("> Playlist")
-    if info := ydl.extract_info(
-        "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI",
-    ):
-        print(info)
-
-    print("> Single Video")
-    if info := ydl.extract_info("https://www.youtube.com/watch?v=BaW_jenozKc"):
-        print(info)
-
-    print("> Custom Search")
-    if info := ydl.extract_info_from_search(
-        "Sub Urban - Rabbit Hole", provider="youtube", limit=5
-    ):
-        print(info)
-    else:
-        print("Not results")
+                info = data.info_dict
+                temp.write_text(json.dumps(info))
+                ydl.download_with_info_file(temp)
+                return filename
+            finally:
+                temp.unlink(missing_ok=True)

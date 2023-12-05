@@ -10,16 +10,16 @@ theme = Theme(
         "status.success": "green",
         "status.warn": "orange1",
         "status.error": "red",
-        "panel.queue": "yellow",
+        "panel.queue": "blue",
         "panel.status": "blue",
         "panel.download": "blue",
-        "downloader.title": "yellow",
-        "downloader.creator": "green",
-        "text.label": "honeydew2 bold",
-        "text.desc": "pink1",
+        "text.label": "plum3",
+        "text.desc": "misty_rose3",
+        "text.meta.title": "misty_rose3",
+        "text.meta.creator": "plum3",
     }
 )
-console = Console(theme=theme)
 
+console = Console(theme=theme)
 print = console.print
 input = console.input

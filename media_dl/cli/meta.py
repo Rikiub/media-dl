@@ -96,7 +96,7 @@ def meta(
             for i, song in enumerate(song_list, start=1):
                 panels.append(
                     Panel(
-                        f"[status.work][{i}][/] [downloader.creator]{song.artists[0]}[/] - [downloader.title]{song.title}[/]"
+                        f"[status.work][{i}][/] [text.meta.creator]{song.artists[0]}[/] - [text.meta.title]{song.title}[/]"
                     )
                 )
                 panels_index.append(i)
@@ -125,7 +125,7 @@ def meta(
 
         print(
             Panel(
-                f'Parsing "[downloader.creator]{song.artists[0]}[/] - [downloader.title]{song.title}[/]" to file [text.label][bold underline]"{file.name}"',
+                f'Parsing "[text.meta.creator]{song.artists[0]}[/] - [text.meta.title]{song.title}[/]" to file [text.label][bold underline]"{file.name}"',
                 border_style="status.work",
             )
         )
