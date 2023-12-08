@@ -160,16 +160,12 @@ class YDL:
         ext_quality: int = 9,
     ):
         self.output_path = outputdir
-
-        if not tempdir:
-            self.temp_path = outputdir
-        else:
-            self.temp_path = tempdir
+        self.temp_path = tempdir or outputdir
 
         self.ydl_opts = {
             "paths": {
-                "temp": str(self.temp_path),
                 "home": str(self.output_path),
+                "temp": str(self.temp_path),
             },
             "quiet": quiet,
             "noprogress": quiet,
@@ -313,7 +309,7 @@ class YDL:
         """Convert raw InfoDict to IEData object
 
         Args:
-            info_dict: Valid info_dict to parse.
+            info_dict: Valid InfoDict to parse.
         """
 
         if "entries" in info_dict:
@@ -438,24 +434,20 @@ class YDL:
     ) -> list[IEData]:
         item_list: list[IEData] = []
 
-        for process in query:
-            if isinstance(process, str):
-                if info := self.extract_info(process):
+        for data in query:
+            if isinstance(data, str):
+                if info := self.extract_info(data):
                     data = info
                 else:
-                    raise DownloadError("Failed to fetch data.")
-            else:
-                data = process
+                    raise DownloadError(f'Failed to fetch "{data}".')
 
             match data:
                 case IEData():
                     item_list.append(data)
                 case IEPlaylist():
-                    for item in data.data_list:
-                        item_list.append(item)
+                    item_list += data.data_list
                 case list():
-                    for item in data:
-                        item_list.append(item)
+                    item_list += data
                 case _:
                     raise ValueError(
                         f"Must be `str`, `list[IEData]`, `IEData` or `IEPlaylist` object."
@@ -508,9 +500,9 @@ class YDL:
 
             try:
                 filename = self._prepare_filename(data)
-                if filename.is_file():
-                    if not exist_ok:
-                        raise FileExistsError(filename.name)
+
+                if filename.is_file() and not exist_ok:
+                    raise FileExistsError(filename.name)
 
                 info = data.info_dict
                 temp.write_text(json.dumps(info))

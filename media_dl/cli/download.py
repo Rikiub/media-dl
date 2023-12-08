@@ -1,12 +1,13 @@
-import concurrent.futures as cf
 from dataclasses import dataclass
+import concurrent.futures as cf
 from typing import Annotated
 from pathlib import Path
 import time
 
 from rich.live import Live
-from rich.align import Align
 from rich.panel import Panel
+from rich.align import Align
+from rich.table import Column
 from rich.console import Group
 from rich.markdown import HorizontalRule
 from rich.progress import (
@@ -35,19 +36,6 @@ from ..theme import *
 app = Typer()
 
 SPEED = 1.5
-PROGRESS_OVERFLOW_LIMIT = 100
-
-
-class UIStatus:
-    pass
-
-
-class UIDownloads:
-    pass
-
-
-class UIPool:
-    pass
 
 
 @app.command()
@@ -122,7 +110,10 @@ def download(
         # Main UI Components
         progress_queue = Progress(
             SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
+            TextColumn(
+                "[progress.description]{task.description}",
+                table_column=Column(justify="right"),
+            ),
             console=console,
         )
         panel_queue = Align.center(
@@ -156,10 +147,15 @@ def download(
         progress_download = Progress(
             TextColumn(
                 "[progress.percentage]{task.description}",
+                table_column=Column(
+                    justify="left",
+                    width=40,
+                    no_wrap=True,
+                    overflow="ellipsis",
+                ),
             ),
-            BarColumn(),
-            DownloadColumn(),
-            TransferSpeedColumn(),
+            BarColumn(table_column=Column(justify="center", width=20)),
+            DownloadColumn(table_column=Column(justify="right", width=15)),
             transient=True,
             expand=True,
             console=console,
@@ -223,18 +219,16 @@ def download(
                     task_id, description="[status.success]Completed"
                 )
             except DownloadError as err:
-                text = (
-                    "[status.error][bold]"
-                    + str(err.msg)[:PROGRESS_OVERFLOW_LIMIT]
-                    + "..."
+                progress_download.update(
+                    task_id, description="[status.error][bold]" + str(err.msg)
                 )
-                progress_download.update(task_id, description=text)
                 return_code = False
             except FileExistsError as e:
-                text = f'[status.warn][bold underline]"{e}"[/] already exist, ignoring'
-                text = text[:PROGRESS_OVERFLOW_LIMIT] + "..."
                 progress_download.update(
-                    task_id, description=text, completed=100, total=100
+                    task_id,
+                    description=f'[status.warn][bold underline]"{e}"[/] already exist, ignoring',
+                    completed=100,
+                    total=100,
                 )
             finally:
                 time.sleep(SPEED)
