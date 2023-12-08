@@ -1,4 +1,4 @@
-from typing import cast, Callable, NewType, TypedDict
+from typing import cast, Callable, Any, NewType, TypedDict
 from dataclasses import dataclass
 import concurrent.futures as cf
 from pathlib import Path
@@ -59,7 +59,6 @@ _QUALITY_VIDEO = (
 
 
 InfoDict = NewType("InfoDict", dict)
-YDLOpts = NewType("YDLOpts", dict)
 
 
 class ExtTypeError(Exception):
@@ -116,7 +115,7 @@ class IEData(IEBase):
             raise DownloadError("Failed to fetch info data.")
 
     def _create_info_dict(self, force_process=False) -> bool:
-        """Fill missed data if not found info_dict."""
+        """Fill missed data if not found InfoDict."""
 
         ydl = YDL(quiet=True)
 
@@ -204,7 +203,7 @@ class YDL:
         self,
         extension: str,
         quality: int,
-    ) -> YDLOpts:
+    ) -> dict[str, Any]:
         """Generate custom YDLOpts by provided arguments.
 
         Args:
@@ -292,7 +291,7 @@ class YDL:
                 FORMAT_EXTS["audio"],
             )
 
-        return YDLOpts(ydl_opts)
+        return ydl_opts
 
     def _prepare_filename(self, info: IEData) -> Path:
         ydl_opts = self.ydl_opts
