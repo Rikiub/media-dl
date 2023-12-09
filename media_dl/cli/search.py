@@ -48,7 +48,7 @@ def search(
         file_query = f"{song.artists[0]} - {song.title}"
 
         live.update(Panel("Fetching file..."))
-        if data := ydl.extract_info_from_search(
+        if data := ydl.search_info_from_provider(
             query=file_query, provider="soundcloud"
         ):
             ydl_opts = ydl._generate_ydl_opts(output, extension)

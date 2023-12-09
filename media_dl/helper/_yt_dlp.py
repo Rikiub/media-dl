@@ -1,12 +1,37 @@
-from typing import cast, Callable, Any, NewType, TypedDict
+from typing import Sequence, cast, Callable, Any, NewType, TypedDict
 from dataclasses import dataclass
 import concurrent.futures as cf
+from threading import Event
 from pathlib import Path
 import json
 
 from yt_dlp import YoutubeDL
 from yt_dlp.utils import DownloadError
 from yt_dlp.extractor import gen_extractors
+
+
+class ExtTypeError(Exception):
+    """Handler to EXT type errors"""
+
+
+class QualityTypeError(Exception):
+    """Handler to quality"""
+
+
+class FakeLogger:
+    """Supress yt-dlp output"""
+
+    @staticmethod
+    def error(msg):
+        pass
+
+    @staticmethod
+    def warning(msg):
+        pass
+
+    @staticmethod
+    def debug(msg):
+        pass
 
 
 class FormatExtsDict(TypedDict):
@@ -57,48 +82,29 @@ _QUALITY_VIDEO = (
     "5250",
 )
 
+EVENT = Event()
 
 InfoDict = NewType("InfoDict", dict)
 
 
-class ExtTypeError(Exception):
-    """Handler to EXT type errors"""
-
-
-class QualityTypeError(Exception):
-    """Handler to quality"""
-
-
-class FakeLogger:
-    """Supress yt-dlp output"""
-
-    @staticmethod
-    def error(msg):
-        pass
-
-    @staticmethod
-    def warning(msg):
-        pass
-
-    @staticmethod
-    def debug(msg):
-        pass
-
-
-@dataclass(slots=True)
-class IEBase:
-    url: str
-    id: str
-    extractor: str
+@dataclass
+class IEType:
     title: str
 
 
-@dataclass(slots=True)
-class IEData(IEBase):
-    """yt-dlp InfoDict but more simple and dynamic."""
+@dataclass
+class IEMeta:
+    url: str
+    id: str
+    extractor: str
+    thumbnail_url: str | None
 
-    creator: str | None = None
-    thumbnail_url: str | None = None
+
+@dataclass(slots=True)
+class IEData(IEType, IEMeta):
+    """yt-dlp InfoDict but simple."""
+
+    creator: str | None
     _info_dict: InfoDict | None = None
 
     @property
@@ -122,7 +128,7 @@ class IEData(IEBase):
         if self._info_dict and not force_process:
             return True
         else:
-            if info_dict := ydl._get_info_dict(self.url):
+            if info_dict := not EVENT.set() and ydl._get_info_dict(self.url):
                 self.creator = info_dict.get("uploader", self.creator)
                 self.thumbnail_url = info_dict.get("thumbnail", self.thumbnail_url)
                 self._info_dict = info_dict
@@ -131,21 +137,15 @@ class IEData(IEBase):
                 return False
 
 
-@dataclass(slots=True)
-class IEPlaylist(IEBase):
+@dataclass
+class IESearch(IEType):
     total_count: int
-    data_list: list[IEData]
+    entries: list[IEData]
 
-    def fetch_data_all(self) -> None:
-        with cf.ThreadPoolExecutor(max_workers=8) as pool:
-            try:
-                futures = [
-                    pool.submit(item._create_info_dict) for item in self.data_list
-                ]
-                cf.wait(futures)
-            except DownloadError:
-                pool.shutdown(wait=False)
-                raise
+
+@dataclass(slots=True)
+class IEPlaylist(IESearch, IEMeta):
+    ...
 
 
 class YDL:
@@ -211,8 +211,8 @@ class YDL:
             quality: Wanted file quality. Range between [0-9].
 
         Raises:
-            ExtTypeError: `extension` is not compatible.
-            QualityTypeError: `extension_quality` is out of range.
+            ExtTypeError: extension is not compatible.
+            QualityTypeError: extension_quality is out of range.
         """
 
         if not quality in QUALITY:
@@ -228,11 +228,6 @@ class YDL:
         )
 
         if extension in _THUMBNAIL_EXTS:
-            ydl_opts.update(
-                {
-                    "writethumbnail": True,
-                }
-            )
             ydl_opts["postprocessors"].append(
                 {"key": "EmbedThumbnail", "already_have_thumbnail": False}
             )
@@ -272,16 +267,16 @@ class YDL:
                     },
                 }
             )
-            if quality in QUALITY:
-                ydl_opts["postprocessors"].append(
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": extension,
-                        "preferredquality": quality,
-                        "nopostoverwrites": False,
-                    }
-                )
+            ydl_opts["postprocessors"].append(
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": extension,
+                    "preferredquality": quality,
+                    "nopostoverwrites": False,
+                }
+            )
 
+        # ERROR
         else:
             raise ExtTypeError(
                 'Failed to determine the "extension" type. Expected:',
@@ -311,32 +306,34 @@ class YDL:
             info_dict: Valid InfoDict to parse.
         """
 
+        def get_thumbnail(d: dict):
+            return (
+                d.get("thumbnail")
+                or d.get("thumbnails")
+                and d["thumbnails"][-1]["url"]
+                or None
+            )
+
         if "entries" in info_dict:
-            ie_list = []
+            data_list = []
 
             for item in info_dict["entries"]:
                 if not item.get("title"):
                     continue
 
-                thumbnail = (
-                    item.get("thumbnail")
-                    or item.get("thumbnails")
-                    and item["thumbnails"][-1]["url"]
-                    or None
-                )
-
-                ie_list.append(
+                data_list.append(
                     IEData(
                         url=item["url"],
                         extractor=item["ie_key"],
                         id=item["id"],
                         title=item["title"],
                         creator=item.get("uploader", None),
-                        thumbnail_url=thumbnail,
+                        thumbnail_url=get_thumbnail(item),
                     )
                 )
-            if len(ie_list) == 1:
-                ie = ie_list[0]
+
+            if len(data_list) == 1:
+                ie = data_list[0]
                 ie._create_info_dict()
                 return ie
             else:
@@ -346,10 +343,19 @@ class YDL:
                     extractor=info_dict["extractor_key"],
                     title=info_dict["title"],
                     total_count=info_dict["playlist_count"],
-                    data_list=ie_list,
+                    thumbnail_url=get_thumbnail(info_dict),
+                    entries=data_list,
                 )
                 if force_process:
-                    playlist.fetch_data_all()
+                    with cf.ThreadPoolExecutor(max_workers=5) as executor:
+                        try:
+                            futures = [
+                                executor.submit(item._create_info_dict)
+                                for item in data_list
+                            ]
+                            cf.wait(futures)
+                        except KeyboardInterrupt:
+                            EVENT.set()
                 return playlist
 
         else:
@@ -359,7 +365,7 @@ class YDL:
                 extractor=info_dict["extractor"],
                 title=info_dict["title"],
                 creator=info_dict.get("uploader", None),
-                thumbnail_url=info_dict.get("thumbnail", None),
+                thumbnail_url=get_thumbnail(info_dict),
                 _info_dict=info_dict,
             )
 
@@ -382,32 +388,39 @@ class YDL:
             except DownloadError:
                 raise
 
-    def extract_info(
+    def search_info(
         self, url: str, force_process: bool = False
-    ) -> IEData | IEPlaylist | None:
+    ) -> IESearch | IEPlaylist | None:
         """Simple search to get a InfoDict
 
         Args:
             url: URL to process.
+            force_process: Fetch missing InfoDict(s) from Data entries.
 
         Returns:
-            If the extraction is succesful, return its InfoDict, otherwise return None.
+            If the extraction is succesful, return a IEType object, otherwise return None.
         """
 
         if info := self._get_info_dict(url):
-            return self._convert_info_dict(info, force_process=force_process)
+            info = self._convert_info_dict(info, force_process=force_process)
+
+            if isinstance(info, IEData):
+                return IESearch(title="NA", total_count=1, entries=[info])
+            else:
+                return info
         else:
             return None
 
-    def extract_info_from_search(
+    def search_info_from_provider(
         self, query: str, provider: str, limit: int = 5, force_process: bool = False
-    ) -> list[IEData] | None:
+    ) -> IESearch | None:
         """Get one/multiple InfoDict from custom provider like YouTube or SoundCloud.
 
         Args:
             query: Query to process.
             provider: Provider where do the searchs.
             limit: Max of searchs to do.
+            force_process: Fetch missing InfoDict(s) from Data entries.
         """
 
         try:
@@ -422,48 +435,41 @@ class YDL:
             data = self._convert_info_dict(info, force_process=force_process)
 
             if isinstance(data, IEPlaylist):
-                return data.data_list
+                return IESearch(
+                    title=query,
+                    total_count=len(data.entries),
+                    entries=data.entries,
+                )
             else:
-                return [data]
+                return None
         else:
             return None
 
-    def convert_info(
-        self, query: list[str | list[IEData] | IEData | IEPlaylist]
-    ) -> list[IEData]:
-        item_list: list[IEData] = []
-
-        for data in query:
-            if isinstance(data, str):
-                if info := self.extract_info(data):
-                    data = info
-                else:
-                    raise DownloadError(f'Failed to fetch "{data}".')
-
-            match data:
-                case IEData():
-                    item_list.append(data)
-                case IEPlaylist():
-                    item_list += data.data_list
-                case list():
-                    item_list += data
-                case _:
-                    raise ValueError(
-                        f"Must be `str`, `list[IEData]`, `IEData` or `IEPlaylist` object."
-                    )
-        return item_list
-
-    def download_multiple(
-        self, query: str | list[IEData] | IEData | IEPlaylist
-    ) -> list[Path]:
+    def download_multiple(self, query: Sequence[str | IEType]) -> list[Path]:
         """Simple download without checks"""
 
+        items: list[IEData] = []
         final_downloads: list[Path] = []
 
         try:
-            for item in self.convert_info([query]):
+            for data in query:
+                match data:
+                    case str():
+                        if info := self.search_info(data):
+                            items += info.entries
+                        else:
+                            raise DownloadError(f'Failed to fetch "{data}".')
+                    case IESearch() | IEPlaylist():
+                        items += data.entries
+                    case IEData():
+                        items.append(data)
+                    case _:
+                        raise ValueError()
+
+            for item in items:
                 filename = self.download_single(item, exist_ok=True)
                 final_downloads.append(filename)
+
             return final_downloads
         except DownloadError:
             raise

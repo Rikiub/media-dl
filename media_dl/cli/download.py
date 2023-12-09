@@ -176,7 +176,7 @@ def download(
             url, queue_task_id = task
 
             try:
-                if queue_item := ydl.extract_info(url):
+                if queue_item := ydl.search_info(url):
                     progress_queue.update(
                         queue_task_id, completed=100, description=f"[status.wait]{url}"
                     )
@@ -292,7 +292,7 @@ def download(
                         ),
                         "Playlist",
                     )
-                    aux_downloads = queue_item.data_list
+                    aux_downloads = queue_item.entries
                 case _:
                     raise ValueError()
 
