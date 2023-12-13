@@ -3,18 +3,19 @@ from pathlib import Path
 import sys
 
 import gallery_dl.config as config
-from gallery_dl import main, option
+import gallery_dl.config as conf
+from gallery_dl import main
 from gallery_dl.job import DataJob, DownloadJob
 
 TEMPFILE = Path("temp")
-DEFAULT_CONFIG = {""}
+DEFAULT_CONFIG = {}
 
 InfoDict = NewType("InfoDict", dict)
 
 
 class GalleryDL:
     def __init__(self) -> None:
-        config.set(("output"), "mode", "null")
+        config.set(("output",), "mode", "null")
 
     def download(self, url: str) -> bool:
         job = DownloadJob(url)
@@ -56,6 +57,8 @@ if __name__ == "__main__":
     from rich import print
 
     gdl = GalleryDL()
+    print(conf._config)
+    raise SystemExit
 
     info = gdl.get_info("https://www.pinterest.es/rikiub_0/sheba/")
     print(info)

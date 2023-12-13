@@ -4,11 +4,11 @@ from pathlib import Path
 import pytest
 from yt_dlp import DownloadError
 
-from media_dl.helper._yt_dlp import (
+from media_dl.helper.ydls import (
     YDL,
-    IEData,
-    IEPlaylist,
-    IESearch,
+    DataInfo,
+    ResultInfoList,
+    PlaylistInfoList,
     ExtTypeError,
     QualityTypeError,
 )
@@ -32,26 +32,26 @@ class TestInfoExtractors:
         # Invalid Provider
         with pytest.raises(ValueError):
             self.ydl.search_info_from_provider(
-                "https://www.youtube.com/watch?v=BaW_jenozKc", provider="NA"
+                "https://www.youtube.com/watch?v=BaW_jenozKc", provider="NA"  # type: ignore
             )
 
     def test_single_url(self):
         info = self.ydl.search_info("https://www.youtube.com/watch?v=BaW_jenozKc")
-        assert isinstance(info, IESearch)
+        assert isinstance(info, ResultInfoList)
 
     def test_plalist_url(self):
         info = self.ydl.search_info(
             "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
         )
-        assert isinstance(info, IEPlaylist)
+        assert isinstance(info, PlaylistInfoList)
 
     def test_custom_search(self):
         query = "Sub Urban: Album HIVE"
         limit = 5
 
         def check(info):
-            assert isinstance(info, IESearch)
-            assert all(isinstance(data, IEData) for data in info.entries)
+            assert isinstance(info, ResultInfoList)
+            assert all(isinstance(data, DataInfo) for data in info.entries)
             assert len(info.entries) == limit
 
         if info := self.ydl.search_info_from_provider(
@@ -106,12 +106,12 @@ class TestDownloads:
             for item in info.entries:
                 file_path = self.ydl.download_single(item)
                 assert file_path.is_file()
+        else:
+            raise AssertionError()
 
     def test_search(self):
         query = "Sub Urban"
 
         if info := self.ydl.search_info_from_provider(query, "youtube"):
-            paths = self.ydl.download_multiple([info])
-
-            for path in paths:
+            for path in self.ydl.download_multiple([info]):
                 assert path.is_file()

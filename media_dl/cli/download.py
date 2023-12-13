@@ -11,7 +11,6 @@ from rich.table import Column
 from rich.console import Group
 from rich.markdown import HorizontalRule
 from rich.progress import (
-    TransferSpeedColumn,
     MofNCompleteColumn,
     DownloadColumn,
     SpinnerColumn,
@@ -22,11 +21,12 @@ from rich.progress import (
 )
 from typer import Typer, Argument, Option
 
-from ..helper._yt_dlp import (
+from ..ydls import (
     YDL,
     QUALITY,
-    IEData,
-    IEPlaylist,
+    DataInfo,
+    PlaylistInfoList,
+    ResultInfoList,
     DownloadError,
 )
 from ..config import DIR_DOWNLOAD, DIR_TEMP
@@ -163,15 +163,21 @@ def download(
         panel_download = Panel(progress_download, border_style="panel.download")
 
         # Prepare Queue UI
-        url_list = []
+        url_list: list[tuple] = []
         for url in urls:
             queue_task_id = progress_queue.add_task(f"[status.work]{url}")
             url_list.append((url, queue_task_id))
 
         live.update(panel_queue)
 
+        @dataclass(slots=True)
+        class QueueTask:
+            url: str
+            item: ResultInfoList
+            task_id: TaskID
+
         # 1. Queue list
-        item_list = []
+        item_list: list[QueueTask] = []
         for task in url_list:
             url, queue_task_id = task
 
@@ -180,7 +186,9 @@ def download(
                     progress_queue.update(
                         queue_task_id, completed=100, description=f"[status.wait]{url}"
                     )
-                    item_list.append((queue_item, queue_task_id))
+                    item_list.append(
+                        QueueTask(url=url, item=queue_item, task_id=queue_task_id)
+                    )
                 else:
                     raise DownloadError("Failed to fetch data")
             except DownloadError:
@@ -192,7 +200,7 @@ def download(
             raise SystemExit(1)
 
         # Main downloader used for section 3.
-        def download_process(info: IEData, task_id: TaskID) -> bool:
+        def download_process(info: DataInfo, task_id: TaskID) -> bool:
             return_code = True
 
             def progress_hook(d):
@@ -247,12 +255,12 @@ def download(
         error_list: list[ErrorReport] = []
 
         # Load UI
-        for queue_item, queue_task_id in item_list:
+        for queue in item_list:
             live.update(Group(panel_queue, panel_loading))
             time.sleep(SPEED)
             progress_queue.reset(
-                queue_task_id,
-                description=f"[status.work][bold italic underline]{queue_item.url}",
+                queue.task_id,
+                description=f"[status.work][bold italic underline]{queue.url}",
                 total=None,
             )
 
@@ -260,18 +268,8 @@ def download(
             content = ()
             progress_playlist = None
 
-            match queue_item:
-                case IEData():
-                    content = (
-                        Group(
-                            f"[text.label][bold]Title:[/][/]   [text.desc]{queue_item.title}[/]\n"
-                            f"[text.label][bold]Creator:[/][/] [text.desc]{queue_item.creator}[/]\n"
-                            f"[text.label][bold]Source:[/][/]  [text.desc]{queue_item.extractor}[/]"
-                        ),
-                        "Item",
-                    )
-                    aux_downloads = [queue_item]
-                case IEPlaylist():
+            match queue.item:
+                case PlaylistInfoList():
                     progress_playlist = Progress(
                         TextColumn(
                             "[progress.percentage]{task.description}",
@@ -280,19 +278,30 @@ def download(
                         console=console,
                     )
                     progress_playlist.add_task(
-                        "[text.label][bold]Total:[/][/]", total=queue_item.total_count
+                        "[text.label][bold]Total:[/][/]", total=queue.item.total_count
                     )
 
                     content = (
                         Group(
-                            f"[text.label][bold]Title:[/][/]  [text.desc]{queue_item.title}[/]\n"
-                            f"[text.label][bold]Source:[/][/] [text.desc]{queue_item.extractor}[/]",
+                            f"[text.label][bold]Title:[/][/]  [text.desc]{queue.item.title}[/]\n"
+                            f"[text.label][bold]Source:[/][/] [text.desc]{queue.item.extractor}[/]",
                             HorizontalRule(),
                             progress_playlist,
                         ),
                         "Playlist",
                     )
-                    aux_downloads = queue_item.entries
+                    aux_downloads = queue.item.entries
+                case ResultInfoList():
+                    item = queue.item.entries[0]
+                    content = (
+                        Group(
+                            f"[text.label][bold]Title:[/][/]   [text.desc]{item.title}[/]\n"
+                            f"[text.label][bold]Creator:[/][/] [text.desc]{item.creator}[/]\n"
+                            f"[text.label][bold]Source:[/][/]  [text.desc]{item.extractor}[/]"
+                        ),
+                        "Item",
+                    )
+                    aux_downloads = [item]
                 case _:
                     raise ValueError()
 
@@ -342,7 +351,7 @@ def download(
                         errors += 1
 
                 error_list.append(
-                    ErrorReport(name=queue_item.url, success=success, errors=errors)
+                    ErrorReport(name=queue.url, success=success, errors=errors)
                 )
 
             if errors >= 1:
@@ -352,9 +361,9 @@ def download(
 
             # Update current Queue status
             progress_queue.update(
-                queue_task_id,
+                queue.task_id,
                 completed=100,
-                description=f"[status.success][bold strike]{queue_item.url}[/][/] "
+                description=f"[status.success][bold strike]{queue.url}[/][/] "
                 + queue_status,
             )
 

@@ -9,7 +9,8 @@ from ..theme import *
 from ._ui import check_ydl_formats
 from ..config import DIR_DOWNLOAD, DIR_TEMP
 from ..meta import get_song_list, song_to_file
-from ..helper._yt_dlp import YDL
+from ..ydls import YDL
+
 
 app = Typer()
 
@@ -39,24 +40,24 @@ def search(
 ):
     with Live(console=console) as live:
         live.update(Panel("Fetching song metadata..."))
-        if song := get_song_list(query, limit=1):
+
+        if song := get_song_list(query, providers=["spotify", "musicbrainz"], limit=1):
             song = song[0]
         else:
             raise BadParameter("Failed.")
 
-        ydl = YDL(quiet=True, cachedir=DIR_TEMP)
-        file_query = f"{song.artists[0]} - {song.title}"
+        with YDL(quiet=True, tempdir=DIR_TEMP, outputdir=output, ext=extension) as ydl:
+            live.update(Panel("Fetching file..."))
 
-        live.update(Panel("Fetching file..."))
-        if data := ydl.search_info_from_provider(
-            query=file_query, provider="soundcloud"
-        ):
-            ydl_opts = ydl._generate_ydl_opts(output, extension)
-            file_path = ydl._prepare_filename(data[0], ydl_opts)
-            ydl.download_multiple(data, extension=extension, output=output)
+            search_query = f"{song.artists[0]} - {song.title}"
+            if data := ydl.search_info_from_provider(
+                query=search_query, provider="ytmusic"
+            ):
+                filename = ydl.download_single(data.entries[0])
 
-            live.update(Panel("Parsing metadata..."))
+                live.update(Panel("Parsing metadata..."))
 
-            song_to_file(file_path, song)
-        else:
-            raise BadParameter("Failed.")
+                song_to_file(filename, song)
+                filename.rename(filename.with_name(search_query + filename.suffix))
+            else:
+                raise BadParameter("Failed.")

@@ -1,9 +1,10 @@
+from typing import cast, Literal
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from contextlib import suppress
-from typing import cast
 from pathlib import Path
 from io import BytesIO
+from enum import Enum
 import requests
 
 import music_tag
@@ -32,7 +33,7 @@ class Song:
     lyrics: str | None = None
 
 
-class MetadataProvider(ABC):
+class BaseMeta(ABC):
     @abstractmethod
     def get_song_metadata(self, query: str, limit: int = 5) -> list[Song] | None:
         pass
@@ -43,7 +44,7 @@ class MetadataProvider(ABC):
         return self.__class__.__name__
 
 
-class SpotifyProvider(MetadataProvider):
+class SpotifyMetadata(BaseMeta):
     def __init__(self, spotipy_credentials: SpotifyClientCredentials) -> None:
         self.spotify = Spotify(client_credentials_manager=spotipy_credentials)
 
@@ -84,7 +85,7 @@ class SpotifyProvider(MetadataProvider):
         return super().name
 
 
-class MusicBrainzProvider(MetadataProvider):
+class MusicBrainzMetadata(BaseMeta):
     def get_song_metadata(self, query: str, limit: int = 5) -> list[Song] | None:
         musicbrainzngs.set_useragent(APPNAME, "0.01", "http://example.com")
         mbid = musicbrainzngs.search_recordings(query, limit=limit)
@@ -141,6 +142,29 @@ class MusicBrainzProvider(MetadataProvider):
         return super().name
 
 
+class Providers(Enum):
+    spotify = SpotifyMetadata(SPOTIPY_CREDENTIALS)
+    musicbrainz = MusicBrainzMetadata()
+
+
+PROVIDER = Literal["spotify", "musicbrainz"]
+
+
+def _sort_instances(selection: list[PROVIDER]) -> list[BaseMeta]:
+    sort = []
+
+    for select in selection:
+        if select == "spotify":
+            sort.append(Providers.spotify.value)
+        elif select == "musicbrainz":
+            sort.append(Providers.musicbrainz.value)
+        else:
+            raise ValueError(
+                f"'{select}' not is a valid metadata provider. Must be:", PROVIDER
+            )
+    return sort
+
+
 def search_lyrics(query: str) -> str | None:
     return syncedlyrics.search(query, allow_plain_format=True)
 
@@ -191,13 +215,15 @@ def file_to_song(file: Path) -> Song:
     )
 
 
-def get_song_list(query: str, limit: int = 5) -> list[Song] | None:
+def get_song_list(
+    query: str, providers: list[PROVIDER], limit: int = 5
+) -> list[Song] | None:
     song_list: list[Song] = []
     error = False
 
     with suppress(Exception):
         try:
-            for item in (SpotifyProvider(SPOTIPY_CREDENTIALS), MusicBrainzProvider()):
+            for item in _sort_instances(providers):
                 songs = item.get_song_metadata(query, limit=limit)
                 if songs:
                     song_list = songs
@@ -205,7 +231,7 @@ def get_song_list(query: str, limit: int = 5) -> list[Song] | None:
 
             if song_list:
                 for song in song_list:
-                    song.lyrics = search_lyrics(f"{song.album_artist} - {song.title}")
+                    song.lyrics = search_lyrics(f"{song.artists[0]} - {song.title}")
                 return song_list
             else:
                 return None
@@ -217,7 +243,7 @@ def get_song_list(query: str, limit: int = 5) -> list[Song] | None:
 
 
 def search_and_embed(query: str, file: Path) -> None:
-    if song := get_song_list(query, limit=1):
+    if song := get_song_list(query, providers=["spotify", "musicbrainz"], limit=1):
         song_to_file(file, song[0])
     else:
         raise ConnectionError()
