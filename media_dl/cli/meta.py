@@ -13,8 +13,8 @@ from rich.progress import (
 )
 from typer import Typer, Argument, Option, BadParameter
 
-from ..theme import *
-from ..meta import get_song_list, song_to_file, file_to_song, Song
+from media_dl.theme import *
+from media_dl.meta import get_song_list, song_to_file, file_to_song, Song
 
 app = Typer()
 
@@ -73,7 +73,7 @@ def meta(
             )
 
             try:
-                if songs := get_song_list(query, limit=limit):
+                if songs := get_song_list(query, providers=["spotify"], limit=limit):
                     song_list = songs
                     live.update("")
                 elif not songs:
@@ -96,7 +96,7 @@ def meta(
             for i, song in enumerate(song_list, start=1):
                 panels.append(
                     Panel(
-                        f"[status.work][{i}][/] [text.meta.creator]{song.artists[0]}[/] - [text.meta.title]{song.title}[/]"
+                        f"[status.work][{i}][/] [text.meta.uploader]{song.artists[0]}[/] - [text.meta.title]{song.title}[/]"
                     )
                 )
                 panels_index.append(i)
@@ -125,7 +125,7 @@ def meta(
 
         print(
             Panel(
-                f'Parsing "[text.meta.creator]{song.artists[0]}[/] - [text.meta.title]{song.title}[/]" to file [text.label][bold underline]"{file.name}"',
+                f'Parsing "[text.meta.uploader]{song.artists[0]}[/] - [text.meta.title]{song.title}[/]" to file [text.label][bold underline]"{file.name}"',
                 border_style="status.work",
             )
         )

@@ -1,3 +1,3 @@
-from .cli import run
+from media_dl.cli import run
 
 run()

@@ -1,6 +1,6 @@
 from typer import BadParameter
 
-from ..ydls import FORMAT_EXTS
+from media_dl.ydls import FORMAT_EXTS
 
 
 def check_ydl_formats(fmt: str) -> str:

@@ -5,12 +5,11 @@ from pathlib import Path
 from rich.live import Live
 from rich.panel import Panel
 
-from ..theme import *
-from ._ui import check_ydl_formats
-from ..config import DIR_DOWNLOAD, DIR_TEMP
-from ..meta import get_song_list, song_to_file
-from ..ydls import YDL
-
+from media_dl.theme import *
+from media_dl.ydls import YDL
+from media_dl.cli._ui import check_ydl_formats
+from media_dl.config import DIR_DOWNLOAD, DIR_TEMP
+from media_dl.meta import get_song_list, song_to_file
 
 app = Typer()
 

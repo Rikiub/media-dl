@@ -1,4 +1,6 @@
-from typing import Literal, cast, Sequence, Callable, NewType, TypedDict
+"""yt-dlp helper with typing and nice defaults."""
+
+from typing import cast, Literal, Sequence, Callable, NewType, TypedDict
 from dataclasses import dataclass
 import concurrent.futures as cf
 from threading import Event
@@ -13,7 +15,7 @@ from yt_dlp.extractor import gen_extractors
 
 
 class ExtTypeError(Exception):
-    """Handler to EXT type errors"""
+    """Handler to extension type errors"""
 
 
 class QualityTypeError(Exception):
@@ -38,7 +40,6 @@ _THUMBNAIL_EXTS = (
     "mp4",
     "mov",
 )
-
 SEARCH_LIMIT = 100
 
 
@@ -49,38 +50,36 @@ class ValidProviders(str, Enum):
     nicovideo = f"nicosearch{SEARCH_LIMIT}:"
 
 
-PROVIDERS = Literal[
+PROVIDER = Literal[
     "youtube",
     "ytmusic",
     "soundcloud",
     "nicovideo",
 ]
 
-
-QUALITY = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
-_QUALITY_VIDEO = (
-    "144",
-    "240",
-    "360",
-    "480",
-    "720",
-    "1080",
-    "1440",
-    "2160",
-    "4320",
-    "5250",
-)
-
-EVENT = Event()
-
-log_ytdlp = logging.getLogger("yt-dlp")
-log_ytdlp.setLevel(logging.DEBUG)
+QUALITY: dict[int, str] = {
+    0: "144",
+    1: "240",
+    2: "360",
+    3: "480",
+    4: "720",
+    5: "1080",
+    6: "1440",
+    7: "2160",
+    8: "4320",
+    9: "5250",
+}
+"""Dict to select video quality. For audio quality, use `QUALIY.keys()`."""
 
 InfoDict = NewType("InfoDict", dict)
+EVENT = Event()
+
+log = logging.getLogger("yt-dlp")
+log.setLevel(logging.DEBUG)
 
 
 @dataclass
-class InfoType:
+class _InfoType:
     """Base for all Info objects."""
 
     extractor: str
@@ -95,7 +94,7 @@ class _Urls:
 
 
 @dataclass(slots=True)
-class DataInfo(InfoType, _Urls):
+class DataInfo(_InfoType, _Urls):
     """yt-dlp InfoDict but simple."""
 
     uploader: str | None
@@ -130,7 +129,7 @@ class DataInfo(InfoType, _Urls):
         else:
             if info_dict := not EVENT.set() and ydl._get_info_dict(self.url):
                 self.title = info_dict.get("title", self.title)
-                self.creator = info_dict.get("uploader", self.creator)
+                self.uploader = info_dict.get("uploader", self.uploader)
                 self.thumbnail_url = info_dict.get("thumbnail", self.thumbnail_url)
                 self._info_dict = info_dict
                 return True
@@ -139,17 +138,17 @@ class DataInfo(InfoType, _Urls):
 
 
 @dataclass
-class ResultInfoList(InfoType):
+class ResultInfoList(_InfoType):
     """List of results from search.
 
     Fields 'id' and 'title' are the same.
     """
 
+    total_count: int
     entries: list[DataInfo]
 
-    @property
-    def total_count(self):
-        return len(self.entries)
+    def __len__(self):
+        return self.total_count
 
 
 @dataclass(slots=True)
@@ -182,23 +181,21 @@ class YDL:
                 "temp": str(self.temp_path),
             },
             "quiet": quiet,
-            "noprogress": quiet,
             "no_warnings": quiet,
+            "noprogress": quiet,
             "ignoreerrors": False,
-            "skip_download": False,
             "overwrites": False,
             "extract_flat": True,
-            "retries": 3,
-            "fragment_retries": 3,
+            "retries": 5,
             "outtmpl": "%(uploader)s - %(title)s.%(ext)s",
             "postprocessors": [],
         }
         self.ydl_opts = self._generate_ydl_opts(ext, ext_quality)
 
         if quiet:
-            log_ytdlp.disabled = True
+            log.disabled = True
 
-        self.ydl_opts.update({"logger": log_ytdlp})
+        self.ydl_opts.update({"logger": log})
 
     @staticmethod
     def is_url_supported(url: str) -> bool:
@@ -229,10 +226,10 @@ class YDL:
             QualityTypeError: extension_quality is out of range.
         """
 
-        if not quality in QUALITY:
+        if not quality in QUALITY.keys():
             raise QualityTypeError(
-                'Failed to determine "quality" range. Expected range between:',
-                *QUALITY,
+                "Failed to determine quality range. Expected range between:",
+                QUALITY.keys(),
             )
 
         ydl_opts = self.ydl_opts
@@ -248,11 +245,11 @@ class YDL:
 
         # VIDEO
         if extension in FORMAT_EXTS["video"]:
-            new_quality = _QUALITY_VIDEO[quality]
+            video_quality = QUALITY[quality]
 
             ydl_opts.update(
                 {
-                    "format": f"bestvideo[height<={new_quality}]+bestaudio/bestvideo[height<={new_quality}]/best",
+                    "format": f"bestvideo[height<={video_quality}]+bestaudio/bestvideo[height<={video_quality}]/best",
                     "format_sort": [f"ext:{extension}:mp4:mkv:mov"],
                     "writesubtitles": True,
                     "subtitleslangs": "all",
@@ -293,7 +290,7 @@ class YDL:
         # ERROR
         else:
             raise ExtTypeError(
-                'Failed to determine the "extension" type. Expected:',
+                "Failed to determine the extension type. Expected:",
                 "VIDEO:",
                 FORMAT_EXTS["video"],
                 "AUDIO:",
@@ -312,7 +309,7 @@ class YDL:
     def _convert_info_dict(
         self, info_dict: InfoDict, force_process: bool = False
     ) -> ResultInfoList | PlaylistInfoList:
-        """Convert raw InfoDict to IEData object
+        """Convert raw InfoDict to DataInfo object
 
         Args:
             info_dict: Valid InfoDict to parse.
@@ -335,6 +332,7 @@ class YDL:
                 extractor=info["extractor_key"],
                 id=info["id"],
                 title=info.get("title", MISSING_TITLE),
+                total_count=info.get("playlist_count") or len(entries),
                 entries=entries,
             )
 
@@ -362,18 +360,20 @@ class YDL:
                     id=info_dict["id"],
                     extractor=info_dict["extractor_key"],
                     title=info_dict.get("title", MISSING_TITLE),
+                    total_count=info_dict["playlist_count"],
                     entries=entries,
                 )
                 if force_process:
                     with cf.ThreadPoolExecutor(max_workers=5) as executor:
+                        futures = []
                         try:
-                            futures = [
-                                executor.submit(item.fetch_missed_data)
-                                for item in entries
-                            ]
+                            for thread in entries:
+                                thread = executor.submit(thread.fetch_missed_data)
+                                futures.append(thread)
                             cf.wait(futures)
                         except KeyboardInterrupt:
                             EVENT.set()
+                            cf.wait(futures)
                 return playlist
         else:
             data = DataInfo(
@@ -408,7 +408,7 @@ class YDL:
                     if entries := info.get("entries"):
                         if not any(entries):
                             return None
-
+                    print(info)
                     return InfoDict(info)
                 else:
                     return None
@@ -417,7 +417,7 @@ class YDL:
 
     def search_info(
         self, url: str, force_process: bool = False
-    ) -> ResultInfoList | PlaylistInfoList | None:
+    ) -> ResultInfoList | None:
         """Get one/multiple results from a valid URL.
 
         Args:
@@ -437,7 +437,7 @@ class YDL:
     def search_info_from_provider(
         self,
         query: str,
-        provider: PROVIDERS,
+        provider: PROVIDER,
         limit: int = 5,
         force_process: bool = False,
     ) -> ResultInfoList | None:
@@ -467,7 +467,9 @@ class YDL:
         else:
             return None
 
-    def download_multiple(self, query: Sequence[str | InfoType]) -> list[Path]:
+    def download_multiple(
+        self, query: Sequence[str | DataInfo | ResultInfoList]
+    ) -> list[Path]:
         """Download a list of URLs/objects without checks.
 
         Args:

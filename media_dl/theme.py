@@ -16,7 +16,7 @@ theme = Theme(
         "text.label": "plum3",
         "text.desc": "misty_rose3",
         "text.meta.title": "misty_rose3",
-        "text.meta.creator": "plum3",
+        "text.meta.uploader": "plum3",
     }
 )
 

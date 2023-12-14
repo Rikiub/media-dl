@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import concurrent.futures as cf
 from typing import Annotated
+from threading import Event
 from pathlib import Path
 import time
 
@@ -21,7 +22,7 @@ from rich.progress import (
 )
 from typer import Typer, Argument, Option
 
-from ..ydls import (
+from media_dl.ydls import (
     YDL,
     QUALITY,
     DataInfo,
@@ -29,13 +30,14 @@ from ..ydls import (
     ResultInfoList,
     DownloadError,
 )
-from ..config import DIR_DOWNLOAD, DIR_TEMP
-from ._ui import check_ydl_formats
-from ..theme import *
+from media_dl.config import DIR_DOWNLOAD, DIR_TEMP
+from media_dl.cli._ui import check_ydl_formats
+from media_dl.theme import *
 
 app = Typer()
 
 SPEED = 1.5
+EVENT = Event()
 
 
 @app.command()
@@ -91,7 +93,7 @@ def download(
     ] = False,
 ):
     if no_metadata:
-        no_metadata = not False
+        no_metadata = True
 
     try:
         output = output.relative_to(Path.cwd())
@@ -106,62 +108,60 @@ def download(
         ext_quality=quality,
     )
 
+    # Main UI Components
+    progress_queue = Progress(
+        SpinnerColumn(),
+        TextColumn(
+            "[progress.description]{task.description}",
+            table_column=Column(justify="right"),
+        ),
+        console=console,
+    )
+    panel_queue = Align.center(
+        Panel(
+            Group(
+                Align.center(f"[text.label][bold]Output:[/][/] [text.desc]{output}[/]"),
+                Align.center(
+                    f"[text.label][bold]Extension:[/][/] [text.desc]{extension}[/] | [text.label][bold]Quality:[/][/] [text.desc]{quality}[/]"
+                ),
+                HorizontalRule(),
+                progress_queue,
+            ),
+            title="Downloads",
+            width=100,
+            padding=(0, 2),
+            expand=False,
+            border_style="panel.queue",
+        )
+    )
+
+    progress_loading = Progress(
+        SpinnerColumn(), TextColumn("[progress.description]{task.description}")
+    )
+    progress_loading.add_task(f"[status.work]Loading[blink]...[/]")
+    panel_loading = Align.center(
+        Panel(progress_loading, border_style="panel.status", expand=False)
+    )
+
+    progress_download = Progress(
+        TextColumn(
+            "[progress.percentage]{task.description}",
+            table_column=Column(
+                justify="left",
+                width=40,
+                no_wrap=True,
+                overflow="ellipsis",
+            ),
+        ),
+        BarColumn(table_column=Column(justify="center", width=20)),
+        DownloadColumn(table_column=Column(justify="right", width=15)),
+        transient=True,
+        expand=True,
+        console=console,
+    )
+    panel_download = Panel(progress_download, border_style="panel.download")
+
     with Live(console=console) as live:
-        # Main UI Components
-        progress_queue = Progress(
-            SpinnerColumn(),
-            TextColumn(
-                "[progress.description]{task.description}",
-                table_column=Column(justify="right"),
-            ),
-            console=console,
-        )
-        panel_queue = Align.center(
-            Panel(
-                Group(
-                    Align.center(
-                        f"[text.label][bold]Output:[/][/] [text.desc]{output}[/]"
-                    ),
-                    Align.center(
-                        f"[text.label][bold]Extension:[/][/] [text.desc]{extension}[/] | [text.label][bold]Quality:[/][/] [text.desc]{quality}[/]"
-                    ),
-                    HorizontalRule(),
-                    progress_queue,
-                ),
-                title="Downloads",
-                width=100,
-                padding=(0, 2),
-                expand=False,
-                border_style="panel.queue",
-            )
-        )
-
-        progress_loading = Progress(
-            SpinnerColumn(), TextColumn("[progress.description]{task.description}")
-        )
-        progress_loading.add_task(f"[status.work]Loading[blink]...[/]")
-        panel_loading = Align.center(
-            Panel(progress_loading, border_style="panel.status", expand=False)
-        )
-
-        progress_download = Progress(
-            TextColumn(
-                "[progress.percentage]{task.description}",
-                table_column=Column(
-                    justify="left",
-                    width=40,
-                    no_wrap=True,
-                    overflow="ellipsis",
-                ),
-            ),
-            BarColumn(table_column=Column(justify="center", width=20)),
-            DownloadColumn(table_column=Column(justify="right", width=15)),
-            transient=True,
-            expand=True,
-            console=console,
-        )
-        panel_download = Panel(progress_download, border_style="panel.download")
-
         # Prepare Queue UI
         url_list: list[tuple] = []
         for url in urls:
@@ -218,27 +218,32 @@ def download(
                         )
 
             try:
-                ydl.download_single(
-                    info,
-                    exist_ok=False,
-                    progress=[lambda d: progress_hook(d)],
-                )
-                progress_download.update(
-                    task_id, description="[status.success]Completed"
-                )
+                if not EVENT.is_set():
+                    ydl.download_single(
+                        info,
+                        exist_ok=False,
+                        progress=[lambda d: progress_hook(d)],
+                    )
+                    progress_download.update(
+                        task_id, description="[status.success]Completed"
+                    )
             except DownloadError as err:
                 progress_download.update(
                     task_id, description="[status.error][bold]" + str(err.msg)
                 )
                 return_code = False
-            except FileExistsError as e:
+            except FileExistsError as err:
                 progress_download.update(
                     task_id,
-                    description=f'[status.warn][bold underline]"{e}"[/] already exist, ignoring',
+                    description=f'[status.warn][bold underline]"{err}"[/] already exist, ignoring',
                     completed=100,
                     total=100,
                 )
             finally:
+                if EVENT.is_set():
+                    return_code = False
+                    return return_code
+
                 time.sleep(SPEED)
                 if progress_playlist:
                     progress_playlist.advance(TaskID(0), 1)
@@ -296,7 +301,7 @@ def download(
                     content = (
                         Group(
                             f"[text.label][bold]Title:[/][/]   [text.desc]{item.title}[/]\n"
-                            f"[text.label][bold]Creator:[/][/] [text.desc]{item.creator}[/]\n"
+                            f"[text.label][bold]Creator:[/][/] [text.desc]{item.uploader}[/]\n"
                             f"[text.label][bold]Source:[/][/]  [text.desc]{item.extractor}[/]"
                         ),
                         "Item",
@@ -322,7 +327,7 @@ def download(
             download_list = []
             for item in aux_downloads:
                 task_id = progress_download.add_task(
-                    f"[text.meta.creator]{item.creator}[/] - [text.meta.title]{item.title}[/]",
+                    f"[text.meta.uploader]{item.uploader}[/] - [text.meta.title]{item.title}[/]",
                     total=None,
                 )
                 download_list.append((item, task_id))
@@ -331,14 +336,19 @@ def download(
 
             # Start Download
             with cf.ThreadPoolExecutor(max_workers=threads) as executor:
+                futures = []
                 try:
-                    futures = []
                     for item, task_id in download_list:
                         future = executor.submit(download_process, item, task_id)
                         futures.append(future)
                     cf.wait(futures)
                 except KeyboardInterrupt:
-                    executor.shutdown(wait=False, cancel_futures=True)
+                    EVENT.set()
+
+                    live.update(Group(panel_queue, "[status.error]Aborting[blink]..."))
+                    cf.wait(futures)
+                    live.update(Group(panel_queue, "[status.error]Aborted."))
+
                     raise SystemExit(1)
 
                 success = 0
