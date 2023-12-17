@@ -9,8 +9,7 @@ from enum import Enum
 import logging
 import json
 
-from yt_dlp import YoutubeDL
-from yt_dlp.utils import DownloadError
+from yt_dlp import YoutubeDL, DownloadError
 from yt_dlp.extractor import gen_extractors
 
 
@@ -299,7 +298,7 @@ class YDL:
 
         return ydl_opts
 
-    def _prepare_filename(self, info: DataInfo) -> Path:
+    def _get_filename(self, info: DataInfo) -> Path:
         with YoutubeDL(self.ydl_opts) as ydl:
             info_dict = info.info_dict
             info_dict["ext"] = self.ydl_opts["final_ext"]
@@ -405,17 +404,20 @@ class YDL:
         with YoutubeDL(ydl_opts) as ydl:
             try:
                 if info := ydl.extract_info(query, download=False):
+                    if info["extractor"] == "generic":
+                        return None
+
                     if entries := info.get("entries"):
                         if not any(entries):
                             return None
-                    print(info)
+
                     return InfoDict(info)
                 else:
                     return None
             except DownloadError:
                 raise
 
-    def search_info(
+    def extract_url(
         self, url: str, force_process: bool = False
     ) -> ResultInfoList | None:
         """Get one/multiple results from a valid URL.
@@ -434,7 +436,7 @@ class YDL:
         else:
             return None
 
-    def search_info_from_provider(
+    def extract_search(
         self,
         query: str,
         provider: PROVIDER,
@@ -458,8 +460,8 @@ class YDL:
             search = ValidProviders[provider].value
         except:
             raise ValueError(
-                f"'{provider}' is not a valid provider. Available options:",
-                *ValidProviders,
+                f'"{provider}" not is a valid provider. Available options:',
+                [value.name for value in ValidProviders],
             )
 
         if info := self._get_info_dict(f"{search}{query}", limit=limit):
@@ -483,7 +485,7 @@ class YDL:
             for data in query:
                 match data:
                     case str():
-                        if info := self.search_info(data):
+                        if info := self.extract_url(data):
                             items += info.entries
                         else:
                             raise DownloadError(f'Failed to fetch "{data}".')
@@ -532,7 +534,7 @@ class YDL:
             temp.parent.mkdir(parents=True, exist_ok=True)
 
             try:
-                filename = self._prepare_filename(data)
+                filename = self._get_filename(data)
 
                 if filename.is_file() and not exist_ok:
                     raise FileExistsError(filename.name)
@@ -544,3 +546,12 @@ class YDL:
                 return filename
             finally:
                 temp.unlink(missing_ok=True)
+
+
+if __name__ == "__main__":
+    from rich import print
+
+    ydl = YDL(quiet=True)
+    info = ydl.extract_search("Sub Urban", provider="ytmusic")
+
+    print(info)

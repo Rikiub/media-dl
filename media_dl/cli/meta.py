@@ -14,7 +14,7 @@ from rich.progress import (
 from typer import Typer, Argument, Option, BadParameter
 
 from media_dl.theme import *
-from media_dl.meta import get_song_list, song_to_file, file_to_song, Song
+from media_dl.meta import get_song_list, song_to_file, file_to_song, Track
 
 app = Typer()
 
@@ -50,7 +50,7 @@ def meta(
         bool, Option("-s", "--skip", help="Just process the first result.")
     ] = False,
 ):
-    song_list: list[Song] = []
+    song_list: list[Track] = []
 
     if not query:
         song = file_to_song(file)

@@ -22,7 +22,7 @@ from rich.progress import (
 )
 from typer import Typer, Argument, Option
 
-from media_dl.ydls import (
+from media_dl.ydl import (
     YDL,
     QUALITY,
     DataInfo,
@@ -182,7 +182,7 @@ def download(
             url, queue_task_id = task
 
             try:
-                if queue_item := ydl.search_info(url):
+                if queue_item := ydl.extract_url(url):
                     progress_queue.update(
                         queue_task_id, completed=100, description=f"[status.wait]{url}"
                     )

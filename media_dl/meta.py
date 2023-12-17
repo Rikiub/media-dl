@@ -1,4 +1,4 @@
-from typing import cast, Literal
+from typing import cast, Literal, get_args
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from contextlib import suppress
@@ -13,11 +13,11 @@ import musicbrainzngs
 from mutagen import _file
 from spotipy import Spotify, SpotifyClientCredentials
 
-from .config import APPNAME, SPOTIPY_CREDENTIALS
+from media_dl.config import APPNAME, SPOTIPY_CREDENTIALS
 
 
 @dataclass
-class Song:
+class Track:
     title: str
     album_name: str
     artists: list[str]
@@ -35,20 +35,15 @@ class Song:
 
 class BaseMeta(ABC):
     @abstractmethod
-    def get_song_metadata(self, query: str, limit: int = 5) -> list[Song] | None:
+    def get_song_metadata(self, query: str, limit: int = 5) -> list[Track] | None:
         pass
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        return self.__class__.__name__
 
 
 class SpotifyMetadata(BaseMeta):
     def __init__(self, spotipy_credentials: SpotifyClientCredentials) -> None:
         self.spotify = Spotify(client_credentials_manager=spotipy_credentials)
 
-    def get_song_metadata(self, query: str, limit: int = 5) -> list[Song] | None:
+    def get_song_metadata(self, query: str, limit: int = 5) -> list[Track] | None:
         songs = []
 
         if data := self.spotify.search(query, limit=limit):
@@ -61,7 +56,7 @@ class SpotifyMetadata(BaseMeta):
                     genres = None
 
                 songs.append(
-                    Song(
+                    Track(
                         title=data["name"],
                         album_name=data["album"]["name"],
                         artists=[artist["name"] for artist in data["artists"]],
@@ -80,13 +75,9 @@ class SpotifyMetadata(BaseMeta):
         else:
             return None
 
-    @property
-    def name(self) -> str:
-        return super().name
-
 
 class MusicBrainzMetadata(BaseMeta):
-    def get_song_metadata(self, query: str, limit: int = 5) -> list[Song] | None:
+    def get_song_metadata(self, query: str, limit: int = 5) -> list[Track] | None:
         musicbrainzngs.set_useragent(APPNAME, "0.01", "http://example.com")
         mbid = musicbrainzngs.search_recordings(query, limit=limit)
 
@@ -116,7 +107,7 @@ class MusicBrainzMetadata(BaseMeta):
                         release_count = int(release["medium-list"][0]["track-count"])
 
                 songs.append(
-                    Song(
+                    Track(
                         title=record["title"],
                         album_name=release["title"],
                         artists=[
@@ -137,10 +128,6 @@ class MusicBrainzMetadata(BaseMeta):
         else:
             return None
 
-    @property
-    def name(self) -> str:
-        return super().name
-
 
 class Providers(Enum):
     spotify = SpotifyMetadata(SPOTIPY_CREDENTIALS)
@@ -152,15 +139,14 @@ PROVIDER = Literal["spotify", "musicbrainz"]
 
 def _sort_instances(selection: list[PROVIDER]) -> list[BaseMeta]:
     sort = []
+    args = get_args(PROVIDER)
 
     for select in selection:
-        if select == "spotify":
-            sort.append(Providers.spotify.value)
-        elif select == "musicbrainz":
-            sort.append(Providers.musicbrainz.value)
+        if select in args:
+            sort.append(Providers[select].value)
         else:
             raise ValueError(
-                f"'{select}' not is a valid metadata provider. Must be:", PROVIDER
+                f"{select} not is a valid metadata provider. Must be:", args
             )
     return sort
 
@@ -169,7 +155,7 @@ def search_lyrics(query: str) -> str | None:
     return syncedlyrics.search(query, allow_plain_format=True)
 
 
-def song_to_file(file: Path, song: Song) -> None:
+def song_to_file(file: Path, song: Track) -> None:
     f = music_tag.load_file(file)
     f = cast(_file.FileType, f)
 
@@ -195,11 +181,11 @@ def song_to_file(file: Path, song: Song) -> None:
     return
 
 
-def file_to_song(file: Path) -> Song:
+def file_to_song(file: Path) -> Track:
     f = music_tag.load_file(file)
     f = cast(_file.FileType, f)
 
-    return Song(
+    return Track(
         title=f["title"].value,
         album_name=f["album"].value,
         artists=f["artist"].value,
@@ -217,8 +203,8 @@ def file_to_song(file: Path) -> Song:
 
 def get_song_list(
     query: str, providers: list[PROVIDER], limit: int = 5
-) -> list[Song] | None:
-    song_list: list[Song] = []
+) -> list[Track] | None:
+    song_list: list[Track] = []
     error = False
 
     with suppress(Exception):

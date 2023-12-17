@@ -6,7 +6,7 @@ from rich.live import Live
 from rich.panel import Panel
 
 from media_dl.theme import *
-from media_dl.ydls import YDL
+from media_dl.ydl import YDL
 from media_dl.cli._ui import check_ydl_formats
 from media_dl.config import DIR_DOWNLOAD, DIR_TEMP
 from media_dl.meta import get_song_list, song_to_file
@@ -49,9 +49,7 @@ def search(
             live.update(Panel("Fetching file..."))
 
             search_query = f"{song.artists[0]} - {song.title}"
-            if data := ydl.search_info_from_provider(
-                query=search_query, provider="ytmusic"
-            ):
+            if data := ydl.extract_search(query=search_query, provider="ytmusic"):
                 filename = ydl.download_single(data.entries[0])
 
                 live.update(Panel("Parsing metadata..."))

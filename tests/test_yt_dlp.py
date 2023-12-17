@@ -31,16 +31,16 @@ class TestInfoExtractors:
     def test_excetions(self):
         # Invalid Provider
         with pytest.raises(ValueError):
-            self.ydl.search_info_from_provider(
+            self.ydl.extract_search(
                 "https://www.youtube.com/watch?v=BaW_jenozKc", provider="NA"  # type: ignore
             )
 
     def test_single_url(self):
-        info = self.ydl.search_info("https://www.youtube.com/watch?v=BaW_jenozKc")
+        info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
         assert isinstance(info, ResultInfoList)
 
     def test_plalist_url(self):
-        info = self.ydl.search_info(
+        info = self.ydl.extract_url(
             "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
         )
         assert isinstance(info, PlaylistInfoList)
@@ -54,24 +54,18 @@ class TestInfoExtractors:
             assert all(isinstance(data, DataInfo) for data in info.entries)
             assert len(info.entries) == limit
 
-        if info := self.ydl.search_info_from_provider(
-            query, provider="youtube", limit=limit
-        ):
+        if info := self.ydl.extract_search(query, provider="youtube", limit=limit):
             check(info)
 
-        if info := self.ydl.search_info_from_provider(
-            query, provider="ytmusic", limit=limit
-        ):
+        if info := self.ydl.extract_search(query, provider="ytmusic", limit=limit):
             check(info)
 
-        if info := self.ydl.search_info_from_provider(
-            query, provider="soundcloud", limit=limit
-        ):
+        if info := self.ydl.extract_search(query, provider="soundcloud", limit=limit):
             check(info)
 
     def test_force_process(self):
         url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
-        if info := self.ydl.search_info(url, force_process=True):
+        if info := self.ydl.extract_url(url, force_process=True):
             assert all(data.thumbnail_url for data in info.entries)
 
 
@@ -100,7 +94,7 @@ class TestDownloads:
 
     def test_single(self):
         url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
-        info = self.ydl.search_info(url)
+        info = self.ydl.extract_url(url)
 
         if info:
             for item in info.entries:
@@ -112,6 +106,6 @@ class TestDownloads:
     def test_search(self):
         query = "Sub Urban"
 
-        if info := self.ydl.search_info_from_provider(query, "youtube"):
+        if info := self.ydl.extract_search(query, "youtube"):
             for path in self.ydl.download_multiple([info]):
                 assert path.is_file()

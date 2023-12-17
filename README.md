@@ -1,35 +1,41 @@
 > Helper for yt-dlp with nice defaults + fancy output + music metadata.
 
-## Overview
-
-### Features
+## Features
 
 - Helper for **yt-dlp** handled by file extension.
 	- Embed metadata, lyrics and thumbnail if extension is audio 🎵.
 	- Embed metadata, subtitles and thumbnail if extension is video 📹.
-- Music, metadata and lyrics search (**Spotify API** + **syncedlyrics**).
+- Music search, metadata and lyrics search (**Spotify API** + **syncedlyrics**).
 
-### Dependencies
+## Dependencies
 
 - **Base**
-	- [yt-dlp](https://pypi.org/project/yt-dlp/): Video and audio downloader.
-	- [Typer](https://pypi.org/project/typer/): CLI interface.
+	- [yt-dlp](https://pypi.org/project/yt-dlp/): Video and Audio downloader.
+	- [Typer](https://pypi.org/project/typer/): Fancy CLI interface.
 	- [Rich](https://pypi.org/project/rich/): Fancy output and progress bars.
 - **Music**
 	- [syncedlyrics](https://pypi.org/project/syncedlyrics/): Synced lyrics support.
-	- [music-tag](https://pypi.org/project/music-tag/): Audio files metadata parser (Wrapper for Mutagen).
-	- **Metadata Sources**
-		- [spotipy](https://pypi.org/project/spotipy/)
-		- [musicbrainzngs](https://pypi.org/project/musicbrainzngs/)
+	- [music-tag](https://pypi.org/project/music-tag/): Audio metadata parser (Wrapper for Mutagen).
+	- [spotipy](https://pypi.org/project/spotipy/): Music metadata scrapper.
+
+## ROADMAP
+
+- [ ] Sync playlists feature.
+- [ ] Video search providers.
+	- [ ] YouTube
+	- [ ] Piped
+- [ ] Music search providers.
+	- [ ] YouTube Music
+	- [ ] Soundlocud
+	- [ ] Bandcamp
+
+---
+
+- [x] Good yt-dlp API helper.
+- [x] Spotify metadata provider (Spotipy).
+- [x] Music lyrics provider (Syncedlyrics).
+- [x] View/Parse music metadata of file from search (Spotify).
 
 ## TODO
 
-- **High Priority**
-	- [x] Fix progress bar and show downloaded bytes.
-- **Music**
-	- [ ] Music download by search with selector.
-	- [x] Embed metadata to file from search.
-	- [x] Music metadata extractors.
-		- [x] Spotify
-		- [x] MusicBrainz (Broken: Need more validations)
-	- [x] Music lyrics extractor.
+- [ ] Refactorize CLI UI components.
