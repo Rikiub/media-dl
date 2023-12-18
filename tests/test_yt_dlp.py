@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from yt_dlp import DownloadError
 
-from media_dl.ydls import (
+from media_dl.ydl import (
     YDL,
     DataInfo,
     ResultInfoList,

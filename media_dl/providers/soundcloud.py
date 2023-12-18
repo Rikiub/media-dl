@@ -1,36 +1,38 @@
 from itertools import islice
+import mimetypes
 
-from soundcloud import SoundCloud as SC
+from soundcloud import SoundCloud as SoundCloudClient
 
-from media_dl.types import Result
-from media_dl.providers.base import YDLGeneric
+from media_dl.providers.base import SearchProvider, Result
 
 
-class Soundcloud(YDLGeneric):
-    PROVIDER_TYPE = "only_audio"
-    URL_BASE = ["https://soundcloud.com/"]
-
-    def __init__(self, client_id: str | None = None, **kwargs):
-        super().__init__(**kwargs)
-
+class Soundcloud(SearchProvider):
+    def __init__(self, client_id: str | None = None):
         if client_id:
-            self.client = SC(client_id=client_id)
+            self.client = SoundCloudClient(client_id=client_id)
         else:
-            self.client = SC()
-
-    def extract_url(self, url: str) -> list[Result]:
-        if url.startswith("https://soundcloud.com/"):
-            return []
-        else:
-            return super().extract_url(url)
+            self.client = SoundCloudClient()
 
     def search(self, query: str) -> list[Result]:
         results: list[Result] = []
 
         for track in islice(self.client.search_tracks(query), 20):
+            formats: list[dict] = []
+
+            for stream in track.media.transcodings:
+                mime_type = stream.format.mime_type.split(";")[0]
+                mime_type = mimetypes.guess_extension(mime_type)[1:]
+
+                formats.append(
+                    {
+                        "url": stream.url + "?client_id=" + self.client.client_id,
+                        "ext": mime_type,
+                        "protocol": stream.format.protocol,
+                    }
+                )
+
             results.append(
                 Result(
-                    type=self.PROVIDER_TYPE,
                     source=self.name,
                     id=str(track.id),
                     url=track.permalink_url,
@@ -38,22 +40,15 @@ class Soundcloud(YDLGeneric):
                     uploader=track.user.username,
                     duration=track.full_duration,
                     thumbnail_url=track.artwork_url,
+                    _formats=formats,
                 )
             )
         return results
 
 
 if __name__ == "__main__":
-    from yt_dlp import YoutubeDL
     from rich import print
 
-    print("Searching.")
     x = Soundcloud()
     result = x.search("Sub Urban")
     print(result)
-
-    print("Downloading.")
-    with YoutubeDL() as ydl:
-        info = ydl.extract_info(result[0].url, download=False)
-
-    print("Finished")

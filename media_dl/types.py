@@ -1,12 +1,31 @@
-from typing import Literal, Generator
+from typing import TypedDict, Generator
 from dataclasses import dataclass
 
-MEDIA_TYPE = Literal["video/audio", "only_audio"]
+
+class FormatDict(TypedDict):
+    url: str
+    ext: str
+
+
+@dataclass(slots=True)
+class Track:
+    title: str
+    album_name: str
+    artists: list[str]
+    album_artist: str
+    track_number: int
+    tracks_count: int
+    disc_number: int
+    disc_count: int
+    year: int
+    genres: list[str] | None = None
+    isrc: str | None = None
+    cover_url: str | None = None
+    lyrics: str | None = None
 
 
 @dataclass(slots=True)
 class Result:
-    type: MEDIA_TYPE
     source: str
     id: str
     title: str
@@ -14,7 +33,7 @@ class Result:
     duration: int
     url: str
     thumbnail_url: str | None = None
-    _formats: list[dict] | None = None
+    _formats: list[FormatDict] | None = None
 
     @property
     def formats(self) -> dict | None:

@@ -7,9 +7,12 @@ from media_dl.cli import download, meta, search
 def run() -> None:
     app = Typer(no_args_is_help=True)
 
-    app.command(name="download", help="Download operations.", no_args_is_help=True)(
-        download.download
-    )
+    app.command(
+        name="download",
+        help="Download operations.",
+        no_args_is_help=True,
+        add_help_option=False,
+    )(download.download)
 
     app.command(
         name="search",

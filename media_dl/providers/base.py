@@ -1,24 +1,39 @@
 """Base class for all providers.
 
 Functions: 
-- Get results from query/URL and return DataInfo object.
-- Download from `Result` object.
+- Do search from search term and return list of `Result`.
 """
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import cast
 import logging
 
-from yt_dlp import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL
 
 from media_dl.config import DIR_TEMP
-from media_dl.types import Result, MEDIA_TYPE
-from media_dl.providers._ydl_helper import gen_format_opts
+from media_dl.providers._helper import gen_format_opts
+from media_dl.types import Result
 
 fake_logger = logging.getLogger("YoutubeDL")
 fake_logger.disabled = True
 
-URL_BASE = ["https://"]
+
+class SearchProvider(ABC):
+    """Base class for search engines."""
+
+    @property
+    def name(self) -> str:
+        return self.__class__.__name__
+
+    @abstractmethod
+    def search(query: str) -> list[Result]:
+        """Get information from a search provider by search term.
+
+        Returns:
+            List of `Result`.
+        """
+        raise NotImplementedError
 
 
 class YDLGeneric:
@@ -28,8 +43,6 @@ class YDLGeneric:
         quality (str, int): Prefered file quality. Must be compatible with `extension`.
             Range between [0-9] for audio; Resolution [144-5250] for video.
     """
-
-    TYPE: MEDIA_TYPE = "video/audio"
 
     def __init__(self, extension: str = "m4a", quality: int = 9):
         opts = {
@@ -47,22 +60,12 @@ class YDLGeneric:
     def name(self) -> str:
         return self.__class__.__name__
 
-    @staticmethod
-    def is_url_compatible(url: str) -> bool:
-        for item in URL_BASE:
-            if url.startswith(item):
-                return True
-        return False
-
     def download(self, url: str) -> Path:
         if data := self.ydl.extract_info(url, download=True):
             filename = self.ydl.prepare_filename(data)
             return Path(filename)
         else:
             return Path()
-
-    def search(self, query: str) -> list[Result]:
-        raise NotImplementedError
 
     def extract_url(self, url: str) -> list[Result]:
         """Extract URL information.
@@ -97,7 +100,6 @@ class YDLGeneric:
                     for item in entries:
                         item_list.append(
                             Result(
-                                type=self.TYPE,
                                 source="ydl-" + item["ie_key"],
                                 id=item["id"],
                                 title=item.get("title", None),
@@ -110,7 +112,6 @@ class YDLGeneric:
                 else:
                     item_list.append(
                         Result(
-                            type=self.TYPE,
                             source="ydl-" + info["extractor_key"],
                             id=info["id"],
                             title=info.get("title", None),
@@ -120,5 +121,7 @@ class YDLGeneric:
                             thumbnail_url=get_thumbnail(info),
                         )
                     )
+                break
+            else:
                 break
         return item_list

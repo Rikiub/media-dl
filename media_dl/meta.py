@@ -36,7 +36,7 @@ class Track:
 class BaseMeta(ABC):
     @abstractmethod
     def get_song_metadata(self, query: str, limit: int = 5) -> list[Track] | None:
-        pass
+        raise NotImplementedError
 
 
 class SpotifyMetadata(BaseMeta):

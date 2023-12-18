@@ -1,12 +1,9 @@
 import requests
 
-from media_dl.providers.base import YDLGeneric
-from media_dl.types import Result
+from media_dl.providers.base import SearchProvider, Result
 
 
-class YouTubePiped(YDLGeneric):
-    TYPE = "only_audio"
-
+class YouTubePiped(SearchProvider):
     def __init__(self):
         self.session = requests.Session()
 
@@ -23,7 +20,6 @@ class YouTubePiped(YDLGeneric):
         for item in search_results:
             results.append(
                 Result(
-                    type=self.TYPE,
                     source=self.name,
                     id=item["url"].split("?v=")[1],
                     title=item["title"],

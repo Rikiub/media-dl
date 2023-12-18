@@ -1,22 +1,17 @@
-from ytmusicapi import YTMusic as YT
+from ytmusicapi import YTMusic as YTMusicClient
 
-from media_dl.providers.base import URL_BASE, YDLGeneric, Result
+from media_dl.providers.base import SearchProvider, Result
 
 
-class YTMusic(YDLGeneric):
-    PROVIDER_TYPE = "only_audio"
-    URL_BASE = ["https://music.youtube/"]
-
-    def __init__(self, **kwars):
-        super().__init__(**kwars)
-        self.client = YT()
+class YTMusic(SearchProvider):
+    def __init__(self):
+        self.client = YTMusicClient()
 
     def search(self, query: str) -> list[Result]:
-        info = self.client.search(query, filter="songs")
         results: list[Result] = []
 
-        for track in info:
-            if not track or not track.get("videoId") or not any(track["artists"]):
+        for track in self.client.search(query, filter="songs"):
+            if not track.get("videoId") or not any(track["artists"]):
                 continue
 
             results.append(
@@ -40,6 +35,8 @@ class YTMusic(YDLGeneric):
 if __name__ == "__main__":
     from rich import print
 
+    query = "Sub Urban"
+
     x = YTMusic()
-    x = x.search("Sub Urban")
+    x = x.search(query)
     print(x)

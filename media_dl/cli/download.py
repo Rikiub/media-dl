@@ -39,6 +39,8 @@ app = Typer()
 SPEED = 1.5
 EVENT = Event()
 
+TG_OTHERS = "Others"
+
 
 @app.command()
 def download(
@@ -80,6 +82,7 @@ def download(
             "--threads",
             max=8,
             clamp=True,
+            rich_help_panel=TG_OTHERS,
             help="Number of threads to use when downloading.",
         ),
     ] = 3,
@@ -88,6 +91,7 @@ def download(
         Option(
             "-m",
             "--no-metadata",
+            rich_help_panel=TG_OTHERS,
             help="Disable embeding music metadata in audio files if URL are avalaible.",
         ),
     ] = False,
