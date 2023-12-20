@@ -1,9 +1,9 @@
-from pathlib import Path
 from typing import Callable, cast
+from pathlib import Path
 import logging
 import json
 
-from yt_dlp import DownloadError, YoutubeDL
+from yt_dlp import YoutubeDL, DownloadError
 
 from media_dl.downloader.formats import gen_format_opts
 from media_dl.types import URL, Result, Playlist
@@ -38,7 +38,7 @@ class YDL:
             },
             "quiet": True,
             "no_warnings": True,
-            "ignoreerrors": True,
+            "ignoreerrors": False,
             "extract_flat": True,
             "outtmpl": "%(uploader)s - %(title)s.%(ext)s",
             "logger": fake_logger,
@@ -131,7 +131,7 @@ class YDL:
                     url=URL(
                         original=info["original_url"],
                         download=info["original_url"],
-                        thumbnail=None,
+                        thumbnail=get_thumbnail(info),
                     ),
                     source=info["extractor_key"],
                     id=info["id"],
@@ -161,10 +161,10 @@ class YDL:
         self,
         data: Result,
         exist_ok: bool = True,
-        progress: Callable | None = None,
+        progress_hook: Callable | None = None,
     ) -> Path:
-        if progress:
-            hook = {"progress_hooks": [progress]}
+        if progress_hook:
+            hook = {"progress_hooks": [progress_hook]}
         else:
             hook = {}
 
@@ -181,8 +181,7 @@ class YDL:
         if final_path.is_file():
             if not exist_ok:
                 raise FileExistsError(final_path)
-            else:
-                return final_path
+            return final_path
 
         try:
             if data.source == "Generic":

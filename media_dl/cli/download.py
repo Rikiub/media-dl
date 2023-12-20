@@ -28,17 +28,15 @@ from media_dl.downloader.ydl import (
     Playlist,
     DownloadError,
 )
-from media_dl.downloader.formats import QUALITY
-from media_dl.config import DIR_DOWNLOAD, DIR_TEMP
+from media_dl.downloader.formats import QLT_TO_RES
 from media_dl.cli._ui import check_ydl_formats
+from media_dl.config import DIR_DOWNLOAD
 from media_dl.theme import *
 
 app = Typer()
 
 SPEED = 1.5
 EVENT = Event()
-
-TG_OTHERS = "Others"
 
 
 @app.command()
@@ -69,7 +67,7 @@ def download(
             "-q",
             "--quality",
             min=0,
-            max=len(QUALITY),
+            max=len(QLT_TO_RES),
             clamp=True,
             help="Prefered file quality.",
         ),
@@ -81,23 +79,10 @@ def download(
             "--threads",
             max=8,
             clamp=True,
-            rich_help_panel=TG_OTHERS,
             help="Number of threads to use when downloading.",
         ),
     ] = 3,
-    no_metadata: Annotated[
-        bool,
-        Option(
-            "-m",
-            "--no-metadata",
-            rich_help_panel=TG_OTHERS,
-            help="Disable embeding music metadata in audio files if URL are avalaible.",
-        ),
-    ] = False,
 ):
-    if no_metadata:
-        no_metadata = True
-
     try:
         output = output.relative_to(Path.cwd())
     except:
@@ -121,11 +106,6 @@ def download(
     panel_queue = Align.center(
         Panel(
             Group(
-                Align.center(f"[text.label][bold]Output:[/][/] [text.desc]{output}[/]"),
-                Align.center(
-                    f"[text.label][bold]Extension:[/][/] [text.desc]{extension}[/] | [text.label][bold]Quality:[/][/] [text.desc]{quality}[/]"
-                ),
-                HorizontalRule(),
                 progress_queue,
             ),
             title="Downloads",
@@ -169,9 +149,17 @@ def download(
             queue_task_id = progress_queue.add_task(f"[status.work]{url}")
             url_list.append((url, queue_task_id))
 
+        print(
+            Align.center(
+                Group(
+                    f"[text.label][bold]Output:[/][/] [text.desc]{output} | [text.label][bold]Extension:[/][/] [text.desc]{extension} | [text.label][bold]Quality:[/][/] [text.desc]{quality}",
+                )
+            )
+        )
+
         live.update(panel_queue)
 
-        @dataclass(slots=True)
+        @dataclass(slots=True, frozen=True)
         class QueueTask:
             url: str
             item: Result | Playlist
@@ -220,7 +208,7 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    ydl.download(info, exist_ok=False, progress=progress_hook)
+                    ydl.download(info, exist_ok=False, progress_hook=progress_hook)
                     progress_download.update(
                         task_id, description="[status.success]Completed"
                     )
@@ -248,7 +236,7 @@ def download(
                 return return_code
 
         # 2. Status
-        @dataclass(slots=True)
+        @dataclass(slots=True, frozen=True)
         class ErrorReport:
             name: str
             success: int
@@ -324,7 +312,7 @@ def download(
             for item in aux_downloads:
                 task_id = progress_download.add_task(
                     f"[text.meta.uploader]{item.uploader}[/] - [text.meta.title]{item.title}[/]",
-                    total=None,
+                    total=100,
                 )
                 download_list.append((item, task_id))
 
@@ -378,7 +366,7 @@ def download(
         for report in error_list:
             if report.errors >= 1:
                 errors_pretty.append(
-                    f"[status.warn]Catched [status.warn][bold]({report.errors})[/][/] errors in [text.meta.title][bold underline]{report.name}"
+                    f"\n[status.warn]Catched [status.warn][bold]({report.errors})[/][/] errors in [text.meta.title][bold underline]{report.name}"
                 )
 
         live.update(
@@ -386,7 +374,7 @@ def download(
                 panel_queue,
                 Panel(
                     Group(
-                        "[status.success][bold]Completed\n",
+                        "[status.success][bold]Completed",
                         *errors_pretty,
                     ),
                     border_style="panel.status",
