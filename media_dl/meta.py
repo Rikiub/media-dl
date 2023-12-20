@@ -13,24 +13,8 @@ import musicbrainzngs
 from mutagen import _file
 from spotipy import Spotify, SpotifyClientCredentials
 
+from media_dl.types import Track
 from media_dl.config import APPNAME, SPOTIPY_CREDENTIALS
-
-
-@dataclass
-class Track:
-    title: str
-    album_name: str
-    artists: list[str]
-    album_artist: str
-    track_number: int
-    tracks_count: int
-    disc_number: int
-    disc_count: int
-    year: int
-    genres: list[str] | None = None
-    isrc: str | None = None
-    cover_url: str | None = None
-    lyrics: str | None = None
 
 
 class BaseMeta(ABC):
@@ -40,7 +24,7 @@ class BaseMeta(ABC):
 
 
 class SpotifyMetadata(BaseMeta):
-    def __init__(self, spotipy_credentials: SpotifyClientCredentials) -> None:
+    def __init__(self, spotipy_credentials: SpotifyClientCredentials):
         self.spotify = Spotify(client_credentials_manager=spotipy_credentials)
 
     def get_song_metadata(self, query: str, limit: int = 5) -> list[Track] | None:

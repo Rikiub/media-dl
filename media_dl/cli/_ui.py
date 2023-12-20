@@ -1,6 +1,6 @@
 from typer import BadParameter
 
-from media_dl.ydl import FORMAT_EXTS
+from media_dl.downloader.formats import FORMAT_EXTS
 
 
 def check_ydl_formats(fmt: str) -> str:

@@ -22,14 +22,13 @@ from rich.progress import (
 )
 from typer import Typer, Argument, Option
 
-from media_dl.ydl import (
+from media_dl.downloader.ydl import (
     YDL,
-    QUALITY,
-    DataInfo,
-    PlaylistInfoList,
-    ResultInfoList,
+    Result,
+    Playlist,
     DownloadError,
 )
+from media_dl.downloader.formats import QUALITY
 from media_dl.config import DIR_DOWNLOAD, DIR_TEMP
 from media_dl.cli._ui import check_ydl_formats
 from media_dl.theme import *
@@ -105,11 +104,9 @@ def download(
         pass
 
     ydl = YDL(
-        quiet=True,
-        tempdir=DIR_TEMP,
-        outputdir=output,
-        ext=extension,
-        ext_quality=quality,
+        output=output,
+        extension=extension,
+        quality=quality,
     )
 
     # Main UI Components
@@ -177,7 +174,7 @@ def download(
         @dataclass(slots=True)
         class QueueTask:
             url: str
-            item: ResultInfoList
+            item: Result | Playlist
             task_id: TaskID
 
         # 1. Queue list
@@ -204,7 +201,7 @@ def download(
             raise SystemExit(1)
 
         # Main downloader used for section 3.
-        def download_process(info: DataInfo, task_id: TaskID) -> bool:
+        def download_process(info: Result, task_id: TaskID) -> bool:
             return_code = True
 
             def progress_hook(d):
@@ -223,11 +220,7 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    ydl.download_single(
-                        info,
-                        exist_ok=False,
-                        progress=[lambda d: progress_hook(d)],
-                    )
+                    ydl.download(info, exist_ok=False, progress=progress_hook)
                     progress_download.update(
                         task_id, description="[status.success]Completed"
                     )
@@ -278,7 +271,7 @@ def download(
             progress_playlist = None
 
             match queue.item:
-                case PlaylistInfoList():
+                case Playlist():
                     progress_playlist = Progress(
                         TextColumn(
                             "[progress.percentage]{task.description}",
@@ -287,30 +280,29 @@ def download(
                         console=console,
                     )
                     progress_playlist.add_task(
-                        "[text.label][bold]Total:[/][/]", total=queue.item.total_count
+                        "[text.label][bold]Total:[/][/]", total=queue.item.count
                     )
 
                     content = (
                         Group(
                             f"[text.label][bold]Title:[/][/]  [text.desc]{queue.item.title}[/]\n"
-                            f"[text.label][bold]Source:[/][/] [text.desc]{queue.item.extractor}[/]",
+                            f"[text.label][bold]Source:[/][/] [text.desc]{queue.item.source}[/]",
                             HorizontalRule(),
                             progress_playlist,
                         ),
                         "Playlist",
                     )
                     aux_downloads = queue.item.entries
-                case ResultInfoList():
-                    item = queue.item.entries[0]
+                case Result():
                     content = (
                         Group(
-                            f"[text.label][bold]Title:[/][/]   [text.desc]{item.title}[/]\n"
-                            f"[text.label][bold]Creator:[/][/] [text.desc]{item.uploader}[/]\n"
-                            f"[text.label][bold]Source:[/][/]  [text.desc]{item.extractor}[/]"
+                            f"[text.label][bold]Title:[/][/]   [text.desc]{queue.item.title}[/]\n"
+                            f"[text.label][bold]Creator:[/][/] [text.desc]{queue.item.uploader}[/]\n"
+                            f"[text.label][bold]Source:[/][/]  [text.desc]{queue.item.source}[/]"
                         ),
                         "Item",
                     )
-                    aux_downloads = [item]
+                    aux_downloads = [queue.item]
                 case _:
                     raise ValueError()
 

@@ -1,8 +1,8 @@
-from media_dl.providers import get_provider
+from media_dl.search import SearchProvider
 
 from rich import print
 
-provider = get_provider("soundcloud")
+provider = SearchProvider.soundcloud.value()
 
 print("Searching with:", provider.name)
 search_result = provider.search("Sub Urban")

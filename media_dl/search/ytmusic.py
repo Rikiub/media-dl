@@ -1,6 +1,6 @@
 from ytmusicapi import YTMusic as YTMusicClient
 
-from media_dl.providers.base import SearchProvider, Result
+from media_dl.search.base import SearchProvider, Result
 
 
 class YTMusic(SearchProvider):
@@ -16,17 +16,16 @@ class YTMusic(SearchProvider):
 
             results.append(
                 Result(
-                    type=self.PROVIDER_TYPE,
                     source=self.name,
                     id=track["videoId"],
                     title=track["title"],
                     uploader=track["artists"][0]["name"],
                     duration=track["duration_seconds"],
-                    url=(
+                    download=(
                         f'https://{"music" if track["resultType"] == "song" else "www"}'
                         f'.youtube.com/watch?v={track["videoId"]}'
                     ),
-                    thumbnail_url=track["thumbnails"][-1]["url"],
+                    thumbnail=track["thumbnails"][-1]["url"],
                 )
             )
         return results

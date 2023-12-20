@@ -3,7 +3,7 @@ import mimetypes
 
 from soundcloud import SoundCloud as SoundCloudClient
 
-from media_dl.providers.base import SearchProvider, Result
+from media_dl.search.base import SearchProvider, Result
 
 
 class Soundcloud(SearchProvider):
@@ -21,7 +21,8 @@ class Soundcloud(SearchProvider):
 
             for stream in track.media.transcodings:
                 mime_type = stream.format.mime_type.split(";")[0]
-                mime_type = mimetypes.guess_extension(mime_type)[1:]
+                mime_type = mimetypes.guess_extension(mime_type)
+                mime_type = mime_type[1:] if mime_type is not None else "none"
 
                 formats.append(
                     {
@@ -39,7 +40,7 @@ class Soundcloud(SearchProvider):
                     title=track.title,
                     uploader=track.user.username,
                     duration=track.full_duration,
-                    thumbnail_url=track.artwork_url,
+                    thumbnail=track.artwork_url,
                     _formats=formats,
                 )
             )

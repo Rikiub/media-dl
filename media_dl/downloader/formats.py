@@ -1,4 +1,5 @@
 from typing import cast, TypedDict
+
 from yt_dlp import YoutubeDL
 
 
@@ -36,7 +37,7 @@ QUALITY: dict[int, str] = {
 """Dict to select video quality. For audio quality, use `QUALIY.keys()`."""
 
 
-def gen_format_opts(ydl_opts: dict, extension: str, quality: int) -> dict:
+def gen_format_opts(extension: str, quality: int) -> dict:
     """Generate custom YDLOpts by provided arguments.
 
     Args:
@@ -52,8 +53,7 @@ def gen_format_opts(ydl_opts: dict, extension: str, quality: int) -> dict:
             "Invalid quality range. Expected int range [0-9].",
         )
 
-    ydl_opts.update({"final_ext": extension})
-    ydl_opts.update({"postprocessors": []})
+    ydl_opts = {"final_ext": extension, "postprocessors": []}
     ydl_opts["postprocessors"].append(
         {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True}
     )

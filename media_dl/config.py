@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from importlib import metadata
 from pathlib import Path
 
 from spotipy import SpotifyClientCredentials, CacheFileHandler

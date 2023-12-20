@@ -1,6 +1,6 @@
 import requests
 
-from media_dl.providers.base import SearchProvider, Result
+from media_dl.search.base import SearchProvider, Result
 
 
 class YouTubePiped(SearchProvider):
@@ -25,8 +25,8 @@ class YouTubePiped(SearchProvider):
                     title=item["title"],
                     uploader=item["uploaderName"],
                     duration=item["duration"],
-                    url="https://piped.video" + item["url"],
-                    thumbnail_url=item["thumbnail"],
+                    download="https://piped.video" + item["url"],
+                    thumbnail=item["thumbnail"],
                 )
             )
         return results
