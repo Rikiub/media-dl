@@ -41,7 +41,7 @@ EVENT = Event()
 
 @app.command()
 def download(
-    urls: Annotated[list[str], Argument(help="URL to download", show_default=False)],
+    url: Annotated[list[str], Argument(help="URL(s) to download", show_default=False)],
     output: Annotated[
         Path,
         Option(
@@ -68,7 +68,6 @@ def download(
             "--quality",
             min=1,
             max=len(QLT_TO_RES),
-            clamp=True,
             help="Prefered file quality.",
         ),
     ] = 9,
@@ -78,7 +77,6 @@ def download(
             "-t",
             "--threads",
             max=8,
-            clamp=True,
             help="Number of threads to use when downloading.",
         ),
     ] = 3,
@@ -145,14 +143,18 @@ def download(
     with Live(console=console) as live:
         # Prepare Queue UI
         url_list: list[tuple] = []
-        for url in urls:
-            queue_task_id = progress_queue.add_task(f"[status.work]{url}")
-            url_list.append((url, queue_task_id))
+        for item in url:
+            queue_task_id = progress_queue.add_task(f"[status.work]{item}")
+            url_list.append((item, queue_task_id))
 
         print(
             Align.center(
                 Group(
-                    f"[text.label][bold]Output:[/][/] [text.desc]{output} | [text.label][bold]Extension:[/][/] [text.desc]{extension} | [text.label][bold]Quality:[/][/] [text.desc]{quality}",
+                    f"[text.label][bold]Extension:[/][/] [text.desc]{extension}"
+                    " | "
+                    f"[text.label][bold]Quality:[/][/] [text.desc]{quality}"
+                    " | "
+                    f"[text.label][bold]Output:[/][/] [text.desc]{output}"
                 )
             )
         )
@@ -168,21 +170,23 @@ def download(
         # 1. Queue list
         item_list: list[QueueTask] = []
         for task in url_list:
-            url, queue_task_id = task
+            item, queue_task_id = task
 
             try:
-                if queue_item := ydl.extract_url(url):
+                if queue_item := ydl.extract_url(item):
                     progress_queue.update(
-                        queue_task_id, completed=100, description=f"[status.wait]{url}"
+                        queue_task_id, completed=100, description=f"[status.wait]{item}"
                     )
                     item_list.append(
-                        QueueTask(url=url, item=queue_item, task_id=queue_task_id)
+                        QueueTask(url=item, item=queue_item, task_id=queue_task_id)
                     )
                 else:
-                    raise DownloadError("Failed to fetch data")
+                    raise DownloadError("_")
             except DownloadError:
                 progress_queue.update(
-                    queue_task_id, completed=100, description=f"[status.error]{url}"
+                    queue_task_id,
+                    completed=100,
+                    description=f"[status.error][bold strike]{item}",
                 )
         if not item_list:
             live.update(Group(panel_queue, Panel("Too many errors to continue")))
@@ -366,7 +370,7 @@ def download(
         for report in error_list:
             if report.errors >= 1:
                 errors_pretty.append(
-                    f"\n[status.warn]Catched [status.warn][bold]({report.errors})[/][/] errors in [text.meta.title][bold underline]{report.name}"
+                    f"[status.warn]Catched [status.warn][bold]({report.errors})[/][/] errors in [text.meta.title][bold underline]{report.name}"
                 )
 
         live.update(

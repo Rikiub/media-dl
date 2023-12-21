@@ -161,7 +161,7 @@ class YDL:
         self,
         data: Result,
         exist_ok: bool = True,
-        progress_hook: Callable | None = None,
+        progress_hook: Callable[[dict], None] | None = None,
     ) -> Path:
         if progress_hook:
             hook = {"progress_hooks": [progress_hook]}

@@ -8,9 +8,7 @@ def check_ydl_formats(fmt: str) -> str:
         return fmt
     else:
         raise BadParameter(
-            f"""Invalid extension format. 
-            
-Avalible formats
-VIDEO: {FormatExt.video.value}
-AUDIO: {FormatExt.audio.value}"""
+            "Invalid extension format. Avalible formats:\n"
+            f"VIDEO: {', '.join(FormatExt.video.value)}\n"
+            f"AUDIO: {', '.join(FormatExt.audio.value)}"
         )

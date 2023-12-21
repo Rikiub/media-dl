@@ -11,7 +11,6 @@ def run() -> None:
         name="download",
         help="Download operations.",
         no_args_is_help=True,
-        add_help_option=False,
     )(download.download)
 
     """

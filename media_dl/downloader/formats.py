@@ -108,11 +108,9 @@ def gen_format_opts(extension: str, quality: int) -> dict:
     # ERROR
     else:
         raise ValueError(
-            "Invalid extension type. Expected:",
-            "VIDEO:",
-            *FormatExt.video.value,
-            "AUDIO:",
-            *FormatExt.audio.value,
+            "Invalid extension type. Expected:\n"
+            f"VIDEO: {', '.join(FormatExt.video.value)}\n"
+            f"AUDIO: {', '.join(FormatExt.audio.value)}"
         )
 
     return ydl_opts
