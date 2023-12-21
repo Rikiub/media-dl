@@ -387,23 +387,6 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
-name = "gallery-dl"
-version = "1.26.4"
-description = "Command-line program to download image galleries and collections from several image hosting sites"
-optional = false
-python-versions = ">=3.4"
-files = [
-    {file = "gallery_dl-1.26.4-py3-none-any.whl", hash = "sha256:a8daf60899ac4f53bbe7f29079bdcbe1a5fad30b3f608fc40fb207783d52321f"},
-    {file = "gallery_dl-1.26.4.tar.gz", hash = "sha256:aa83561fb7e898e40474ecf4fac117b5f85722d3e87d231b0ef40298770e3d7a"},
-]
-
-[package.dependencies]
-requests = ">=2.11.0"
-
-[package.extras]
-video = ["youtube-dl"]
-
-[[package]]
 name = "idna"
 version = "3.6"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -575,19 +558,6 @@ files = [
 [package.extras]
 docs = ["furo", "olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-inline-tabs", "sphinx-removed-in", "sphinxext-opengraph"]
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
-
-[[package]]
-name = "piped-api"
-version = "1.0.1b0"
-description = "Piped API client"
-optional = false
-python-versions = "*"
-files = [
-    {file = "piped-api-1.0.1b0.tar.gz", hash = "sha256:9ee182ed9ecabdf2e5a2baa91a7f792e0451eb62eab1215b71a6e4a70880d418"},
-]
-
-[package.dependencies]
-requests = "*"
 
 [[package]]
 name = "platformdirs"
@@ -1173,4 +1143,4 @@ dev = ["coverage", "flake8", "pre-commit", "sphinx", "sphinx-rtd-theme", "yapf"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "78e32cadfe50e875ebf2e7eb38e86d653ec82394d91f83d51d5fede8ccf1b9b0"
+content-hash = "afe09d690caf7be0fd837d0d3be12cfe6cdf8d9ac7d3539730db1c989817f992"
