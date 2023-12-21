@@ -212,7 +212,7 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    ydl.download(info, exist_ok=False, progress_hook=progress_hook)
+                    ydl.download(info, exist_ok=False, on_progress=progress_hook)
                     progress_download.update(
                         task_id, description="[status.success]Completed"
                     )

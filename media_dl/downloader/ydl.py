@@ -1,5 +1,6 @@
-from typing import Callable, cast
+from typing import cast, Callable, TypedDict, Literal
 from pathlib import Path
+from copy import copy
 import logging
 import json
 
@@ -11,6 +12,10 @@ from media_dl.config import DIR_TEMP
 
 fake_logger = logging.getLogger("YoutubeDL")
 fake_logger.disabled = True
+
+
+class ProgressHookDict(TypedDict):
+    status: Literal["downloading", "finished"]
 
 
 class YDL:
@@ -44,7 +49,7 @@ class YDL:
             "logger": fake_logger,
         }
         formats = gen_format_opts(extension, quality)
-        self.ydl_opts = opts | formats
+        self._ydl = YoutubeDL(opts | formats)
 
     def _prepare_tempjson(self, data: Result) -> Path:
         return self.tempdir / str(data.source + " " + data.id + ".info.json")
@@ -59,9 +64,7 @@ class YDL:
             return file
 
     def _get_info_dict(self, url: str) -> dict | None:
-        ydl = YoutubeDL(self.ydl_opts)
-
-        if info := ydl.extract_info(url, download=False):
+        if info := self._ydl.extract_info(url, download=False):
             info = cast(dict, info)
 
             if info["extractor_key"] == "Generic":
@@ -161,14 +164,13 @@ class YDL:
         self,
         data: Result,
         exist_ok: bool = True,
-        progress_hook: Callable[[dict], None] | None = None,
+        on_progress: Callable[[ProgressHookDict], None] | None = None,
     ) -> Path:
-        if progress_hook:
-            hook = {"progress_hooks": [progress_hook]}
+        if on_progress:
+            ydl = copy(self._ydl)
+            ydl._progress_hooks = [on_progress]
         else:
-            hook = {}
-
-        ydl = YoutubeDL(self.ydl_opts | hook)
+            ydl = self._ydl
 
         if path := self._get_result_info(data):
             info_dict = json.loads(path.read_text())
@@ -197,6 +199,9 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
+    def progress_hook(d):
+        ...
+
     url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
 
     print("YDL")
@@ -206,6 +211,6 @@ if __name__ == "__main__":
 
     if isinstance(data, Playlist):
         for item in data:
-            ydl.download(item)
+            ydl.download(item, on_progress=progress_hook)
     elif isinstance(data, Result):
         ydl.download(data)
