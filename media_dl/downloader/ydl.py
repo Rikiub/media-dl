@@ -1,4 +1,4 @@
-from typing import cast, Callable, TypedDict, Literal
+from typing import cast, Callable
 from pathlib import Path
 from copy import copy
 import logging
@@ -12,10 +12,6 @@ from media_dl.config import DIR_TEMP
 
 fake_logger = logging.getLogger("YoutubeDL")
 fake_logger.disabled = True
-
-
-class ProgressHookDict(TypedDict):
-    status: Literal["downloading", "finished"]
 
 
 class YDL:
@@ -164,7 +160,7 @@ class YDL:
         self,
         data: Result,
         exist_ok: bool = True,
-        on_progress: Callable[[ProgressHookDict], None] | None = None,
+        on_progress: Callable[[dict], None] | None = None,
     ) -> Path:
         if on_progress:
             ydl = copy(self._ydl)
