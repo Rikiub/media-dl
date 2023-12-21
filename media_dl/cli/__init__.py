@@ -14,6 +14,7 @@ def run() -> None:
         add_help_option=False,
     )(download.download)
 
+    """
     app.command(
         name="search",
         help="Search and download music.",
@@ -25,5 +26,6 @@ def run() -> None:
         help="View/Parse metadata of audio file from multiple music providers.",
         no_args_is_help=True,
     )(meta.meta)
+    """
 
     app(prog_name=APPNAME.lower())

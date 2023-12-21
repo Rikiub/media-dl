@@ -66,7 +66,7 @@ def download(
         Option(
             "-q",
             "--quality",
-            min=0,
+            min=1,
             max=len(QLT_TO_RES),
             clamp=True,
             help="Prefered file quality.",
