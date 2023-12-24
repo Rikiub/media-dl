@@ -51,10 +51,12 @@ def gen_format_opts(extension: str, quality: int) -> dict:
             "Invalid quality range. Expected int range [1-9].",
         )
 
-    ydl_opts = {"final_ext": extension, "postprocessors": []}
-    ydl_opts["postprocessors"].append(
-        {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True}
-    )
+    ydl_opts = {
+        "final_ext": extension,
+        "postprocessors": [
+            {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True},
+        ],
+    }
 
     if extension in FormatExt.thumbnail_compatible.value:
         ydl_opts["postprocessors"].append(
@@ -73,12 +75,10 @@ def gen_format_opts(extension: str, quality: int) -> dict:
                 "subtitleslangs": "all",
             }
         )
-        ydl_opts["postprocessors"].append(
-            {"key": "FFmpegVideoConvertor", "preferedformat": extension}
-        )
-        ydl_opts["postprocessors"].append(
+        ydl_opts["postprocessors"] += [
+            {"key": "FFmpegVideoConvertor", "preferedformat": extension},
             {"key": "FFmpegEmbedSubtitle", "already_have_subtitle": False},
-        )
+        ]
 
     # AUDIO
     elif extension in FormatExt.audio.value:
@@ -101,7 +101,7 @@ def gen_format_opts(extension: str, quality: int) -> dict:
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": extension,
                 "preferredquality": quality,
-                "nopostoverwrites": False,
+                "nopostoverwrites": True,
             }
         )
 

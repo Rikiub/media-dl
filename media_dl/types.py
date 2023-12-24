@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+__all__ = ["Result", "Playlist"]
+
 
 @dataclass(slots=True, frozen=True)
 class URL:
@@ -11,7 +13,7 @@ class URL:
 @dataclass(slots=True, frozen=True)
 class BasicMeta:
     url: URL
-    source: str
+    extractor: str
     id: str
     title: str
 

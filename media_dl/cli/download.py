@@ -212,7 +212,7 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    ydl.download(info, exist_ok=False, on_progress=progress_hook)
+                    ydl.download(info, exist_ok=False, progress_callback=progress_hook)
                     progress_download.update(
                         task_id, description="[status.success]Completed"
                     )
@@ -278,7 +278,7 @@ def download(
                     content = (
                         Group(
                             f"[text.label][bold]Title:[/][/]  [text.desc]{queue.item.title}[/]\n"
-                            f"[text.label][bold]Source:[/][/] [text.desc]{queue.item.source}[/]",
+                            f"[text.label][bold]Source:[/][/] [text.desc]{queue.item.extractor}[/]",
                             HorizontalRule(),
                             progress_playlist,
                         ),
@@ -290,7 +290,7 @@ def download(
                         Group(
                             f"[text.label][bold]Title:[/][/]   [text.desc]{queue.item.title}[/]\n"
                             f"[text.label][bold]Creator:[/][/] [text.desc]{queue.item.uploader}[/]\n"
-                            f"[text.label][bold]Source:[/][/]  [text.desc]{queue.item.source}[/]"
+                            f"[text.label][bold]Source:[/][/]  [text.desc]{queue.item.extractor}[/]"
                         ),
                         "Item",
                     )

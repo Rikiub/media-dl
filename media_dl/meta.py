@@ -143,7 +143,7 @@ def song_to_file(file: Path, song: Track) -> None:
     f = music_tag.load_file(file)
     f = cast(_file.FileType, f)
 
-    f["title"] = song.title
+    f["tracktitle"] = song.title
     f["album"] = song.album_name
     f["artist"] = song.artists
     f["albumartist"] = song.album_artist

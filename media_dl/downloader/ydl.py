@@ -1,4 +1,4 @@
-from typing import cast, Callable
+from typing import cast, Callable, TypedDict
 from pathlib import Path
 from copy import copy
 import logging
@@ -12,6 +12,26 @@ from media_dl.config import DIR_TEMP
 
 fake_logger = logging.getLogger("YoutubeDL")
 fake_logger.disabled = True
+
+
+class OptionalsInfoDict(TypedDict, total=False):
+    playlist_count: int
+    thumbnail: str
+    thumbnails: list[dict]
+    entries: list[dict]
+
+
+class InfoDict(OptionalsInfoDict):
+    id: str
+    title: str
+    uploader: str
+    upload_date: int
+    original_url: str
+    url: str
+    extractor: str
+    extractor_key: str
+    epoch: int
+    formats: list[dict]
 
 
 class YDL:
@@ -41,6 +61,7 @@ class YDL:
             "no_warnings": True,
             "ignoreerrors": False,
             "extract_flat": True,
+            "overwrites": False,
             "outtmpl": "%(uploader)s - %(title)s.%(ext)s",
             "logger": fake_logger,
         }
@@ -48,9 +69,9 @@ class YDL:
         self._ydl = YoutubeDL(opts | formats)
 
     def _prepare_tempjson(self, data: Result) -> Path:
-        return self.tempdir / str(data.source + " " + data.id + ".info.json")
+        return self.tempdir / str(data.extractor + " " + data.id + ".info.json")
 
-    def _save_result_info(self, data: Result, info_dict: dict) -> None:
+    def _save_result_info(self, data: Result, info_dict: InfoDict) -> None:
         file = self._prepare_tempjson(data)
         file.write_text(json.dumps(info_dict))
 
@@ -59,18 +80,13 @@ class YDL:
         if file.is_file():
             return file
 
-    def _get_info_dict(self, url: str) -> dict | None:
+    def _get_info_dict(self, url: str) -> InfoDict | None:
         if info := self._ydl.extract_info(url, download=False):
-            info = cast(dict, info)
-
-            if info["extractor_key"] == "Generic":
-                info.update(
-                    {
-                        "title": info["webpage_url_domain"],
-                        "id": info["webpage_url_basename"],
-                    }
-                )
-                return info
+            # Some extractors redirect the URL to the "real URL",
+            # For this extractors we need do another request.
+            if info["extractor_key"] == "Generic" and info["url"] != url:
+                if aux := self._ydl.extract_info(info["url"], download=False):
+                    info = aux
 
             if entries := info.get("entries"):
                 serialize = []
@@ -83,6 +99,7 @@ class YDL:
 
                 info["entries"] = serialize
 
+            info = cast(InfoDict, info)
             return info
         else:
             return None
@@ -97,18 +114,17 @@ class YDL:
             List of `Result`.
         """
 
-        def get_thumbnail(info_dict: dict) -> str | None:
-            return (
-                info_dict.get("thumbnail")
-                or info_dict.get("thumbnails")
-                and info_dict["thumbnails"][-1]["url"]
-                or None
-            )
+        def get_thumbnail(d: InfoDict | dict) -> str | None:
+            if thumb := d.get("thumbnail"):
+                return thumb
+            elif thumb := d.get("thumbnails"):
+                return thumb[-1]["url"]
+            else:
+                return None
 
         if info := self._get_info_dict(url):
+            # If is Playlist, process as placeholder.
             if entries := info.get("entries"):
-                entries = cast(list[dict], entries)
-
                 item_list: list[Result] = []
 
                 for item in entries:
@@ -119,7 +135,7 @@ class YDL:
                                 download=item["url"],
                                 thumbnail=get_thumbnail(item),
                             ),
-                            source=item["ie_key"],
+                            extractor=item["ie_key"],
                             id=item["id"],
                             title=item["title"],
                             uploader=item.get("uploader", "unkdown"),
@@ -132,12 +148,13 @@ class YDL:
                         download=info["original_url"],
                         thumbnail=get_thumbnail(info),
                     ),
-                    source=info["extractor_key"],
+                    extractor=info["extractor_key"],
                     id=info["id"],
                     title=info["title"],
-                    count=info["playlist_count"],
+                    count=info.get("playlist_count", 0),
                     entries=item_list,
                 )
+            # If is a single item, process full and save its cache.
             else:
                 item = Result(
                     url=URL(
@@ -145,7 +162,7 @@ class YDL:
                         download=info["url"],
                         thumbnail=get_thumbnail(info),
                     ),
-                    source=info["extractor_key"],
+                    extractor=info["extractor_key"],
                     id=info["id"],
                     title=info["title"],
                     uploader=info.get("uploader", "unkdown"),
@@ -153,6 +170,8 @@ class YDL:
                 )
                 self._save_result_info(item, info)
                 return item
+
+        # URL is unsupported.
         else:
             return None
 
@@ -160,11 +179,11 @@ class YDL:
         self,
         data: Result,
         exist_ok: bool = True,
-        on_progress: Callable[[dict], None] | None = None,
+        progress_callback: Callable[[dict], None] | None = None,
     ) -> Path:
-        if on_progress:
+        if progress_callback:
             ydl = copy(self._ydl)
-            ydl._progress_hooks = [on_progress]
+            ydl._progress_hooks = [progress_callback]
         else:
             ydl = self._ydl
 
@@ -182,10 +201,7 @@ class YDL:
             return final_path
 
         try:
-            if data.source == "Generic":
-                ydl.download(data.url.download)
-            else:
-                ydl.process_ie_result(info_dict, download=True)
+            ydl.process_ie_result(info_dict, download=True)
         except DownloadError:
             raise
 
@@ -195,10 +211,7 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
-    def progress_hook(d):
-        ...
-
-    url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
+    url = "https://youtu.be/yoMkbDS9RtU?si=5dxxXQzTAp11avxc"
 
     print("YDL")
 
@@ -207,6 +220,6 @@ if __name__ == "__main__":
 
     if isinstance(data, Playlist):
         for item in data:
-            ydl.download(item, on_progress=progress_hook)
+            ydl.download(item)
     elif isinstance(data, Result):
         ydl.download(data)

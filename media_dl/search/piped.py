@@ -20,7 +20,7 @@ class YouTubePiped(SearchProvider):
         for item in search_results:
             results.append(
                 Result(
-                    source=self.name,
+                    extractor=self.name,
                     id=item["url"].split("?v=")[1],
                     title=item["title"],
                     uploader=item["uploaderName"],

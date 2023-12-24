@@ -16,7 +16,7 @@ class YTMusic(SearchProvider):
 
             results.append(
                 Result(
-                    source=self.name,
+                    extractor=self.name,
                     id=track["videoId"],
                     title=track["title"],
                     uploader=track["artists"][0]["name"],

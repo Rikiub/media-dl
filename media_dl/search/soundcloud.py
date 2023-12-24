@@ -18,7 +18,7 @@ class Soundcloud(SearchProvider):
         for track in islice(self.client.search_tracks(query), 20):
             results.append(
                 Result(
-                    source=self.name,
+                    extractor=self.name,
                     id=str(track.id),
                     url=track.permalink_url,
                     title=track.title,
