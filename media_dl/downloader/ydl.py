@@ -26,11 +26,13 @@ class InfoDict(OptionalsInfoDict):
     title: str
     uploader: str
     upload_date: int
-    original_url: str
-    url: str
+    epoch: int
     extractor: str
     extractor_key: str
-    epoch: int
+    url: str
+    original_url: str
+    webpage_url_basename: str
+    webpage_url_domain: str
     formats: list[dict]
 
 
