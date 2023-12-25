@@ -1,4 +1,4 @@
-from typing import cast, Callable, TypedDict
+from typing import cast, Callable, NewType, Any
 from pathlib import Path
 from copy import copy
 import logging
@@ -10,30 +10,12 @@ from media_dl.downloader.formats import gen_format_opts
 from media_dl.types import URL, Result, Playlist
 from media_dl.config import DIR_TEMP
 
+
 fake_logger = logging.getLogger("YoutubeDL")
 fake_logger.disabled = True
 
 
-class OptionalsInfoDict(TypedDict, total=False):
-    playlist_count: int
-    thumbnail: str
-    thumbnails: list[dict]
-    entries: list[dict]
-
-
-class InfoDict(OptionalsInfoDict):
-    id: str
-    title: str
-    uploader: str
-    upload_date: int
-    epoch: int
-    extractor: str
-    extractor_key: str
-    url: str
-    original_url: str
-    webpage_url_basename: str
-    webpage_url_domain: str
-    formats: list[dict]
+InfoDict = NewType("InfoDict", dict[str, Any])
 
 
 class YDL:
@@ -87,7 +69,7 @@ class YDL:
             # Some extractors redirect the URL to the "real URL",
             # For this extractors we need do another request.
             if info["extractor_key"] == "Generic" and info["url"] != url:
-                if aux := self._ydl.extract_info(info["url"], download=False):
+                if (aux := self._ydl.extract_info(info["url"], download=False)) and aux["extractor_key"] != "Generic":
                     info = aux
 
             if entries := info.get("entries"):
@@ -116,7 +98,7 @@ class YDL:
             List of `Result`.
         """
 
-        def get_thumbnail(d: InfoDict | dict) -> str | None:
+        def get_thumbnail(d: InfoDict) -> str | None:
             if thumb := d.get("thumbnail"):
                 return thumb
             elif thumb := d.get("thumbnails"):

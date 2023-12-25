@@ -5,7 +5,7 @@ from soundcloud import SoundCloud as SoundCloudClient
 from media_dl.search.base import SearchProvider, Result
 
 
-class Soundcloud(SearchProvider):
+class SoundCloud(SearchProvider):
     def __init__(self, client_id: str | None = None):
         if client_id:
             self.client = SoundCloudClient(client_id=client_id)
@@ -33,6 +33,6 @@ class Soundcloud(SearchProvider):
 if __name__ == "__main__":
     from rich import print
 
-    x = Soundcloud()
+    x = SoundCloud()
     result = x.search("Sub Urban")
     print(result)

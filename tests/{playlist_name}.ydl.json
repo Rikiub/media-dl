@@ -1,12 +1,25 @@
 {
-    "url": "",
+    "url": {
+        "original": "",
+        "download": "",
+        "thumbnail": "",
+    },
+    "extractor": "",
+    "id": "",
     "title": "",
-    "count": "",
+    "count": 0,
     "entries": [
         {
-            "url": "",
+            "url": {
+                "original": "",
+                "download": "",
+                "thumbnail": ""
+            },
+            "extractor": "",
+            "id": "",
             "title": "",
-            "uploader": ""
+            "uploader": "",
+            "duration": 0,
         }
     ]
 }

@@ -42,13 +42,13 @@ class SpotifyMetadata(BaseMeta):
                 songs.append(
                     Track(
                         title=data["name"],
-                        album_name=data["album"]["name"],
+                        album_title=data["album"]["name"],
                         artists=[artist["name"] for artist in data["artists"]],
                         album_artist=data["album"]["artists"][0]["name"],
                         track_number=data["track_number"],
-                        tracks_count=data["album"]["total_tracks"],
+                        tracks_total=data["album"]["total_tracks"],
                         disc_number=data["disc_number"],
-                        disc_count=0,
+                        disc_total=0,
                         year=int(data["album"]["release_date"][0:4]),
                         genres=genres,
                         isrc=data["external_ids"]["isrc"],
@@ -93,16 +93,16 @@ class MusicBrainzMetadata(BaseMeta):
                 songs.append(
                     Track(
                         title=record["title"],
-                        album_name=release["title"],
+                        album_title=release["title"],
                         artists=[
                             artist["artist"]["name"]
                             for artist in record["artist-credit"]
                         ],
                         album_artist=record["artist-credit"][0]["artist"]["name"],
                         track_number=release_position,
-                        tracks_count=release_count,
+                        tracks_total=release_count,
                         disc_number=0,
-                        disc_count=0,
+                        disc_total=0,
                         year=release["date"][0:4],
                         isrc=None,
                         cover_url=image["image"],
@@ -144,13 +144,13 @@ def song_to_file(file: Path, song: Track) -> None:
     f = cast(_file.FileType, f)
 
     f["tracktitle"] = song.title
-    f["album"] = song.album_name
+    f["album"] = song.album_title
     f["artist"] = song.artists
     f["albumartist"] = song.album_artist
     f["tracknumber"] = song.track_number
-    f["totaltracks"] = song.tracks_count
+    f["totaltracks"] = song.tracks_total
     f["discnumber"] = song.disc_number
-    f["totaldiscs"] = song.disc_count
+    f["totaldiscs"] = song.disc_total
     f["year"] = song.year
     f["genre"] = song.genres
     f["isrc"] = song.isrc
@@ -171,13 +171,13 @@ def file_to_song(file: Path) -> Track:
 
     return Track(
         title=f["title"].value,
-        album_name=f["album"].value,
+        album_title=f["album"].value,
         artists=f["artist"].value,
         album_artist=f["albumartist"].value,
         track_number=f["tracknumber"].value,
-        tracks_count=f["totaltracks"].value,
+        tracks_total=f["totaltracks"].value,
         disc_number=f["discnumber"].value,
-        disc_count=f["totaldiscs"].value,
+        disc_total=f["totaldiscs"].value,
         year=f["year"].value,
         genres=f["genre"].value,
         isrc=f["isrc"].value,

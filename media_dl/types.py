@@ -1,6 +1,9 @@
 from dataclasses import dataclass
+from typing import TypeAlias
 
 __all__ = ["Result", "Playlist"]
+
+JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
 
 
 @dataclass(slots=True, frozen=True)
@@ -39,16 +42,24 @@ class Playlist(BasicMeta):
 
 @dataclass(slots=True)
 class Track:
-    title: str
-    album_name: str
-    artists: list[str]
-    album_artist: str
-    track_number: int
-    tracks_count: int
-    disc_number: int
-    disc_count: int
     year: int
+    title: str
+    artists: list[str]
+    album_title: str | None = None
+    album_artist: str | None = None
     genres: list[str] | None = None
+    track_number: int | None = None
+    tracks_total: int | None = None
+    disc_number: int | None = None
+    disc_total: int | None = None
     isrc: str | None = None
-    cover_url: str | None = None
     lyrics: str | None = None
+
+    def __post_init__(self):
+        # Interpret as single album.
+        if not self.album_title:
+            self.album_title = self.title
+
+        # Interpret as first artist.
+        if not self.album_artist:
+            self.album_artist = self.artists[0]

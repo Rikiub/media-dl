@@ -6,22 +6,27 @@ import pytest
 from media_dl.downloader.ydl import YDL, Result, Playlist, DownloadError
 
 TEMPDIR = TemporaryDirectory()
-TEMPDIR = Path(TEMPDIR.name)
+TEMPPATH = Path(TEMPDIR.name)
 
 
-def test_init():
-    with pytest.raises(ValueError):
-        YDL(output=TEMPDIR, extension="raw")
+class TestInstance:
+    def test_start(self):
+        YDL(output=TEMPPATH, extension="m4a")
+        YDL(output=TEMPPATH, extension="m4a", quality=9)
 
-    with pytest.raises(ValueError):
-        YDL(output=TEMPDIR, quality=20)
+    def test_exceptions(self):
+        with pytest.raises(ValueError):
+            YDL(output=TEMPPATH, extension="raw")
 
-    with pytest.raises(ValueError):
-        YDL(output=TEMPDIR, extension="raw", quality=20)
+        with pytest.raises(ValueError):
+            YDL(output=TEMPPATH, quality=20)
+
+        with pytest.raises(ValueError):
+            YDL(output=TEMPPATH, extension="raw", quality=20)
 
 
 class TestInfoExtractors:
-    ydl = YDL(output=TEMPDIR)
+    ydl = YDL(output=TEMPPATH)
 
     def test_single_url(self):
         info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
@@ -35,7 +40,7 @@ class TestInfoExtractors:
 
 
 class TestDownloads:
-    ydl = YDL(output=TEMPDIR, extension="m4a")
+    ydl = YDL(output=TEMPPATH, extension="m4a")
 
     def test_exceptions(self):
         # YouTube: [Private video]
