@@ -19,14 +19,11 @@ class TestInstance:
             YDL(output=TEMPPATH, extension="raw")
 
         with pytest.raises(ValueError):
-            YDL(output=TEMPPATH, quality=20)
-
-        with pytest.raises(ValueError):
-            YDL(output=TEMPPATH, extension="raw", quality=20)
+            YDL(output=TEMPPATH, extension="m4a", quality=20)
 
 
 class TestInfoExtractors:
-    ydl = YDL(output=TEMPPATH)
+    ydl = YDL(output=TEMPPATH, extension="m4a")
 
     def test_single_url(self):
         info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")

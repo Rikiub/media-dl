@@ -22,13 +22,12 @@ from rich.progress import (
 )
 from typer import Typer, Argument, Option
 
-from media_dl.downloader.ydl import (
+from media_dl.ydl import (
     YDL,
     Result,
     Playlist,
     DownloadError,
 )
-from media_dl.downloader.formats import QLT_TO_RES
 from media_dl.cli._ui import check_ydl_formats
 from media_dl.config import DIR_DOWNLOAD
 from media_dl.theme import *
@@ -67,7 +66,7 @@ def download(
             "-q",
             "--quality",
             min=1,
-            max=len(QLT_TO_RES),
+            max=9,
             help="Prefered file quality.",
         ),
     ] = 9,

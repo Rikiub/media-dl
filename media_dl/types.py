@@ -1,34 +1,41 @@
 from dataclasses import dataclass
-from typing import TypeAlias
+from typing import Literal
+
 
 __all__ = ["Result", "Playlist"]
 
-JSON: TypeAlias = dict[str, "JSON"] | list["JSON"] | str | int | float | bool | None
+EXT_VIDEO = Literal["avi", "flv", "mkv", "mov", "mp4", "webm"]
+EXT_AUDIO = Literal["aiff", "alac", "flac", "m4a", "mka", "mp3", "ogg", "opus", "wav"]
+
+QUALITY = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]
+VIDEO_QUALITY = Literal[
+    "144", "240", "360", "480", "720", "1080", "1440", "2160", "4320"
+]
 
 
 @dataclass(slots=True, frozen=True)
-class URL:
+class Url:
     original: str
     download: str
     thumbnail: str | None
 
 
 @dataclass(slots=True, frozen=True)
-class BasicMeta:
-    url: URL
+class _BasicMeta:
+    url: Url
     extractor: str
     id: str
     title: str
 
 
 @dataclass(slots=True, frozen=True)
-class Result(BasicMeta):
+class Result(_BasicMeta):
     uploader: str
     duration: int
 
 
 @dataclass(slots=True, frozen=True)
-class Playlist(BasicMeta):
+class Playlist(_BasicMeta):
     count: int
     entries: list[Result]
 
@@ -38,28 +45,3 @@ class Playlist(BasicMeta):
     def __iter__(self):
         for item in self.entries:
             yield item
-
-
-@dataclass(slots=True)
-class Track:
-    year: int
-    title: str
-    artists: list[str]
-    album_title: str | None = None
-    album_artist: str | None = None
-    genres: list[str] | None = None
-    track_number: int | None = None
-    tracks_total: int | None = None
-    disc_number: int | None = None
-    disc_total: int | None = None
-    isrc: str | None = None
-    lyrics: str | None = None
-
-    def __post_init__(self):
-        # Interpret as single album.
-        if not self.album_title:
-            self.album_title = self.title
-
-        # Interpret as first artist.
-        if not self.album_artist:
-            self.album_artist = self.artists[0]
