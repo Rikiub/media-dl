@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from media_dl.downloader.ydl import YDL, Result, Playlist, DownloadError
+from media_dl.ydl import YDL, Result, Playlist, DownloadError
 
 TEMPDIR = TemporaryDirectory()
 TEMPPATH = Path(TEMPDIR.name)
@@ -16,10 +16,10 @@ class TestInstance:
 
     def test_exceptions(self):
         with pytest.raises(ValueError):
-            YDL(output=TEMPPATH, extension="raw")
+            YDL(output=TEMPPATH, extension="raw")  # type: ignore
 
         with pytest.raises(ValueError):
-            YDL(output=TEMPPATH, extension="m4a", quality=20)
+            YDL(output=TEMPPATH, extension="m4a", quality=20)  # type: ignore
 
 
 class TestInfoExtractors:

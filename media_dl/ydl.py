@@ -6,7 +6,14 @@ import json
 
 from yt_dlp import YoutubeDL, DownloadError
 
-from media_dl.types import Url, Result, Playlist, EXT_VIDEO, EXT_AUDIO, QUALITY
+from media_dl.types import (
+    Result,
+    Playlist,
+    EXTENSION,
+    EXT_VIDEO,
+    EXT_AUDIO,
+    QUALITY,
+)
 from media_dl.config import DIR_TEMP
 
 
@@ -39,7 +46,7 @@ class YDL:
     def __init__(
         self,
         output: Path | str,
-        extension: EXT_VIDEO | EXT_AUDIO,
+        extension: EXTENSION,
         quality: QUALITY = 9,
     ):
         self.tempdir = DIR_TEMP / "ydl"
@@ -62,9 +69,7 @@ class YDL:
         formats = self._gen_format_opts(extension, quality)
         self._ydl = YoutubeDL(opts | formats)
 
-    def _gen_format_opts(
-        self, extension: EXT_VIDEO | EXT_AUDIO, quality: QUALITY
-    ) -> dict:
+    def _gen_format_opts(self, extension: EXTENSION, quality: QUALITY) -> dict:
         """Generate custom YDLOpts by provided arguments.
 
         Args:
@@ -208,11 +213,8 @@ class YDL:
                 for item in entries:
                     item_list.append(
                         Result(
-                            url=Url(
-                                original=item["url"],
-                                download=item["url"],
-                                thumbnail=get_thumbnail(item),
-                            ),
+                            url=item["url"],
+                            thumbnail=get_thumbnail(item),
                             extractor=item["ie_key"],
                             id=item["id"],
                             title=item["title"],
@@ -221,11 +223,8 @@ class YDL:
                         )
                     )
                 return Playlist(
-                    url=Url(
-                        original=info["original_url"],
-                        download=info["original_url"],
-                        thumbnail=get_thumbnail(info),
-                    ),
+                    url=info["original_url"],
+                    thumbnail=get_thumbnail(info),
                     extractor=info["extractor_key"],
                     id=info["id"],
                     title=info["title"],
@@ -235,11 +234,8 @@ class YDL:
             # If is a single item, process full and save its cache.
             else:
                 item = Result(
-                    url=Url(
-                        original=info["original_url"],
-                        download=info["url"],
-                        thumbnail=get_thumbnail(info),
-                    ),
+                    url=info["original_url"],
+                    thumbnail=get_thumbnail(info),
                     extractor=info["extractor_key"],
                     id=info["id"],
                     title=info["title"],
@@ -269,7 +265,7 @@ class YDL:
             info_dict = json.loads(path.read_text())
             path.unlink()
         else:
-            info_dict = self._get_info_dict(data.url.download)
+            info_dict = self._get_info_dict(data.url)
 
         final_path = Path(ydl.prepare_filename(info_dict))
 
@@ -289,15 +285,10 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
-    url = "https://youtu.be/yoMkbDS9RtU?si=5dxxXQzTAp11avxc"
+    url = "https://piped.video/watch?v=gHfImphT2kM"
 
     print("YDL")
 
     ydl = YDL("temp", "m4a")
     data = ydl.extract_url(url)
-
-    if isinstance(data, Playlist):
-        for item in data:
-            ydl.download(item)
-    elif isinstance(data, Result):
-        ydl.download(data)
+    print(data)

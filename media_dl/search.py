@@ -1,7 +1,10 @@
 from typing import Literal
 import requests
+from requests.exceptions import HTTPError
 
-from media_dl.types import Result, Url
+from media_dl.types import Result
+
+PIPEDAPI_INSTANCE = "pipedapi.kavin.rocks"
 
 
 class YoutubeSearch:
@@ -19,23 +22,25 @@ class YoutubeSearch:
             raise ValueError(f'{provider} is invalid. Must be "youtube" or "ytmusic".')
 
         response = self.session.get(
-            "https://pipedapi.kavin.rocks/search",
+            "https://" + PIPEDAPI_INSTANCE + "/search",
             params={"q": query, "filter": scope},
             timeout=10,
         )
-        search_results = response.json()["items"]
+
+        # Check if instance is out of service.
+        if response.status_code != 200:
+            raise HTTPError(PIPEDAPI_INSTANCE + " returned error", response.status_code)
+
+        search_results = response.json()
 
         results: list[Result] = []
-        for item in search_results:
-            url: str = "https://youtube.com" + item["url"]
+        for item in search_results["items"]:
+            url: str = "https://piped.video" + item["url"]
 
             results.append(
                 Result(
-                    url=Url(
-                        original=url,
-                        download=url,
-                        thumbnail=item["thumbnail"],
-                    ),
+                    url=url,
+                    thumbnail=item["thumbnail"],
                     extractor="Youtube",
                     id=item["url"].split("?v=")[1],
                     title=item["title"],
@@ -50,5 +55,5 @@ if __name__ == "__main__":
     from rich import print
 
     client = YoutubeSearch()
-    results = client.search("Sub Urban", "youtube")
+    results = client.search("Sub Urban", "ytmusic")
     print(results)
