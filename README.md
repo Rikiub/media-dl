@@ -1,4 +1,4 @@
-> Helper for yt-dlp with nice defaults + fancy output + music metadata.
+> Helper for yt-dlp with nice defaults + fancy output
 
 ## Features
 

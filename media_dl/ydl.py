@@ -48,10 +48,13 @@ class YDL:
         output: Path | str,
         extension: EXTENSION,
         quality: QUALITY = 9,
+        exist_ok: bool = True,
     ):
         self.tempdir = DIR_TEMP / "ydl"
         self.tempdir.mkdir(parents=True, exist_ok=True)
         self.outputdir = Path(output)
+
+        self.exist_ok = exist_ok
 
         opts = {
             "paths": {
@@ -79,8 +82,11 @@ class YDL:
         Raises:
             ValueError: `extension` or `quality` is invalid.
         """
+        video_args = get_args(EXT_VIDEO)
+        audio_args = get_args(EXT_AUDIO)
+        quality_args = get_args(QUALITY)
 
-        if not quality in get_args(QUALITY):
+        if not quality in quality_args:
             raise ValueError(
                 "Invalid quality range. Expected int range [1-9].",
             )
@@ -98,8 +104,8 @@ class YDL:
             )
 
         # VIDEO
-        if extension in get_args(EXT_VIDEO):
-            video_quality = get_args(EXT_VIDEO)[quality]
+        if extension in video_args:
+            video_quality = video_args[quality]
 
             ydl_opts.update(
                 {
@@ -115,7 +121,7 @@ class YDL:
             ]
 
         # AUDIO
-        elif extension in get_args(EXT_AUDIO):
+        elif extension in audio_args:
             ydl_opts.update(
                 {
                     "format": "bestaudio/best",
@@ -143,8 +149,8 @@ class YDL:
         else:
             raise ValueError(
                 "Invalid extension type. Expected:\n"
-                f"VIDEO: {', '.join(get_args(EXT_VIDEO))}\n"
-                f"AUDIO: {', '.join(get_args(EXT_AUDIO))}"
+                f"VIDEO: {', '.join(video_args)}\n"
+                f"AUDIO: {', '.join(audio_args)}"
             )
 
         return ydl_opts
@@ -161,6 +167,21 @@ class YDL:
         if file.is_file():
             return file
 
+    def _sanatize_playlist(self, info_dict: dict) -> dict:
+        if entries := info_dict.get("entries"):
+            serialize = []
+
+            for item in entries:
+                if item["_type"] == "playlist":
+                    if data := self._sanatize_playlist(item):
+                        info_dict = data
+                elif item.get("ie_key") and item.get("id") and item.get("title"):
+                    serialize.append(item)
+
+                if not serialize:
+                    info_dict = {}
+        return info_dict
+
     def _get_info_dict(self, url: str) -> InfoDict | None:
         if info := self._ydl.extract_info(url, download=False):
             # Some extractors redirect the URL to the "real URL",
@@ -169,16 +190,8 @@ class YDL:
                 if aux := self._ydl.extract_info(info["url"], download=False):
                     info = aux
 
-            if entries := info.get("entries"):
-                serialize = []
-                for item in entries:
-                    if item.get("ie_key") and item.get("id") and item.get("title"):
-                        serialize.append(item)
-
-                if not serialize:
-                    return None
-
-                info["entries"] = serialize
+            if info.get("entries"):
+                info = self._sanatize_playlist(info)
             elif not info.get("formats"):
                 return None
 
@@ -252,8 +265,7 @@ class YDL:
     def download(
         self,
         data: Result,
-        exist_ok: bool = True,
-        progress_callback: Callable[[dict], None] | None = None,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> Path:
         if progress_callback:
             ydl = copy(self._ydl)
@@ -270,7 +282,7 @@ class YDL:
         final_path = Path(ydl.prepare_filename(info_dict))
 
         if final_path.is_file():
-            if not exist_ok:
+            if not self.exist_ok:
                 raise FileExistsError(final_path)
             return final_path
 
@@ -285,7 +297,7 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
-    url = "https://piped.video/watch?v=gHfImphT2kM"
+    url = "https://piped.video/channel/UCNHWpNqiM8yOQcHXtsluD7Q?tab=playlists"
 
     print("YDL")
 
