@@ -11,6 +11,6 @@ def run() -> None:
         name="download",
         help="Download operations.",
         no_args_is_help=True,
-    )
+    )(download.download)
 
     app(prog_name=APPNAME.lower())

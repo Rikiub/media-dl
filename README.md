@@ -3,8 +3,11 @@
 ## Features
 
 - Helper for **yt-dlp** handled by file extension.
-	- Embed metadata, lyrics and thumbnail if extension is audio 🎵.
-	- Embed metadata, subtitles and thumbnail if extension is video 📹.
+- Embed metadata for **📹video** and **🎵audio**.
+
+## No supported
+
+- Bulk download of channels (Or anything with multiple Playlists).
 
 ## Dependencies
 
@@ -15,5 +18,6 @@
 ## TODO
 
 - [ ] Sync playlists feature.
+- [ ] YTMusic and SoundCloud search.
 - [ ] Refactorize CLI UI components.
 - [x] Good yt-dlp API helper.

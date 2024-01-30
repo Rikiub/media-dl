@@ -24,7 +24,7 @@ from typer import Typer, Argument, Option, BadParameter
 
 from media_dl.ydl import (
     YDL,
-    Result,
+    Media,
     Playlist,
     DownloadError,
 )
@@ -109,6 +109,7 @@ def download(
         output=output,
         extension=extension,  # type: ignore
         quality=quality,  # type: ignore
+        exist_ok=False,
     )
 
     # Main UI Components
@@ -182,7 +183,7 @@ def download(
         live.update(panel_queue)
 
         # Main downloader used for section 3.
-        def download_process(info: Result, task_id: TaskID) -> bool:
+        def download_process(info: Media, task_id: TaskID) -> bool:
             return_code = True
 
             def progress_hook(d):
@@ -201,7 +202,7 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    ydl.download(info, exist_ok=False, progress_callback=progress_hook)
+                    ydl.download(info, progress_callback=progress_hook)
                     progress_download.update(
                         task_id, description="[status.success]Completed"
                     )
@@ -282,7 +283,7 @@ def download(
                         "Playlist",
                     )
                     download_queue = queue_process.entries
-                case Result():
+                case Media():
                     content = (
                         Group(
                             f"[text.label][bold]Title:[/][/]   [text.desc]{queue_process.title}[/]\n"

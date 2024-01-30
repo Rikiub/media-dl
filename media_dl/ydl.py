@@ -7,8 +7,9 @@ import json
 from yt_dlp import YoutubeDL, DownloadError
 
 from media_dl.types import (
-    Result,
+    Media,
     Playlist,
+    ResultType,
     EXTENSION,
     EXT_VIDEO,
     EXT_AUDIO,
@@ -40,7 +41,7 @@ class YDL:
     Arguments:
         extension (str): Prefered file extension type.
         quality (str, int): Prefered file quality. Must be compatible with `extension`.
-            Range between [0-9] for audio; Resolution [144-5250] for video.
+            Range between [1-9] for audio; Resolution [144-4320] for video.
     """
 
     def __init__(
@@ -105,7 +106,7 @@ class YDL:
 
         # VIDEO
         if extension in video_args:
-            video_quality = video_args[quality]
+            video_quality = quality
 
             ydl_opts.update(
                 {
@@ -155,43 +156,41 @@ class YDL:
 
         return ydl_opts
 
-    def _prepare_tempjson(self, data: Result) -> Path:
+    def _prepare_tempjson(self, data: Media) -> Path:
         return self.tempdir / str(data.extractor + " " + data.id + ".info.json")
 
-    def _save_result_info(self, data: Result, info_dict: InfoDict) -> None:
+    def _save_result_info(self, data: Media, info_dict: InfoDict) -> None:
         file = self._prepare_tempjson(data)
         file.write_text(json.dumps(info_dict))
 
-    def _get_result_info(self, data: Result) -> Path | None:
+    def _get_result_info(self, data: Media) -> Path | None:
         file = self._prepare_tempjson(data)
         if file.is_file():
             return file
-
-    def _sanatize_playlist(self, info_dict: dict) -> dict:
-        if entries := info_dict.get("entries"):
-            serialize = []
-
-            for item in entries:
-                if item["_type"] == "playlist":
-                    if data := self._sanatize_playlist(item):
-                        info_dict = data
-                elif item.get("ie_key") and item.get("id") and item.get("title"):
-                    serialize.append(item)
-
-                if not serialize:
-                    info_dict = {}
-        return info_dict
 
     def _get_info_dict(self, url: str) -> InfoDict | None:
         if info := self._ydl.extract_info(url, download=False):
             # Some extractors redirect the URL to the "real URL",
             # For this extractors we need do another request.
             if info["extractor_key"] == "Generic" and info["url"] != url:
-                if aux := self._ydl.extract_info(info["url"], download=False):
-                    info = aux
+                if data := self._ydl.extract_info(info["url"], download=False):
+                    info = data
 
-            if info.get("entries"):
-                info = self._sanatize_playlist(info)
+            # Check if is a valid Playlist
+            if entries := info.get("entries"):
+                serialize = []
+
+                for item in entries:
+                    # Exclude multi-playlist items
+                    if item.get("entries"):
+                        continue
+                    # If item has the 3 required fields, will be added.
+                    elif item.get("ie_key") and item.get("id") and item.get("title"):
+                        serialize.append(item)
+
+                if not serialize:
+                    return None
+            # Check at least if is a valid Result
             elif not info.get("formats"):
                 return None
 
@@ -200,79 +199,78 @@ class YDL:
         else:
             return None
 
-    def extract_url(self, url: str) -> Playlist | Result | None:
-        """Extract basic URL information.
+    def _get_thumbnail(self, d: dict) -> str | None:
+        if thumb := d.get("thumbnail"):
+            return thumb
+        elif thumb := d.get("thumbnails"):
+            return thumb[-1]["url"]
+        else:
+            return None
+
+    def _info_to_dataclass(self, info: InfoDict) -> ResultType:
+        # Playlist Type
+        if entries := info.get("entries"):
+            results = []
+
+            # Recursive add of items
+            for item in entries:
+                item = self._info_to_dataclass(item)
+                results.append(item)
+
+            return Playlist(
+                url=info.get("original_url") or info.get("url") or "",
+                thumbnail=self._get_thumbnail(info),
+                extractor=info["extractor_key"],
+                id=info["id"],
+                title=info["title"],
+                count=info.get("playlist_count", 0),
+                entries=results,
+            )
+
+        # Single Result Type
+        # Process fully and save cache copy.
+        else:
+            item = Media(
+                url=info.get("original_url") or info.get("url") or "",
+                thumbnail=self._get_thumbnail(info),
+                extractor=info.get("extractor_key") or info.get("ie_key") or "",
+                id=info["id"],
+                title=info["title"],
+                uploader=info.get("uploader", ""),
+                duration=info.get("duration", 0),
+            )
+            if info.get("formats"):
+                self._save_result_info(item, info)
+            return item
+
+    def extract_url(self, url: str) -> ResultType | None:
+        """Extract basic information from URL.
 
         Args:
             url: URL to process.
 
         Return:
-            List of `Result`.
+            List of `Media`.
         """
 
-        def get_thumbnail(d: InfoDict) -> str | None:
-            if thumb := d.get("thumbnail"):
-                return thumb
-            elif thumb := d.get("thumbnails"):
-                return thumb[-1]["url"]
-            else:
-                return None
-
         if info := self._get_info_dict(url):
-            # If is Playlist, process as placeholder.
-            if entries := info.get("entries"):
-                item_list: list[Result] = []
-
-                for item in entries:
-                    item_list.append(
-                        Result(
-                            url=item["url"],
-                            thumbnail=get_thumbnail(item),
-                            extractor=item["ie_key"],
-                            id=item["id"],
-                            title=item["title"],
-                            uploader=item.get("uploader", "unkdown"),
-                            duration=item.get("duration", 0),
-                        )
-                    )
-                return Playlist(
-                    url=info["original_url"],
-                    thumbnail=get_thumbnail(info),
-                    extractor=info["extractor_key"],
-                    id=info["id"],
-                    title=info["title"],
-                    count=info.get("playlist_count", 0),
-                    entries=item_list,
-                )
-            # If is a single item, process full and save its cache.
-            else:
-                item = Result(
-                    url=info["original_url"],
-                    thumbnail=get_thumbnail(info),
-                    extractor=info["extractor_key"],
-                    id=info["id"],
-                    title=info["title"],
-                    uploader=info.get("uploader", "unkdown"),
-                    duration=info.get("duration", 0),
-                )
-                self._save_result_info(item, info)
-                return item
-
-        # URL is unsupported.
+            return self._info_to_dataclass(info)
         else:
             return None
 
     def download(
         self,
-        data: Result,
+        data: Media,
         progress_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> Path:
+        # Progress Handler
         if progress_callback:
             ydl = copy(self._ydl)
             ydl._progress_hooks = [progress_callback]
         else:
             ydl = self._ydl
 
+        # Load cached file if exist
         if path := self._get_result_info(data):
             info_dict = json.loads(path.read_text())
             path.unlink()
@@ -281,11 +279,13 @@ class YDL:
 
         final_path = Path(ydl.prepare_filename(info_dict))
 
+        # Remove duplicates
         if final_path.is_file():
             if not self.exist_ok:
                 raise FileExistsError(final_path)
             return final_path
 
+        # Start download
         try:
             ydl.process_ie_result(info_dict, download=True)
         except DownloadError:
@@ -297,7 +297,7 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
-    url = "https://piped.video/channel/UCNHWpNqiM8yOQcHXtsluD7Q?tab=playlists"
+    url = "https://www.youtube.com/@s4vitar/playlists"
 
     print("YDL")
 

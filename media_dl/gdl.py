@@ -1,12 +1,12 @@
-import contextlib
 from dataclasses import dataclass
+import contextlib
 import os
 
 from gallery_dl.exception import NoExtractorError
 from gallery_dl.extractor.common import Extractor
 from gallery_dl import config, extractor, job, path, formatter
 
-from media_dl.types import Result, Playlist
+from media_dl.types import Media, Playlist
 
 config.set((), "output", "null")
 
@@ -23,7 +23,6 @@ class Image:
 class Album:
     url: str
     extractor: str
-    entries: "Image | Album"
 
 
 class GDL:
@@ -35,7 +34,7 @@ class GDL:
         pfmt.build_path()
         final_path: str = pfmt.realpath
 
-    def extract_url(self, url: str) -> list[Playlist] | Playlist | Result | None:
+    def extract_url(self, url: str) -> list[Playlist] | Playlist | Media | None:
         """Try to get the necesary information.
 
         DataJob return codes:
