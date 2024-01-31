@@ -26,14 +26,20 @@ class _BasicMeta:
 
 @dataclass(slots=True, frozen=True)
 class Media(_BasicMeta):
-    uploader: str | None
+    uploader: str
     duration: int
+
+    def is_completed(self) -> bool:
+        if self.title or self.uploader or self.duration:
+            return True
+        else:
+            return False
 
 
 @dataclass(slots=True, frozen=True)
 class Playlist(_BasicMeta):
     count: int
-    entries: list
+    entries: list[Media]
 
     def __len__(self):
         return self.count

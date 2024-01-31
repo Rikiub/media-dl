@@ -65,8 +65,8 @@ class YDL:
             "quiet": True,
             "no_warnings": True,
             "ignoreerrors": False,
-            "extract_flat": True,
             "overwrites": False,
+            "extract_flat": "in_playlist",
             "outtmpl": "%(uploader)s - %(title)s.%(ext)s",
             "logger": fake_logger,
         }
@@ -181,11 +181,8 @@ class YDL:
                 serialize = []
 
                 for item in entries:
-                    # Exclude multi-playlist items
-                    if item.get("entries"):
-                        continue
-                    # If item has the 3 required fields, will be added.
-                    elif item.get("ie_key") and item.get("id") and item.get("title"):
+                    # If item has the 2 required fields, will be added.
+                    if item.get("ie_key") and item.get("id"):
                         serialize.append(item)
 
                 if not serialize:
@@ -199,10 +196,10 @@ class YDL:
         else:
             return None
 
-    def _get_thumbnail(self, d: dict) -> str | None:
-        if thumb := d.get("thumbnail"):
+    def _get_info_thumbnail(self, info: InfoDict) -> str | None:
+        if thumb := info.get("thumbnail"):
             return thumb
-        elif thumb := d.get("thumbnails"):
+        elif thumb := info.get("thumbnails"):
             return thumb[-1]["url"]
         else:
             return None
@@ -219,10 +216,10 @@ class YDL:
 
             return Playlist(
                 url=info.get("original_url") or info.get("url") or "",
-                thumbnail=self._get_thumbnail(info),
+                thumbnail=self._get_info_thumbnail(info),
                 extractor=info["extractor_key"],
                 id=info["id"],
-                title=info["title"],
+                title=info.get("title") or "",
                 count=info.get("playlist_count", 0),
                 entries=results,
             )
@@ -232,11 +229,11 @@ class YDL:
         else:
             item = Media(
                 url=info.get("original_url") or info.get("url") or "",
-                thumbnail=self._get_thumbnail(info),
+                thumbnail=self._get_info_thumbnail(info),
                 extractor=info.get("extractor_key") or info.get("ie_key") or "",
                 id=info["id"],
-                title=info["title"],
-                uploader=info.get("uploader", ""),
+                title=info.get("title") or "",
+                uploader=info.get("uploader") or "",
                 duration=info.get("duration", 0),
             )
             if info.get("formats"):
@@ -297,7 +294,7 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
-    url = "https://www.youtube.com/@s4vitar/playlists"
+    url = "https://soundcloud.com/playlist/sets/sound-of-berlin-01-qs1-x-synth"
 
     print("YDL")
 

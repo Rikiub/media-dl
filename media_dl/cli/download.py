@@ -197,7 +197,8 @@ def download(
                         )
                     case "finished":
                         progress_download.update(
-                            task_id, description="[status.wait][bold]Converting"
+                            task_id,
+                            description="[status.wait][bold]Converting" + "[blink]...",
                         )
 
             try:
