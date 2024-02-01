@@ -178,3 +178,4 @@ pyrightconfig.json
 # CUSTOM CONFIG
 temp/
 tmp/
+.syncedlyrics/
