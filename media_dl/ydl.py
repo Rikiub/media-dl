@@ -5,6 +5,10 @@ import logging
 import json
 
 from yt_dlp import YoutubeDL, DownloadError
+from yt_dlp.postprocessor import PostProcessor
+from mutagen._file import FileType
+import syncedlyrics
+import music_tag
 
 from media_dl.types import (
     Media,
@@ -14,6 +18,7 @@ from media_dl.types import (
     EXT_VIDEO,
     EXT_AUDIO,
     QUALITY,
+    QUALITY_VIDEO,
 )
 from media_dl.config import DIR_TEMP
 
@@ -36,6 +41,54 @@ _THUMB_COMPATIBLE = {
 }
 
 
+class MusicMetaPP(PostProcessor):
+    EXTS = get_args(EXT_AUDIO)
+
+    def run(self, information):
+        ext = information["ext"]
+        track = information.get("track")
+        artist = information.get("artist")
+
+        if ext in self.EXTS and track and artist:
+            audio = music_tag.load_file(information["filepath"])
+            audio = cast(FileType, audio)
+
+            # Fix year tag
+            if not audio["year"] or len(str(audio["year"])) > 4:
+                year = int(
+                    information.get("release_year")
+                    or information.get("upload_date")[:4]
+                )
+                audio["year"] = year
+
+            if not audio["album"]:
+                # Single Album
+                audio["album"] = track
+            if not audio["album_artist"]:
+                audio["album_artist"] = artist
+            if not audio["lyrics"]:
+                try:
+                    search_term = track + " - " + artist
+                    if lyrics := syncedlyrics.search(
+                        search_term, allow_plain_format=True
+                    ):
+                        audio["lyrics"] = lyrics
+                except:
+                    pass
+            audio.save()
+
+        return [], information
+
+
+def get_info_thumbnail(info: InfoDict) -> str | None:
+    if thumb := info.get("thumbnail"):
+        return thumb
+    elif thumb := info.get("thumbnails"):
+        return thumb[-1]["url"]
+    else:
+        return None
+
+
 class YDL:
     """
     Arguments:
@@ -49,29 +102,28 @@ class YDL:
         output: Path | str,
         extension: EXTENSION,
         quality: QUALITY = 9,
-        exist_ok: bool = True,
     ):
         self.tempdir = DIR_TEMP / "ydl"
         self.tempdir.mkdir(parents=True, exist_ok=True)
         self.outputdir = Path(output)
-
-        self.exist_ok = exist_ok
 
         opts = {
             "paths": {
                 "home": str(self.outputdir),
                 "temp": str(self.tempdir),
             },
-            "quiet": True,
-            "no_warnings": True,
+            "outtmpl": "%(artist,creator,uploader)s - %(track,title)s.%(ext)s",
             "ignoreerrors": False,
             "overwrites": False,
+            "quiet": True,
+            "no_warnings": True,
             "extract_flat": "in_playlist",
-            "outtmpl": "%(uploader)s - %(title)s.%(ext)s",
             "logger": fake_logger,
         }
         formats = self._gen_format_opts(extension, quality)
+
         self._ydl = YoutubeDL(opts | formats)
+        self._ydl.add_post_processor(MusicMetaPP(), when="post_process")
 
     def _gen_format_opts(self, extension: EXTENSION, quality: QUALITY) -> dict:
         """Generate custom YDLOpts by provided arguments.
@@ -92,41 +144,46 @@ class YDL:
                 "Invalid quality range. Expected int range [1-9].",
             )
 
-        ydl_opts = {
+        # Prepare Options
+        ydl_opts: dict = {
             "final_ext": extension,
-            "postprocessors": [
-                {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True},
-            ],
         }
+        postprocessors: list[dict] = []
+        postprocessors.append(
+            {"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": True}
+        )
 
         if extension in _THUMB_COMPATIBLE:
-            ydl_opts["postprocessors"].append(
+            postprocessors.append(
                 {"key": "EmbedThumbnail", "already_have_thumbnail": False}
             )
 
         # VIDEO
         if extension in video_args:
-            video_quality = quality
+            video_quality = get_args(QUALITY_VIDEO)[quality - 1]
 
             ydl_opts.update(
                 {
                     "format": f"bestvideo[height<={video_quality}]+bestaudio/bestvideo[height<={video_quality}]/best",
-                    "format_sort": [f"ext:{extension}:mp4:mkv:mov"],
+                    "format_sort": [f"ext:{extension}:{':'.join(video_args)}"],
                     "writesubtitles": True,
                     "subtitleslangs": "all",
                 }
             )
-            ydl_opts["postprocessors"] += [
-                {"key": "FFmpegVideoConvertor", "preferedformat": extension},
-                {"key": "FFmpegEmbedSubtitle", "already_have_subtitle": False},
-            ]
+
+            postprocessors.append(
+                {"key": "FFmpegVideoConvertor", "preferedformat": extension}
+            )
+            postprocessors.append(
+                {"key": "FFmpegEmbedSubtitle", "already_have_subtitle": False}
+            )
 
         # AUDIO
         elif extension in audio_args:
             ydl_opts.update(
                 {
                     "format": "bestaudio/best",
-                    "format_sort": [f"ext:{extension}:m4a:mp3:ogg"],
+                    "format_sort": [f"ext:{extension}:{':'.join(audio_args)}"],
                     "postprocessor_args": {
                         "thumbnailsconvertor+ffmpeg_o": [
                             "-c:v",
@@ -137,7 +194,7 @@ class YDL:
                     },
                 }
             )
-            ydl_opts["postprocessors"].append(
+            postprocessors.append(
                 {
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": extension,
@@ -145,6 +202,17 @@ class YDL:
                     "nopostoverwrites": True,
                 }
             )
+            """
+            # Will be a new feature, see:
+            # https://github.com/yt-dlp/yt-dlp/pull/8869
+            postprocessors.append(
+                {
+                    "key": "FFmpegSubtitlesConvertor",
+                    "format": "lrc",
+                    "when": "before_dl",
+                }
+            )
+            """
 
         # ERROR
         else:
@@ -154,21 +222,26 @@ class YDL:
                 f"AUDIO: {', '.join(audio_args)}"
             )
 
+        ydl_opts.update({"postprocessors": postprocessors})
         return ydl_opts
 
     def _prepare_tempjson(self, data: Media) -> Path:
         return self.tempdir / str(data.extractor + " " + data.id + ".info.json")
 
-    def _save_result_info(self, data: Media, info_dict: InfoDict) -> None:
+    def save_info(self, data: Media, info_dict: InfoDict) -> None:
+        """Save `Media` as cached `InfoDict`"""
         file = self._prepare_tempjson(data)
         file.write_text(json.dumps(info_dict))
 
-    def _get_result_info(self, data: Media) -> Path | None:
+    def get_saved_info(self, data: Media) -> InfoDict | None:
+        """Get cached `InfoDict` of a `Media` item if exist."""
         file = self._prepare_tempjson(data)
         if file.is_file():
-            return file
+            return json.loads(file.read_text())
 
-    def _get_info_dict(self, url: str) -> InfoDict | None:
+    def _fetch_url(self, url: str) -> InfoDict | None:
+        """Process and validate yt-dlp URLs"""
+
         if info := self._ydl.extract_info(url, download=False):
             # Some extractors redirect the URL to the "real URL",
             # For this extractors we need do another request.
@@ -196,14 +269,6 @@ class YDL:
         else:
             return None
 
-    def _get_info_thumbnail(self, info: InfoDict) -> str | None:
-        if thumb := info.get("thumbnail"):
-            return thumb
-        elif thumb := info.get("thumbnails"):
-            return thumb[-1]["url"]
-        else:
-            return None
-
     def _info_to_dataclass(self, info: InfoDict) -> ResultType:
         # Playlist Type
         if entries := info.get("entries"):
@@ -216,11 +281,11 @@ class YDL:
 
             return Playlist(
                 url=info.get("original_url") or info.get("url") or "",
-                thumbnail=self._get_info_thumbnail(info),
+                thumbnail=get_info_thumbnail(info),
                 extractor=info["extractor_key"],
                 id=info["id"],
                 title=info.get("title") or "",
-                count=info.get("playlist_count", 0),
+                count=info.get("playlist_count") or 0,
                 entries=results,
             )
 
@@ -229,15 +294,15 @@ class YDL:
         else:
             item = Media(
                 url=info.get("original_url") or info.get("url") or "",
-                thumbnail=self._get_info_thumbnail(info),
+                thumbnail=get_info_thumbnail(info),
                 extractor=info.get("extractor_key") or info.get("ie_key") or "",
                 id=info["id"],
                 title=info.get("title") or "",
-                uploader=info.get("uploader") or "",
-                duration=info.get("duration", 0),
+                creator=info.get("uploader") or "",
+                duration=info.get("duration") or 0,
             )
             if info.get("formats"):
-                self._save_result_info(item, info)
+                self.save_info(item, info)
             return item
 
     def extract_url(self, url: str) -> ResultType | None:
@@ -250,7 +315,7 @@ class YDL:
             List of `Media`.
         """
 
-        if info := self._get_info_dict(url):
+        if info := self._fetch_url(url):
             return self._info_to_dataclass(info)
         else:
             return None
@@ -260,6 +325,12 @@ class YDL:
         data: Media,
         progress_callback: Callable[[dict[str, Any]], None] | None = None,
     ) -> Path:
+        """Download and get the final path from a `Media` item.
+
+        Raises:
+            DownloadError: `yt-dlp` related exceptions.
+        """
+
         # Progress Handler
         if progress_callback:
             ydl = copy(self._ydl)
@@ -267,37 +338,34 @@ class YDL:
         else:
             ydl = self._ydl
 
-        # Load cached file if exist
-        if path := self._get_result_info(data):
-            info_dict = json.loads(path.read_text())
-            path.unlink()
+        # Load cached info if exist, else re-fetch info.
+        if info := self.get_saved_info(data) or self._fetch_url(data.url):
+            info_dict = info
         else:
-            info_dict = self._get_info_dict(data.url)
-
-        final_path = Path(ydl.prepare_filename(info_dict))
-
-        # Remove duplicates
-        if final_path.is_file():
-            if not self.exist_ok:
-                raise FileExistsError(final_path)
-            return final_path
+            raise DownloadError("Unable to fetch info from:", data.url)
 
         # Start download
         try:
-            ydl.process_ie_result(info_dict, download=True)
+            info_dict = ydl.process_ie_result(info_dict, download=True)
         except DownloadError:
             raise
 
+        final_path = Path(info_dict["requested_downloads"][0]["filepath"])
         return final_path
 
 
 if __name__ == "__main__":
     from rich import print
 
-    url = "https://soundcloud.com/playlist/sets/sound-of-berlin-01-qs1-x-synth"
+    url = "https://gourmetdeluxxx.bandcamp.com/track/nocturnal-hooli"
+    print("> Using YDL")
 
-    print("YDL")
-
-    ydl = YDL("temp", "m4a")
+    ydl = YDL("temp", "m4a", quality=9)
     data = ydl.extract_url(url)
     print(data)
+
+    if isinstance(data, Media):
+        ydl.download(data)
+    elif isinstance(data, Playlist):
+        for item in data:
+            ydl.download(item)

@@ -20,4 +20,5 @@
 - [ ] Sync playlists feature.
 - [ ] YTMusic and SoundCloud search.
 - [ ] Refactorize CLI UI components.
+- [x] Handler for music-sites metadata + syncedlyrics.
 - [x] Good yt-dlp API helper.

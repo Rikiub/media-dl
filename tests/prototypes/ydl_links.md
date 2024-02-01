@@ -1,0 +1,4 @@
+- SoundCloud (Playlist): https://soundcloud.com/playlist/sets/sound-of-berlin-01-qs1-x-synth
+- Bandcamp Song: https://gourmetdeluxxx.bandcamp.com/track/nocturnal-hooli
+- YTMusic Song: https://music.youtube.com/watch?v=Kx7B-XvmFtE
+- YouTube Video: https://www.youtube.com/watch?v=BaW_jenozKc

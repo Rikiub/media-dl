@@ -46,7 +46,7 @@ class YoutubeSearch:
                     extractor="Youtube",
                     id=url.split("?v=")[1],
                     title=item["title"],
-                    uploader=item["uploaderName"],
+                    creator=item["uploaderName"],
                     duration=item["duration"],
                 )
             )

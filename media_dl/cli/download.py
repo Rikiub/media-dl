@@ -109,7 +109,6 @@ def download(
         output=output,
         extension=extension,  # type: ignore
         quality=quality,  # type: ignore
-        exist_ok=False,
     )
 
     # Main UI Components
@@ -203,22 +202,24 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    ydl.download(info, progress_callback=progress_hook)
-                    progress_download.update(
-                        task_id, description="[status.success]Completed"
-                    )
+                    path = ydl.download(info, progress_callback=progress_hook)
+
+                    if path.is_file:
+                        progress_download.update(
+                            task_id,
+                            description=f'[status.warn][bold underline]"{path.name}"[/] already exist, ignoring',
+                            completed=100,
+                            total=100,
+                        )
+                    else:
+                        progress_download.update(
+                            task_id, description="[status.success]Completed"
+                        )
             except DownloadError as err:
                 progress_download.update(
                     task_id, description="[status.error][bold]" + str(err.msg)
                 )
                 return_code = False
-            except FileExistsError as err:
-                progress_download.update(
-                    task_id,
-                    description=f'[status.warn][bold underline]"{err}"[/] already exist, ignoring',
-                    completed=100,
-                    total=100,
-                )
             finally:
                 if EVENT.is_set():
                     return_code = False
@@ -288,7 +289,7 @@ def download(
                     content = (
                         Group(
                             f"[text.label][bold]Title:[/][/]   [text.desc]{queue_process.title}[/]\n"
-                            f"[text.label][bold]Creator:[/][/] [text.desc]{queue_process.uploader}[/]\n"
+                            f"[text.label][bold]Creator:[/][/] [text.desc]{queue_process.creator}[/]\n"
                             f"[text.label][bold]Source:[/][/]  [text.desc]{queue_process.extractor}[/]"
                         ),
                         "Item",
@@ -314,7 +315,7 @@ def download(
             download_list = []
             for item in download_queue:
                 task_id = progress_download.add_task(
-                    f"[text.meta.uploader]{item.uploader}[/] - [text.meta.title]{item.title}[/]",
+                    f"[text.meta.uploader]{item.creator}[/] - [text.meta.title]{item.title}[/]",
                     total=100,
                 )
                 download_list.append((item, task_id))

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from rich.panel import Panel
 from rich.align import Align
 from rich.table import Column
@@ -14,6 +16,18 @@ from rich.progress import (
 )
 
 from media_dl.theme import *
+from media_dl.ydl import (
+    YDL,
+    Media,
+    Playlist,
+    DownloadError,
+)
+
+
+@dataclass(slots=True, frozen=True)
+class QueueTask:
+    url: str
+    task_id: TaskID
 
 
 class UIProgress:
@@ -50,3 +64,27 @@ class UIProgress:
         )
         load.add_task(f"[status.work]Loading[blink]...[/]")
         return load
+
+
+class DownloadWorker:
+    urls: list[str]
+
+    def __init__(self, output, extension, quality) -> None:
+        self.ydl = YDL(
+            output=output,
+            extension=extension,  # type: ignore
+            quality=quality,  # type: ignore
+            exist_ok=False,
+        )
+
+    def url_to_result(self, task: QueueTask):
+        try:
+            result = self.ydl.extract_url(task.url)
+            if not result:
+                raise DownloadError("_")
+        except DownloadError:
+            UIProgress.queue.update(
+                task.task_id,
+                completed=100,
+                description=f"[status.error][bold strike]{task.url}",
+            )
