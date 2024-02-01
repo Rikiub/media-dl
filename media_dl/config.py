@@ -11,7 +11,7 @@ DIR_DOWNLOAD = dirs.user_downloads_path / APPNAME
 DIR_TEMP = TemporaryDirectory()
 DIR_TEMP = Path(DIR_TEMP.name)
 
-
+"""
 @dataclass(slots=True)
 class Main:
     output_dir: Path
@@ -25,3 +25,4 @@ class Extensions:
     video_quality: str
     audio: str
     audio_quality: int
+"""

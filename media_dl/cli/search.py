@@ -13,6 +13,8 @@ class Provider(Enum):
 @app.command()
 def search(
     query: Annotated[str, Argument(help="Search term")],
-    provider: Annotated[Provider, Option(show_default=False)] = Provider.ytmusic,
+    provider: Annotated[
+        Provider, Option("--provider", "-p", show_default=False)
+    ] = Provider.ytmusic,
 ):
     ...
