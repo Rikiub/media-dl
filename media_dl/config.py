@@ -1,6 +1,6 @@
-from tempfile import TemporaryDirectory
 from dataclasses import dataclass
-from pathlib import Path
+import shutil
+import atexit
 
 from platformdirs import PlatformDirs
 
@@ -8,8 +8,8 @@ APPNAME = "media-dl"
 
 dirs = PlatformDirs(APPNAME, ensure_exists=True)
 DIR_DOWNLOAD = dirs.user_downloads_path / APPNAME
-DIR_TEMP = TemporaryDirectory()
-DIR_TEMP = Path(DIR_TEMP.name)
+DIR_TEMP = dirs.site_cache_path
+
 
 """
 @dataclass(slots=True)
@@ -26,3 +26,10 @@ class Extensions:
     audio: str
     audio_quality: int
 """
+
+
+def clean():
+    shutil.rmtree(DIR_TEMP)
+
+
+atexit.register(clean)

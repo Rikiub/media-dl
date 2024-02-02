@@ -1,9 +1,19 @@
-> Helper for yt-dlp with nice defaults + fancy output
+> yt-dlp helper with nice defaults + fancy output + music metadata.
 
 ## Features
 
-- Helper for **yt-dlp** handled by file extension.
-- Embed metadata for **📹video** and **🎵audio**.
+- Helper for yt-dlp handled by file extension with nice defaults:
+    - Metadata
+    - Thumbnails
+    - Subtitles
+    - Simple API and extra validations
+- Music search for:
+    - YouTube Music
+    - SoundCloud
+- Multiple threads for fast downloads.
+- Pretty and fancy CLI interface.
+- Basic metadata and synced lyrics for music sites.
+- Sync playlists
 
 ## No supported
 
@@ -17,8 +27,9 @@
 
 ## TODO
 
-- [ ] Sync playlists feature.
 - [ ] YTMusic and SoundCloud search.
+- [ ] Better video quality selector.
+- [ ] Sync playlists feature.
 - [ ] Refactorize CLI UI components.
 - [x] Handler for music-sites metadata + syncedlyrics.
 - [x] Good yt-dlp API helper.
