@@ -4,6 +4,7 @@ from typing import Literal
 
 __all__ = ["Media", "Playlist"]
 
+FORMAT_TYPE = Literal["best-video", "best-audio"]
 EXT_VIDEO = Literal["mp4", "mkv"]
 EXT_AUDIO = Literal["m4a", "mp3", "ogg", "mka"]
 EXTENSION = EXT_VIDEO | EXT_AUDIO
@@ -16,7 +17,7 @@ VIDEO_RES = Literal["144", "240", "360", "480", "720", "1080", "1440", "2160", "
 @dataclass(slots=True, frozen=True)
 class _BasicMeta:
     url: str
-    thumbnail: str | None
+    thumbnail: str
     extractor: str
     id: str
     title: str

@@ -16,8 +16,8 @@ theme = Theme(
         "panel.download": "blue",
         "text.label": "plum3",
         "text.desc": "misty_rose3",
-        "text.meta.title": "misty_rose3",
-        "text.meta.uploader": "plum3",
+        "meta.title": "misty_rose3",
+        "meta.creator": "plum3",
     }
 )
 

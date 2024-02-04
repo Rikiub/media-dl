@@ -28,7 +28,7 @@ from media_dl.ydl import (
     DownloadError,
 )
 from media_dl.config import DIR_DOWNLOAD, MAX_THREADS
-from media_dl.types import EXT_VIDEO, EXT_AUDIO, Media, Playlist
+from media_dl.types import EXT_VIDEO, EXT_AUDIO, FORMAT_TYPE, Media, Playlist
 from media_dl.theme import *
 import media_dl.cli._options as opts
 
@@ -294,7 +294,7 @@ def download(
             download_list = []
             for item in download_queue:
                 task_id = progress_download.add_task(
-                    f"[text.meta.uploader]{item.creator}[/] - [text.meta.title]{item.title}[/]",
+                    f"[meta.creator]{item.creator}[/] - [meta.title]{item.title}[/]",
                     total=100,
                 )
                 download_list.append((item, task_id))

@@ -1,4 +1,4 @@
-from typing import cast, get_args, Callable, NewType, Any, Literal
+from typing import cast, get_args, Callable, NewType, Any
 from pathlib import Path
 from copy import copy
 import logging
@@ -14,6 +14,7 @@ from media_dl.types import (
     Media,
     Playlist,
     ResultType,
+    FORMAT_TYPE,
     EXT_VIDEO,
     EXT_AUDIO,
     EXTENSION,
@@ -79,13 +80,13 @@ class MusicMetaPP(PostProcessor):
         return [], information
 
 
-def get_info_thumbnail(info: InfoDict) -> str | None:
+def get_info_thumbnail(info: InfoDict) -> str:
     if thumb := info.get("thumbnail"):
         return thumb
     elif thumb := info.get("thumbnails"):
         return thumb[-1]["url"]
     else:
-        return None
+        return ""
 
 
 class YDL:
@@ -108,7 +109,7 @@ class YDL:
     def __init__(
         self,
         output: Path | str,
-        format: Literal["best-video", "best-audio"] | EXTENSION,
+        format: FORMAT_TYPE | EXTENSION,
         quality: QUALITY = 9,
     ):
         # Instance vars
@@ -123,7 +124,6 @@ class YDL:
             },
             "outtmpl": {
                 "default": "%(artist,creator,uploader)s - %(track,title)s.%(ext)s",
-                "pl_video": "%(uploader)s %(id)s",
             },
             "ignoreerrors": False,
             "overwrites": False,
@@ -233,7 +233,7 @@ class YDL:
         file = self._prepare_tempjson(data)
         file.write_text(json.dumps(info_dict))
 
-    def get_saved_info(self, data: Media) -> InfoDict | None:
+    def load_saved_info(self, data: Media) -> InfoDict | None:
         """Get cached `InfoDict` of a `Media` item if exist."""
         file = self._prepare_tempjson(data)
         if file.is_file():
@@ -347,7 +347,7 @@ class YDL:
             ydl = self._ydl
 
         # Load cached info if exist, else re-fetch info.
-        if info := self.get_saved_info(data) or self._fetch_url(data.url):
+        if info := self.load_saved_info(data) or self._fetch_url(data.url):
             info_dict = info
         else:
             raise DownloadError("Unable to fetch info from:", data.url)
