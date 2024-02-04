@@ -1,5 +1,6 @@
 from rich.console import Console
 from rich.theme import Theme
+import rich.traceback as traceback
 
 __all__ = ["print", "input", "console"]
 
@@ -23,3 +24,5 @@ theme = Theme(
 console = Console(theme=theme)
 print = console.print
 input = console.input
+
+traceback.install(console=console)

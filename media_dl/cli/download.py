@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import concurrent.futures as cf
 from threading import Event
 from pathlib import Path
+from enum import Enum
 import time
 
 from rich.live import Live
@@ -24,13 +25,12 @@ from typer import Typer, Argument, Option, BadParameter
 
 from media_dl.ydl import (
     YDL,
-    Media,
-    Playlist,
     DownloadError,
 )
-from media_dl.types import EXT_VIDEO, EXT_AUDIO
-from media_dl.config import DIR_DOWNLOAD
+from media_dl.config import DIR_DOWNLOAD, MAX_THREADS
+from media_dl.types import EXT_VIDEO, EXT_AUDIO, Media, Playlist
 from media_dl.theme import *
+import media_dl.cli._options as opts
 
 app = Typer()
 
@@ -42,7 +42,11 @@ def check_ydl_formats(fmt: str) -> str:
     video = get_args(EXT_VIDEO)
     audio = get_args(EXT_AUDIO)
 
-    if fmt in video or fmt in audio:
+    if fmt == "video":
+        return "best-video"
+    elif fmt == "audio":
+        return "best-audio"
+    elif fmt in video or fmt in audio:
         return fmt
     else:
         raise BadParameter(
@@ -60,54 +64,35 @@ class QueueTask:
 
 @app.command()
 def download(
-    url: Annotated[list[str], Argument(help="URL(s) to download", show_default=False)],
-    output: Annotated[
-        Path,
-        Option(
-            "-o",
-            "--output",
-            help="Directory where to save downloads.",
-            file_okay=False,
-            resolve_path=True,
-        ),
-    ] = DIR_DOWNLOAD,
-    extension: Annotated[
+    format: Annotated[
         str,
-        Option(
-            "-x",
-            "--extension",
-            help="Prefered file extension.",
+        Argument(
+            help="You want 'video', 'audio' or convert to an 'extension'?",
             callback=check_ydl_formats,
+            show_default=False,
         ),
-    ] = "mp4",
+    ],
+    url: Annotated[list[str], Argument(help="URL(s) to download", show_default=False)],
+    output: opts.Output = DIR_DOWNLOAD,
     quality: Annotated[
         int,
         Option(
             "-q",
             "--quality",
+            help="Prefered file quality.",
             min=1,
             max=9,
-            help="Prefered file quality.",
         ),
     ] = 9,
-    threads: Annotated[
-        int,
-        Option(
-            "-t",
-            "--threads",
-            max=8,
-            help="Number of threads to use when downloading.",
-        ),
-    ] = 3,
 ):
     try:
-        output = output.relative_to(Path.cwd())
+        output = DIR_DOWNLOAD.relative_to(Path.cwd())
     except:
         pass
 
     ydl = YDL(
         output=output,
-        extension=extension,  # type: ignore
+        format=format,  # type: ignore
         quality=quality,  # type: ignore
     )
 
@@ -170,7 +155,7 @@ def download(
         print(
             Align.center(
                 Group(
-                    f"[text.label][bold]Extension:[/][/] [text.desc]{extension}"
+                    f"[text.label][bold]Extension:[/][/] [text.desc]{format}"
                     " | "
                     f"[text.label][bold]Quality:[/][/] [text.desc]{quality}"
                     " | "
@@ -191,8 +176,10 @@ def download(
                         total_bytes = d.get("total_bytes") or d.get(
                             "total_bytes_estimate"
                         )
+                        downloaded_bytes = d["downloaded_bytes"]
+
                         progress_download.update(
-                            task_id, completed=d["downloaded_bytes"], total=total_bytes
+                            task_id, completed=downloaded_bytes, total=total_bytes
                         )
                     case "finished":
                         progress_download.update(
@@ -202,19 +189,11 @@ def download(
 
             try:
                 if not EVENT.is_set():
-                    path = ydl.download(info, progress_callback=progress_hook)
+                    ydl.download(info, progress_callback=progress_hook)
 
-                    if path.is_file:
-                        progress_download.update(
-                            task_id,
-                            description=f'[status.warn][bold underline]"{path.name}"[/] already exist, ignoring',
-                            completed=100,
-                            total=100,
-                        )
-                    else:
-                        progress_download.update(
-                            task_id, description="[status.success]Completed"
-                        )
+                    progress_download.update(
+                        task_id, description="[status.success]Completed"
+                    )
             except DownloadError as err:
                 progress_download.update(
                     task_id, description="[status.error][bold]" + str(err.msg)
@@ -323,7 +302,7 @@ def download(
             live.update(Group(panel_queue, panel_status, panel_download))
 
             # Start Download
-            with cf.ThreadPoolExecutor(max_workers=threads) as executor:
+            with cf.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
                 futures = []
                 try:
                     for item, task_id in download_list:
