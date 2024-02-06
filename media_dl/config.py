@@ -1,8 +1,12 @@
 from dataclasses import dataclass
+from pathlib import Path
 import shutil
 import atexit
+from typing import Literal
 
 from platformdirs import PlatformDirs
+
+from media_dl.types import EXT_AUDIO, EXT_VIDEO, VIDEO_RES
 
 APPNAME = "media-dl"
 
@@ -13,21 +17,18 @@ DIR_TEMP = dirs.site_cache_path
 MAX_THREADS = 4
 
 
-"""
 @dataclass(slots=True)
-class Main:
-    output_dir: Path
+class GeneralConf:
+    output: Path
     threads: int
-    parse_metadata: bool
+    pref_res: VIDEO_RES
 
 
 @dataclass(slots=True)
-class Extensions:
-    video: str
-    video_quality: str
-    audio: str
-    audio_quality: int
-"""
+class ConvertConf:
+    status: Literal["auto", "always", "never"]
+    video: EXT_VIDEO
+    audio: EXT_AUDIO
 
 
 def clean():

@@ -1,11 +1,8 @@
-from dataclasses import dataclass
 from pathlib import Path
 import threading
 import time
 
 from rich.live import Live
-from rich.panel import Panel
-from rich.align import Align
 from rich.table import Column
 from rich.console import Group, RenderableType
 from rich.markdown import HorizontalRule
@@ -19,16 +16,21 @@ from rich.progress import (
 )
 
 from media_dl.theme import *
-from media_dl.types import Media, Playlist, ResultType
+from media_dl.types import FORMAT, Media, Playlist, ResultType
 from media_dl.ydl import (
     YDL,
     DownloadError,
 )
 
-semaphore = threading.Semaphore(3)
+SEMAPHORE = None
 
 
-class CounterComp:
+def set_semaphore(limit: int):
+    global SEMAPHORE
+    SEMAPHORE = threading.Semaphore(limit)
+
+
+class CounterPart:
     def __init__(self, text: str) -> None:
         self.progress = Progress(
             TextColumn(
@@ -47,14 +49,14 @@ class CounterComp:
         self.progress.advance(self.task_id, 1)
 
     def reset(self):
-        self.progress.update(self.task_id, total=None, completed=None)
+        self.progress.reset(self.task_id)
 
     def set_limit(self, limit: int):
         self.progress.update(self.task_id, total=limit)
 
 
 class DownloadWorker(threading.Thread):
-    def __init__(self, ydl: YDL, progress: Progress, media: Media):
+    def __init__(self, media: Media, ydl: YDL, progress: Progress):
         self.ydl = ydl
         self.media = media
 
@@ -62,6 +64,7 @@ class DownloadWorker(threading.Thread):
             self.media_str,
             start=False,
             visible=False,
+            total=None,
         )
         self.progress = progress
 
@@ -73,7 +76,7 @@ class DownloadWorker(threading.Thread):
             f"[meta.creator]{self.media.creator}[/] - [meta.title]{self.media.title}[/]"
         )
 
-    def _ydl_progress_hook(self, d):
+    def ydl_progress_hook(self, d):
         match d["status"]:
             case "downloading":
                 downloaded_bytes = d.get("downloaded_bytes")
@@ -104,29 +107,32 @@ class DownloadWorker(threading.Thread):
         self.progress.update(self.task_id, visible=True)
 
     def run(self) -> None:
-        semaphore.acquire()
+        if SEMAPHORE:
+            SEMAPHORE.acquire()
+
+        self.init_progressbar()
 
         try:
-            self.init_progressbar()
-
             if not self.media.is_complete():
                 self.update_media()
 
-            self.ydl.download(self.media, progress_callback=self._ydl_progress_hook)
+            self.ydl.download(self.media, progress_callback=self.ydl_progress_hook)
             self.update_text("[status.success]Completed")
         except DownloadError as err:
             self.update_text("[status.error][bold]" + str(err.msg))
         finally:
             time.sleep(1.5)
             self.progress.remove_task(self.task_id)
-            semaphore.release()
+
+            if SEMAPHORE:
+                SEMAPHORE.release()
 
 
 class Downloader:
-    def __init__(self, *args, threads: int = 4, **kwargs) -> None:
-        self._ydl = YDL(*args, **kwargs)
-        self.threads = threads
-        self.queue = []
+    def __init__(self, output: Path | str, format: FORMAT, threads: int = 4, **kwargs):
+        set_semaphore(threads)
+
+        self.ydl = YDL(output, format, **kwargs)
 
         # Progress Bars
         self.progress = Progress(
@@ -145,8 +151,7 @@ class Downloader:
             expand=True,
             console=console,
         )
-
-        self.counter = CounterComp("[text.label][bold]Counter:")
+        self.counter = CounterPart("[text.label][bold]Counter:")
 
     @staticmethod
     def get_loading_bar() -> Progress:
@@ -156,7 +161,7 @@ class Downloader:
         load.add_task(f"[status.work]Loading[blink]...[/]")
         return load
 
-    def create_render(self, result: ResultType) -> RenderableType:
+    def get_media_render(self, result: ResultType) -> RenderableType:
         match result:
             case Playlist():
                 self.counter.set_limit(result.count)
@@ -176,36 +181,44 @@ class Downloader:
             case _:
                 raise TypeError()
 
-    def result_to_iter(self, result: ResultType) -> list[Media]:
-        items = []
+    def process_url(self, url: str) -> ResultType:
+        try:
+            if info := self.ydl.extract_url(url):
+                return info
+            else:
+                raise DownloadError("_")
+        except DownloadError:
+            raise DownloadError(
+                f"'{url}'[status.error] is invalid, unsupported or unable to establish internet connection."
+            )
 
-        if isinstance(result, Playlist):
-            items = result.entries
-        elif isinstance(result, Media):
-            items = [result]
-
-        return items
-
-    def download(self, urls: list[str]) -> None:
+    def download(self, query: list[str] | ResultType) -> None:
         with Live(console=console) as live:
-            for url in urls:
-                if info := self._ydl.extract_url(url):
-                    media_info = self.create_render(info)
-                    live.update(Group(media_info, HorizontalRule(), self.progress))
+            if isinstance(query, Media):
+                data = [query]
+            else:
+                data = query
 
-                    threads = []
-                    for media in self.result_to_iter(info):
-                        t = DownloadWorker(self._ydl, self.progress, media)
-                        t.start()
-                        threads.append(t)
-                    for t in threads:
-                        t.join()
-                        self.counter.advance()
+            for entry in data:
+                # Process and validate URLs
+                if isinstance(entry, str):
+                    try:
+                        entry = self.process_url(entry)
+                    except:
+                        continue
+
+                # Render UI
+                media_render = self.get_media_render(entry)
+                live.update(Group(media_render, HorizontalRule(), self.progress))
+
+                # Start download threads
+                threads = []
+                for media in self.ydl.result_to_iterable(entry):
+                    t = DownloadWorker(media, self.ydl, self.progress)
+                    t.start()
+                    threads.append(t)
+                for t in threads:
+                    t.join()
+                    self.counter.advance()
+
                 self.counter.reset()
-
-
-if __name__ == "__main__":
-    url = "https://gourmetdeluxxx.bandcamp.com/track/nocturnal-hooli"
-
-    dl = Downloader("temp", format="best-audio")
-    dl.download([url])

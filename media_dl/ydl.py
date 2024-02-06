@@ -1,6 +1,7 @@
-from typing import cast, get_args, Callable, NewType, Any
+from typing import Generator, Literal, cast, get_args, Callable, NewType, Any
 from pathlib import Path
 from copy import copy
+from enum import Enum
 import logging
 import json
 
@@ -14,12 +15,12 @@ from media_dl.types import (
     Media,
     Playlist,
     ResultType,
-    FORMAT_TYPE,
+    FORMAT,
     EXT_VIDEO,
     EXT_AUDIO,
     EXTENSION,
-    QUALITY,
     VIDEO_RES,
+    AUDIO_QUALITY,
 )
 from media_dl.config import DIR_TEMP
 
@@ -29,7 +30,7 @@ supress_logger.disabled = True
 
 InfoDict = NewType("InfoDict", dict[str, Any])
 
-THUMB_COMPATIBLE_EXTS = {
+_THUMB_COMPATIBLE_EXTS = {
     "mp3",
     "mkv",
     "mka",
@@ -40,6 +41,16 @@ THUMB_COMPATIBLE_EXTS = {
     "mp4",
     "mov",
 }
+_SEARCH_LIMIT = "20"
+
+
+class SearchProvider(Enum):
+    ytmusic = "https://music.youtube.com/search?q="
+    youtube = "ytsearch" + _SEARCH_LIMIT + ":"
+    soundcloud = "scsearch" + _SEARCH_LIMIT + ":"
+
+
+SEARCH_PROVDER = Literal["ytmusic", "youtube", "soundcloud"]
 
 
 class MusicMetaPP(PostProcessor):
@@ -80,37 +91,32 @@ class MusicMetaPP(PostProcessor):
         return [], information
 
 
-def get_info_thumbnail(info: InfoDict) -> str:
-    if thumb := info.get("thumbnail"):
-        return thumb
-    elif thumb := info.get("thumbnails"):
-        return thumb[-1]["url"]
-    else:
-        return ""
-
-
 class YDL:
     """
-    yt-dlp helper with nice defaults. It will handle:
+    yt-dlp helper with nice defaults and handler for:
 
-    - Info extraction from supported URLs
-    - `Media` objects creation
-    - Request files to download, conversion, metadata, etc
+    - Info extraction from supported URLs.
+    - `Media` objects creation.
+    - Request files to download, conversion, embed metadata, etc.
 
     Arguments:
         output: Directory where to save downloaded files.
-        format: File to request.
-        - Select 'best-video/best-audio' will try get the best file without convert it.
-        - Select one extension type will convert the file (It is slow and may increase file size without any quality difference).
+        format: Prefered file to request. Will try get the best file, but if can't get a 'video' file, fallback to 'audio'.
+        convert: Convert final file to wanted extension (It is slow and may increase file size).
+        video_res: Prefered video resolution. If selected quality is'nt available, closest one is used instead.
+        audio_quality: Prefered audio quality when do a file conversion. Range between [1-9].
 
-        quality: File quality. Range between [1-9]. By default will select the best quality [9].
+    Raises:
+        ValueEror: Bad provided arguments.
     """
 
     def __init__(
         self,
         output: Path | str,
-        format: FORMAT_TYPE | EXTENSION,
-        quality: QUALITY = 9,
+        format: FORMAT,
+        convert: EXTENSION | None = None,
+        video_res: VIDEO_RES = "2160",
+        audio_quality: AUDIO_QUALITY = 9,
     ):
         # Instance vars
         self.tempdir = DIR_TEMP / "ydl"
@@ -137,32 +143,38 @@ class YDL:
         # Determine extension
         video_exts = get_args(EXT_VIDEO)
         audio_exts = get_args(EXT_AUDIO)
-        quality_range = get_args(QUALITY)
+        quality_range = get_args(AUDIO_QUALITY)
 
-        if not quality in quality_range:
+        if not audio_quality in quality_range:
             raise ValueError(
-                f"'{quality}' is out of range. Expected int range [1-9].",
+                f"'{audio_quality}' is out of range. Expected range between [1-9].",
             )
+        if convert:
+            if not (format == "video" and convert in video_exts) and not (
+                format == "audio" and convert in audio_exts
+            ):
+                raise ValueError(
+                    f"The '{format}' format and the '{convert}' extension to be converted are incompatible."
+                )
 
-        # VIDEO
-        if format == "best-video" or format in video_exts:
-            video_quality = get_args(VIDEO_RES)[quality - 1]
-
+        # Video
+        if format == "video":
+            res = video_res if video_res else "5000"
             ydl_opts.update(
                 {
-                    "format": f"bv[height<={video_quality}]+ba/bv[height<={video_quality}]/b",
+                    "format": f"bv[height<={res}]+ba/bv[height<={res}]/b",
                     "merge_output_format": "/".join(video_exts),
                     "subtitleslangs": "all",
                     "writesubtitles": True,
                 }
             )
 
-            if format in video_exts:
+            if convert:
                 ydl_opts["postprocessors"].append(
-                    {"key": "FFmpegVideoConvertor", "preferedformat": format}
+                    {"key": "FFmpegVideoConvertor", "preferedformat": convert}
                 )
-        # AUDIO
-        elif format == "best-audio" or format in audio_exts:
+        # Audio
+        elif format == "audio":
             ydl_opts.update(
                 {
                     "format": "ba/b",
@@ -181,8 +193,8 @@ class YDL:
                 {
                     "key": "FFmpegExtractAudio",
                     "nopostoverwrites": True,
-                    "preferredcodec": format if format in audio_exts else None,
-                    "preferredquality": quality if quality != 9 else None,
+                    "preferredcodec": convert if convert in audio_exts else None,
+                    "preferredquality": audio_quality if audio_quality != 9 else None,
                 }
             )
 
@@ -199,10 +211,7 @@ class YDL:
             """
         # Invalid Format
         else:
-            raise ValueError(
-                f"'{format}' is invalid. Excepted 'best-video', 'best-audio' or one 'extension': "
-                + ", ".join(video_exts + audio_exts),
-            )
+            raise ValueError(f"'{format}' is invalid. Expected 'video' or 'audio'.")
 
         # Metadata Postprocessors
         ydl_opts["postprocessors"].append(
@@ -224,6 +233,17 @@ class YDL:
         # Init final YDL
         self._ydl = YoutubeDL(ydl_opts)
         self._ydl.add_post_processor(MusicMetaPP(), when="post_process")
+
+    @staticmethod
+    def result_to_iterable(result: ResultType) -> Generator[Media, None, None]:
+        match result:
+            case Playlist():
+                for item in result.entries:
+                    yield item
+            case Media():
+                yield result
+            case _:
+                raise TypeError()
 
     def _prepare_tempjson(self, data: Media) -> Path:
         return self.tempdir / str(data.extractor + " " + data.id + ".info.json")
@@ -249,18 +269,15 @@ class YDL:
                 if data := self._ydl.extract_info(info["url"], download=False):
                     info = data
 
-            # Check if is a valid Playlist
+            # Check if is a valid playlist and validate
             if entries := info.get("entries"):
-                serialize = []
-
                 for item in entries:
-                    # If item has the 2 required fields, will be added.
-                    if item.get("ie_key") and item.get("id"):
-                        serialize.append(item)
-
-                if not serialize:
+                    # If item not has the 2 required fields, will be deleted.
+                    if not (item.get("ie_key") and item.get("id")):
+                        del item
+                if not entries:
                     return None
-            # Check at least if is a valid Result
+            # Check at least if is a valid info
             elif not info.get("formats"):
                 return None
 
@@ -281,24 +298,28 @@ class YDL:
 
             return Playlist(
                 url=info.get("original_url") or info.get("url") or "",
-                thumbnail=get_info_thumbnail(info),
+                thumbnail=info.get("thumbnail") or "",
                 extractor=info["extractor_key"],
                 id=info["id"],
                 title=info.get("title") or "",
                 count=info.get("playlist_count") or 0,
                 entries=results,
             )
-
-        # Single Result Type
+        # Single Media Type
         # Process fully and save cache copy.
         else:
             item = Media(
                 url=info.get("original_url") or info.get("url") or "",
-                thumbnail=get_info_thumbnail(info),
+                thumbnail=info.get("thumbnail") or "",
                 extractor=info.get("extractor_key") or info.get("ie_key") or "",
                 id=info["id"],
-                title=info.get("title") or "",
-                creator=info.get("uploader") or "",
+                title=info.get("track") or info.get("title") or "",
+                creator=(
+                    info.get("artist")
+                    or info.get("creator")
+                    or info.get("uploader")
+                    or ""
+                ),
                 duration=info.get("duration") or 0,
             )
             if info.get("formats"):
@@ -327,6 +348,26 @@ class YDL:
             return self._info_to_dataclass(info)
         else:
             return None
+
+    def search(self, query: str, provider: SEARCH_PROVDER) -> list[Media]:
+        result = []
+
+        try:
+            prov = SearchProvider[provider].value
+        except:
+            raise ValueError(f"'{provider}' is invalid.")
+
+        try:
+            info = self._fetch_url(prov + query)
+        except DownloadError:
+            raise
+
+        if info:
+            info = self._info_to_dataclass(info)
+            if isinstance(info, Playlist):
+                result = info.entries
+
+        return result
 
     def download(
         self,
@@ -365,15 +406,20 @@ class YDL:
 if __name__ == "__main__":
     from rich import print
 
-    url = "https://music.youtube.com/watch?v=Kx7B-XvmFtE"
+    url = "https://soundcloud.com/playlist/sets/sound-of-berlin-01-qs1-x-synth"
     print("> Using YDL")
 
-    ydl = YDL("temp", "best-video")
+    ydl = YDL("temp", "video")
     data = ydl.extract_url(url)
     print(data)
 
+    data = ydl.search("Imagine Dragons", "ytmusic")
+    print(data)
+
+    """
     if isinstance(data, Media):
         ydl.download(data)
     elif isinstance(data, Playlist):
         for item in data:
             ydl.download(item)
+    """

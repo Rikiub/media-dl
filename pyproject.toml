@@ -11,14 +11,14 @@ media-dl = "media_dl.cli:run"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+typer = {extras = ["all"], version = "^0.9.0"}
 yt-dlp = "^2023.7.6"
 rich = "^13.4.2"
 platformdirs = "^3.10.0"
-typer = {extras = ["all"], version = "^0.9.0"}
-m3u8 = "^4.0.0"
-gallery-dl = "^1.26.5"
 syncedlyrics = "^0.8.0"
 music-tag = "^0.4.3"
+gallery-dl = {version = "^1.26.5", optional = true}
+m3u8 = {version = "^4.0.0", optional = true}
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

@@ -4,13 +4,13 @@ from typing import Literal
 
 __all__ = ["Media", "Playlist"]
 
-FORMAT_TYPE = Literal["best-video", "best-audio"]
+FORMAT = Literal["video", "audio"]
 EXT_VIDEO = Literal["mp4", "mkv"]
-EXT_AUDIO = Literal["m4a", "mp3", "ogg", "mka"]
+EXT_AUDIO = Literal["m4a", "mp3", "ogg"]
 EXTENSION = EXT_VIDEO | EXT_AUDIO
-"""Common containers formats with thumbnail support and lossy compression."""
+"""Common containers formats with thumbnail, metadata and lossy compression support."""
 
-QUALITY = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]
+AUDIO_QUALITY = Literal[1, 2, 3, 4, 5, 6, 7, 8, 9]
 VIDEO_RES = Literal["144", "240", "360", "480", "720", "1080", "1440", "2160", "4320"]
 
 
