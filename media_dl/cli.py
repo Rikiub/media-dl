@@ -12,12 +12,18 @@ from media_dl.theme import *
 app = Typer(rich_markup_mode="rich")
 
 
-class Format(Enum):
+class Format(str, Enum):
     video = "video"
     audio = "audio"
 
 
+class Provider(str, Enum):
+    ytmusic = "ytmusic"
+    soundcloud = "soundcloud"
+
+
 class RichPanel:
+    required = "Required"
     output = "Formatting"
     search = "Search"
     convert = "Conversion (Advanced)"
@@ -40,19 +46,19 @@ def download(
             "-f",
             help="File type to request. Would fallback to 'audio' if 'video' is not available.",
             prompt="What format you want?",
-            rich_help_panel=RichPanel.output,
+            rich_help_panel=RichPanel.required,
             show_default=False,
         ),
     ],
     search: Annotated[
-        str,
+        Provider,
         Option(
             "--search-from",
             "-s",
             help="Switch to 'search' mode from selected provider.",
             rich_help_panel=RichPanel.output,
         ),
-    ] = "",
+    ] = Provider.ytmusic,
     video_res: Annotated[
         str,
         Option(
@@ -120,7 +126,7 @@ def download(
 
     if search:
         for url in urls:
-            if info := dl.ydl.search(url, search):  # type: ignore
+            if info := dl.ydl.search(url, search.value):
                 info = info[0]
                 dl.download(info)
     else:
