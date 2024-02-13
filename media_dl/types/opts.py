@@ -1,8 +1,8 @@
 import logging
 
-from media_dl.config.dirs import DIR_TEMP
-
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
+
+from media_dl.config.dirs import DIR_TEMP
 
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
