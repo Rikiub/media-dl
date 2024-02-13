@@ -1,4 +1,4 @@
-> yt-dlp helper with nice defaults + fancy output + music metadata.
+> yt-dlp helper with nice defaults + fancy output.
 
 ## Features
 
@@ -6,14 +6,12 @@
     - Metadata
     - Thumbnails
     - Subtitles
-    - Simple API and extra validations
+- Simple yt-dlp API.
 - Music search for:
     - YouTube Music
     - SoundCloud
-- Multiple threads for fast downloads.
+- Multi-threads for fast downloads.
 - Pretty and fancy CLI interface.
-- Basic metadata and synced lyrics for music sites.
-- Sync playlists
 
 ## No supported
 
@@ -21,15 +19,14 @@
 
 ## Dependencies
 
+- Python 3.10
 - [yt-dlp](https://pypi.org/project/yt-dlp/): Video and Audio downloader.
 - [Typer](https://pypi.org/project/typer/): Fancy CLI interface.
 - [Rich](https://pypi.org/project/rich/): Fancy output and progress bars.
 
 ## TODO
 
-- [ ] YTMusic and SoundCloud search.
-- [ ] Better video quality selector.
 - [ ] Sync playlists feature.
-- [ ] Refactorize CLI UI components.
-- [x] Handler for music-sites metadata + syncedlyrics.
+- [x] Refactorize CLI.
+- [x] YTMusic and SoundCloud search.
 - [x] Good yt-dlp API helper.
