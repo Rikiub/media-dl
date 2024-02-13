@@ -814,6 +814,22 @@ files = [
 ]
 
 [[package]]
+name = "strenum"
+version = "0.4.15"
+description = "An Enum that inherits from str."
+optional = false
+python-versions = "*"
+files = [
+    {file = "StrEnum-0.4.15-py3-none-any.whl", hash = "sha256:a30cda4af7cc6b5bf52c8055bc4bf4b2b6b14a93b574626da33df53cf7740659"},
+    {file = "StrEnum-0.4.15.tar.gz", hash = "sha256:878fb5ab705442070e4dd1929bb5e2249511c0bcf2b0eeacf3bcd80875c82eff"},
+]
+
+[package.extras]
+docs = ["myst-parser[linkify]", "sphinx", "sphinx-rtd-theme"]
+release = ["twine"]
+test = ["pylint", "pytest", "pytest-black", "pytest-cov", "pytest-pylint"]
+
+[[package]]
 name = "syncedlyrics"
 version = "0.8.0"
 description = "Get an LRC format (synchronized) lyrics for your music"
@@ -997,4 +1013,4 @@ websockets = ">=12.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "e01ee1708e2a5b982788e8f4c755d36c489c7c1c6d8c31cb2c5c506a3f9cae0a"
+content-hash = "a2c127957eee0817509649b727e9b7e752455ea10296b37fe93a00017f370182"

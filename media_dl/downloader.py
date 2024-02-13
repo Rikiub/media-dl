@@ -1,74 +1,115 @@
-from pathlib import Path
-import threading
+from typing import Callable, Literal
+from threading import Thread, Semaphore
 import time
 
-from rich.live import Live
+from yt_dlp import YoutubeDL, DownloadError
 from rich.table import Column
-from rich.console import Group, RenderableType
-from rich.markdown import HorizontalRule
 from rich.progress import (
-    MofNCompleteColumn,
     DownloadColumn,
-    SpinnerColumn,
     TextColumn,
     BarColumn,
     Progress,
 )
 
-from media_dl.theme import *
-from media_dl.types import FORMAT, Media, Playlist, ResultType
-from media_dl.ydl import (
-    YDL,
-    DownloadError,
-)
+from media_dl.extractor import ExtractionError, Extractor
+from media_dl.types.download import DownloadConfig
+from media_dl.types.models import InfoDict, Media, ResultType
+from media_dl.config.theme import *
 
-SEMAPHORE = None
-
-
-def set_semaphore(limit: int):
-    global SEMAPHORE
-    SEMAPHORE = threading.Semaphore(limit)
+ProgressCallback = Callable[
+    [Literal["downloading", "processing", "finished", "error"], str, int, int],
+    None,
+]
 
 
-class CounterPart:
-    def __init__(self, text: str) -> None:
-        self.progress = Progress(
-            TextColumn(
-                "[progress.percentage]{task.description}",
-            ),
-            MofNCompleteColumn(),
-            console=console,
-        )
-        self.task_id = self.progress.add_task(text, total=None)
+class DownloadWorker(Thread):
+    def __init__(
+        self,
+        media: Media,
+        config: DownloadConfig | None = None,
+        callback: ProgressCallback | None = None,
+        limiter: Semaphore = Semaphore(),
+    ):
+        self._extr = Extractor()
 
-    @property
-    def render(self) -> Progress:
-        return self.progress
-
-    def advance(self):
-        self.progress.advance(self.task_id, 1)
-
-    def reset(self):
-        self.progress.reset(self.task_id)
-
-    def set_limit(self, limit: int):
-        self.progress.update(self.task_id, total=limit)
-
-
-class DownloadWorker(threading.Thread):
-    def __init__(self, media: Media, ydl: YDL, progress: Progress):
-        self.ydl = ydl
         self.media = media
+        self.config = config if config else DownloadConfig("video")
+        self.callback = callback
+        self.loop = limiter
+
+        super().__init__(daemon=True)
+
+    def _callback_wraper(
+        self,
+        d: dict,
+        progress: ProgressCallback,
+    ) -> None:
+        status = d["status"]
+        completed = d.get("downloaded_bytes") or 0
+        total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+
+        post = d.get("postprocessor") or "DownloadPart"
+
+        match status:
+            case "downloading":
+                pass
+            case "started" | "finished":
+                status = "processing"
+
+        progress(status, post, completed, total)
+
+    def resolve_media(self) -> InfoDict:
+        self.media, data = self._extr.update_media(self.media)
+        return data
+
+    def download(self) -> None:
+        if self.callback:
+            callback = self.callback
+            wrapper = lambda d: self._callback_wraper(d, callback)
+            progress = {
+                "progress_hooks": [wrapper],
+                "postprocessor_hooks": [wrapper],
+            }
+        else:
+            progress = {}
+
+        try:
+            info = self.resolve_media()
+
+            with YoutubeDL(self.config.gen_opts() | progress) as ydl:
+                data = ydl.process_ie_result(info, download=True)
+
+            path = data["requested_downloads"][0]["filename"]
+
+            if self.callback:
+                self.callback("finished", path, 0, 0)
+        except (DownloadError, ExtractionError) as err:
+            if self.callback:
+                self.callback("error", str(err), 0, 0)
+
+    def run(self) -> None:
+        self.loop.acquire()
+        self.download()
+        self.loop.release()
+
+
+class RichDownloadWorker(DownloadWorker):
+    def __init__(
+        self,
+        media: Media,
+        progress: Progress,
+        config: DownloadConfig | None = None,
+        limiter: Semaphore = Semaphore(),
+    ):
+        super().__init__(media, config, self.default_callback, limiter)
 
         self.task_id = progress.add_task(
             self.media_str,
+            total=None,
             start=False,
             visible=False,
-            total=None,
         )
         self.progress = progress
-
-        super().__init__(daemon=True)
 
     @property
     def media_str(self):
@@ -76,65 +117,56 @@ class DownloadWorker(threading.Thread):
             f"[meta.creator]{self.media.creator}[/] - [meta.title]{self.media.title}[/]"
         )
 
-    def ydl_progress_hook(self, d):
-        match d["status"]:
+    def default_callback(self, status, action, completed, total):
+        match status:
             case "downloading":
-                downloaded_bytes = d.get("downloaded_bytes")
-                total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate")
-                self.progress.update(
-                    self.task_id,
-                    completed=downloaded_bytes,
-                    total=total_bytes,
-                )
+                self.update_text(self.media_str)
+                self.update_progress(completed, total)
+            case "processing":
+                self.update_text("[status.wait][bold]Processing step: " + action)
+            case "error":
+                self.update_text("[status.error]" + action)
+                time.sleep(1.5)
+                self.remove_progress()
             case "finished":
-                self.update_text("[status.wait][bold]Converting" + "[blink]...")
+                self.update_text("[status.success]Completed")
+                time.sleep(1.5)
+                self.remove_progress()
+
+    def resolve_media(self) -> InfoDict:
+        info = super().resolve_media()
+        self.update_text(self.media_str)
+        return info
 
     def update_text(self, text: str):
         self.progress.update(self.task_id, description=text)
 
-    def update_media(self):
-        self.update_text("[blink][status.wait]...")
+    def update_progress(self, completed: int, total: int):
+        self.progress.update(self.task_id, completed=completed, total=total)
 
-        result = self.ydl.extract_url(self.media.url)
+    def remove_progress(self):
+        self.progress.remove_task(self.task_id)
 
-        if isinstance(result, Media):
-            self.media = result
-
-        self.update_text(self.media_str)
-
-    def init_progressbar(self):
+    def init_progress(self):
         self.progress.start_task(self.task_id)
         self.progress.update(self.task_id, visible=True)
 
-    def run(self) -> None:
-        if SEMAPHORE:
-            SEMAPHORE.acquire()
-
-        self.init_progressbar()
-
-        try:
-            if not self.media.is_complete():
-                self.update_media()
-
-            self.ydl.download(self.media, progress_callback=self.ydl_progress_hook)
-            self.update_text("[status.success]Completed")
-        except DownloadError as err:
-            self.update_text("[status.error][bold]" + str(err.msg))
-        finally:
-            time.sleep(1.5)
-            self.progress.remove_task(self.task_id)
-
-            if SEMAPHORE:
-                SEMAPHORE.release()
+    def download(self):
+        self.init_progress()
+        super().download()
 
 
 class Downloader:
-    def __init__(self, output: Path | str, format: FORMAT, threads: int = 4, **kwargs):
-        set_semaphore(threads)
+    def __init__(
+        self,
+        data: ResultType,
+        config: DownloadConfig | None = None,
+        threads: int = 4,
+    ):
+        self.data = data
+        self.config = config
+        self.loop = Semaphore(threads)
 
-        self.ydl = YDL(output, format, **kwargs)
-
-        # Progress Bars
         self.progress = Progress(
             TextColumn(
                 "[progress.percentage]{task.description}",
@@ -151,74 +183,21 @@ class Downloader:
             expand=True,
             console=console,
         )
-        self.counter = CounterPart("[text.label][bold]Counter:")
 
-    @staticmethod
-    def get_loading_bar() -> Progress:
-        load = Progress(
-            SpinnerColumn(), TextColumn("[progress.description]{task.description}")
-        )
-        load.add_task(f"[status.work]Loading[blink]...[/]")
-        return load
+    def start(self) -> None:
+        if isinstance(self.data, Media):
+            d = [self.data]
+        else:
+            d = self.data
 
-    def get_media_render(self, result: ResultType) -> RenderableType:
-        match result:
-            case Playlist():
-                self.counter.set_limit(result.count)
-                return Group(
-                    f"[text.label][bold]Playlist Title:[/][/] [text.desc]{result.title}[/]\n"
-                    f"[text.label][bold]Source:[/][/] [text.desc]{result.extractor}[/]",
-                    self.counter.render,
+        with self.progress:
+            threads = []
+
+            for entry in d:
+                t = RichDownloadWorker(
+                    entry, self.progress, self.config, limiter=self.loop
                 )
-            case Media():
-                self.counter.set_limit(1)
-                return Group(
-                    f"[text.label][bold]Media Title:[/][/] [text.desc]{result.title}[/]\n"
-                    f"[text.label][bold]Creator:[/][/] [text.desc]{result.creator}[/]\n"
-                    f"[text.label][bold]Source:[/][/] [text.desc]{result.extractor}[/]",
-                    self.counter.render,
-                )
-            case _:
-                raise TypeError()
-
-    def process_url(self, url: str) -> ResultType:
-        try:
-            if info := self.ydl.extract_url(url):
-                return info
-            else:
-                raise DownloadError("_")
-        except DownloadError:
-            raise DownloadError(
-                f"'{url}'[status.error] is invalid, unsupported or unable to establish internet connection."
-            )
-
-    def download(self, query: list[str] | ResultType) -> None:
-        with Live(console=console) as live:
-            if isinstance(query, Media):
-                data = [query]
-            else:
-                data = query
-
-            for entry in data:
-                # Process and validate URLs
-                if isinstance(entry, str):
-                    try:
-                        entry = self.process_url(entry)
-                    except:
-                        continue
-
-                # Render UI
-                media_render = self.get_media_render(entry)
-                live.update(Group(media_render, HorizontalRule(), self.progress))
-
-                # Start download threads
-                threads = []
-                for media in self.ydl.result_to_iterable(entry):
-                    t = DownloadWorker(media, self.ydl, self.progress)
-                    t.start()
-                    threads.append(t)
-                for t in threads:
-                    t.join()
-                    self.counter.advance()
-
-                self.counter.reset()
+                threads.append(t)
+                t.start()
+            for t in threads:
+                t.join()

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "media_dl"
 version = "0.1.0"
-description = "yt-dlp helper with nice defaults + fancy output + music metadata"
+description = "yt-dlp wrappre with nice defaults + fancy output"
 authors = ["Rikiub <rikiub.dev@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -15,10 +15,7 @@ typer = {extras = ["all"], version = "^0.9.0"}
 yt-dlp = "^2023.7.6"
 rich = "^13.4.2"
 platformdirs = "^3.10.0"
-syncedlyrics = "^0.8.0"
-music-tag = "^0.4.3"
-gallery-dl = {version = "^1.26.5", optional = true}
-m3u8 = {version = "^4.0.0", optional = true}
+strenum = "^0.4.15"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
