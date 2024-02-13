@@ -1,13 +1,12 @@
 from tempfile import TemporaryDirectory
-from pathlib import Path
 
 import pytest
 
-from media_dl import YDL
+from media_dl import YDL, DownloadConfig
 from media_dl.extractor import ExtractionError
 from media_dl.types.models import Media, Playlist
 
-TEMPPATH = Path(TemporaryDirectory().name)
+TEMPDIR = TemporaryDirectory()
 
 
 class TestExtractor:
@@ -30,6 +29,7 @@ class TestExtractor:
 
 class TestDownloads:
     ydl = YDL()
+    config = DownloadConfig("audio", output=TEMPDIR.name)
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer
@@ -37,8 +37,9 @@ class TestDownloads:
         info = self.ydl.extract_from_url(url)
 
         if isinstance(info, Media):
-            file_path = self.ydl.download(info)
-            # assert file_path.is_file()
+            with TEMPDIR:
+                file_path = self.ydl.download(info, config=self.config)
+                # assert file_path.is_file()
         else:
             raise AssertionError()
 
@@ -48,8 +49,9 @@ class TestDownloads:
         info = self.ydl.extract_from_url(url)
 
         if isinstance(info, Playlist):
-            for item in info:
-                file_path = self.ydl.download(item)
-                # assert file_path.is_file()
+            with TEMPDIR:
+                for item in info:
+                    file_path = self.ydl.download(item, config=self.config)
+                    # assert file_path.is_file()
         else:
             raise AssertionError()
