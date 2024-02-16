@@ -5,7 +5,7 @@ InfoDict = NewType("InfoDict", dict[str, Any])
 
 
 @dataclass(slots=True)
-class _BaseID:
+class _ExtractID:
     extractor: str
     id: str
     url: str
@@ -26,16 +26,16 @@ class Format:
 
 
 @dataclass(slots=True)
-class Media(_BaseID):
+class Media(_ExtractID):
     thumbnail: str
     title: str
     creator: str
     duration: int
-    formats: set[Format]
+    formats: list[Format]
 
     @staticmethod
-    def _gen_formats(info: InfoDict) -> set["Format"]:
-        results = set()
+    def _gen_formats(info: InfoDict) -> list["Format"]:
+        results = []
 
         for format in info.get("formats") or {}:
             try:
@@ -47,9 +47,10 @@ class Media(_BaseID):
                     vcodec=format["vcodec"] if format["vcodec"] != "none" else None,
                     acodec=format["acodec"] if format["acodec"] != "none" else None,
                 )
-                results.add(fmt)
+                results.append(fmt)
             except KeyError:
                 continue
+
         return results
 
     @classmethod
@@ -79,20 +80,26 @@ class Media(_BaseID):
     def format_type(
         self,
     ) -> Literal["video+audio", "only_video", "only_audio", "incomplete"]:
-        type = "incomplete"
+        video_audio = False
+        only_video = False
+        only_audio = False
 
         for item in self.formats:
             if item.vcodec and item.acodec:
-                type = "video+audio"
-                break
+                video_audio = True
             elif item.vcodec:
-                type = "only_video"
-                break
+                only_video = True
             elif item.acodec:
-                type = "only_audio"
-                break
+                only_audio = True
 
-        return type
+        if video_audio:
+            return "video+audio"
+        elif only_video:
+            return "only_video"
+        elif only_audio:
+            return "only_audio"
+        else:
+            return "incomplete"
 
     def is_complete(self) -> bool:
         if self.formats:
@@ -102,7 +109,7 @@ class Media(_BaseID):
 
 
 @dataclass(slots=True)
-class Playlist(_BaseID):
+class Playlist(_ExtractID):
     thumbnail: str
     title: str
     count: int

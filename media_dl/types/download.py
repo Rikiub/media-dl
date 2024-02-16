@@ -1,20 +1,16 @@
 from dataclasses import dataclass
+from typing import Any, get_args
 from pathlib import Path
-from typing import Any
 
-from media_dl.types.opts import EXTRACT_OPTS, DOWNLOAD_OPTS
-from media_dl.types.formats import (
-    FormatTuples,
-    FORMAT,
-    EXTENSION,
-)
+from media_dl.types import ydl_opts
+from media_dl.types.formats import FORMAT, EXTENSION, EXT_VIDEO, EXT_AUDIO
 
 
 @dataclass(slots=True)
 class DownloadConfig:
     format: FORMAT
     convert_to: EXTENSION | None = None
-    video_res: int = 1080
+    video_quality: int = 1080
     audio_quality: int = 9
     embed_metadata: bool = True
     output: Path | str = Path.cwd()
@@ -24,31 +20,27 @@ class DownloadConfig:
 
         if not self.output.is_dir:
             raise ValueError(f"'{self.output}' not is a directory.")
-        if not self.audio_quality in FormatTuples.audio_quality:
-            raise ValueError(
-                f"'{self.audio_quality}' is out of range. Expected range between [1-9].",
-            )
         if self.convert_to:
             if not (
                 self.format == "video"
-                and self.convert_to in FormatTuples.video_exts
+                and self.convert_to in get_args(EXT_VIDEO)
                 or self.format == "audio"
-                and self.convert_to in FormatTuples.audio_exts
+                and self.convert_to in get_args(EXT_AUDIO)
             ):
                 raise ValueError(
                     f"The '{self.format}' format and the '{self.convert_to}' extension to be converted are incompatible."
                 )
 
     def gen_opts(self) -> dict[str, Any]:
-        opts = EXTRACT_OPTS | DOWNLOAD_OPTS
+        opts = ydl_opts.BASE_OPTS | ydl_opts.DOWNLOAD_OPTS
         opts["paths"]["home"] = str(self.output)
 
         match self.format:
             case "video":
-                res = str(self.video_res if self.video_res else 4320)
+                resolution = str(self.video_quality)
                 opts |= {
-                    "format": f"bv[height<={res}]+ba/bv[height<={res}]/b",
-                    "merge_output_format": "/".join(FormatTuples.video_exts),
+                    "format": f"bv[height<={resolution}]+ba/bv[height<={resolution}]/b",
+                    "merge_output_format": "/".join(get_args(EXT_VIDEO)),
                     "subtitleslangs": "all",
                     "writesubtitles": True,
                 }
@@ -80,12 +72,10 @@ class DownloadConfig:
                         "nopostoverwrites": True,
                         "preferredcodec": (
                             self.convert_to
-                            if self.convert_to in FormatTuples.video_exts
+                            if self.convert_to in get_args(EXT_AUDIO)
                             else None
                         ),
-                        "preferredquality": (
-                            self.audio_quality if self.audio_quality != 9 else None
-                        ),
+                        "preferredquality": self.audio_quality,
                     }
                 )
 
@@ -104,7 +94,7 @@ class DownloadConfig:
                 )
                 """
             case _:
-                raise ValueError()
+                raise ValueError(f"'{self.format}' is invalid.")
 
         if self.embed_metadata:
             # Metadata Postprocessors

@@ -1,5 +1,6 @@
 from typing import Callable, Literal
-from threading import Thread, Semaphore
+import concurrent.futures as cf
+from threading import Event
 import time
 
 from yt_dlp import YoutubeDL, DownloadError
@@ -11,10 +12,10 @@ from rich.progress import (
     Progress,
 )
 
+from media_dl.types.models import InfoDict, Media, Playlist, ResultType
 from media_dl.extractor import ExtractionError, Extractor
 from media_dl.types.download import DownloadConfig
-from media_dl.types.models import InfoDict, Media, ResultType
-from media_dl.config.theme import *
+from media_dl.config.theme import CONSOLE
 
 ProgressCallback = Callable[
     [Literal["downloading", "processing", "finished", "error"], str, int, int],
@@ -22,22 +23,24 @@ ProgressCallback = Callable[
 ]
 
 
-class DownloadWorker(Thread):
+class DownloaderError(Exception):
+    pass
+
+
+class DownloadWork:
     def __init__(
         self,
         media: Media,
         config: DownloadConfig | None = None,
         callback: ProgressCallback | None = None,
-        limiter: Semaphore = Semaphore(),
+        event: Event = Event(),
     ):
-        self._extr = Extractor()
-
         self.media = media
         self.config = config if config else DownloadConfig("video")
-        self.callback = callback
-        self.loop = limiter
 
-        super().__init__(daemon=True)
+        self._extr = Extractor()
+        self._callback = callback
+        self._event = event
 
     def _callback_wraper(
         self,
@@ -45,16 +48,14 @@ class DownloadWorker(Thread):
         progress: ProgressCallback,
     ) -> None:
         status = d["status"]
+        post = d.get("postprocessor") or "DownloadPart"
         completed = d.get("downloaded_bytes") or 0
         total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
-        post = d.get("postprocessor") or "DownloadPart"
-
-        match status:
-            case "downloading":
-                pass
-            case "started" | "finished":
-                status = "processing"
+        if status == "downloading":
+            pass
+        elif status in ("started", "finished"):
+            status = "processing"
 
         progress(status, post, completed, total)
 
@@ -62,10 +63,9 @@ class DownloadWorker(Thread):
         self.media, data = self._extr.update_media(self.media)
         return data
 
-    def download(self) -> None:
-        if self.callback:
-            callback = self.callback
-            wrapper = lambda d: self._callback_wraper(d, callback)
+    def start_download(self) -> bool:
+        if c := self._callback:
+            wrapper = lambda d: self._callback_wraper(d, c)
             progress = {
                 "progress_hooks": [wrapper],
                 "postprocessor_hooks": [wrapper],
@@ -81,27 +81,36 @@ class DownloadWorker(Thread):
 
             path = data["requested_downloads"][0]["filename"]
 
-            if self.callback:
-                self.callback("finished", path, 0, 0)
+            if callback := self._callback:
+                callback("finished", path, 0, 0)
+
+            return True
         except (DownloadError, ExtractionError) as err:
-            if self.callback:
-                self.callback("error", str(err), 0, 0)
+            if callback := self._callback:
+                callback("error", str(err), 0, 0)
 
-    def run(self) -> None:
-        self.loop.acquire()
-        self.download()
-        self.loop.release()
+            return False
+
+    def run(self) -> bool:
+        if self._event.is_set():
+            return False
+        return self.start_download()
 
 
-class RichDownloadWorker(DownloadWorker):
+class RichDownloadWork(DownloadWork):
     def __init__(
         self,
         media: Media,
         progress: Progress,
         config: DownloadConfig | None = None,
-        limiter: Semaphore = Semaphore(),
+        event: Event = Event(),
     ):
-        super().__init__(media, config, self.default_callback, limiter)
+        super().__init__(
+            media=media,
+            config=config,
+            callback=self.default_callback,
+            event=event,
+        )
 
         self.task_id = progress.add_task(
             self.media_str,
@@ -151,23 +160,24 @@ class RichDownloadWorker(DownloadWorker):
         self.progress.start_task(self.task_id)
         self.progress.update(self.task_id, visible=True)
 
-    def download(self):
+    def start_download(self):
         self.init_progress()
-        super().download()
+        return super().start_download()
 
 
 class Downloader:
     def __init__(
         self,
-        data: ResultType,
         config: DownloadConfig | None = None,
-        threads: int = 4,
+        max_threads: int = 4,
+        error_limit: int = 4,
     ):
-        self.data = data
-        self.config = config
-        self.loop = Semaphore(threads)
+        self._event = Event()
+        self._threads = max_threads
+        self._error_limit = error_limit
 
-        self.progress = Progress(
+        self._config = config
+        self._progress = Progress(
             TextColumn(
                 "[progress.percentage]{task.description}",
                 table_column=Column(
@@ -181,23 +191,46 @@ class Downloader:
             DownloadColumn(table_column=Column(justify="right", width=15)),
             transient=True,
             expand=True,
-            console=console,
+            console=CONSOLE,
         )
 
-    def start(self) -> None:
-        if isinstance(self.data, Media):
-            d = [self.data]
-        else:
-            d = self.data
+    def _resolve_data(self, data: ResultType) -> list[Media]:
+        match data:
+            case Media():
+                return [data]
+            case Playlist():
+                return data.entries
+            case list():
+                return data
+            case _:
+                raise TypeError(data)
 
-        with self.progress:
-            threads = []
+    def _init_tasks(self, data: ResultType) -> list[RichDownloadWork]:
+        return [
+            RichDownloadWork(
+                task, self._progress, config=self._config, event=self._event
+            )
+            for task in self._resolve_data(data)
+        ]
 
-            for entry in d:
-                t = RichDownloadWorker(
-                    entry, self.progress, self.config, limiter=self.loop
-                )
-                threads.append(t)
-                t.start()
-            for t in threads:
-                t.join()
+    def download(self, data: ResultType) -> None:
+        with self._progress:
+            with cf.ThreadPoolExecutor(self._threads) as executor:
+                futures = [executor.submit(task.run) for task in self._init_tasks(data)]
+
+                sucess = 0
+                errors = 0
+
+                try:
+                    for ft in cf.as_completed(futures):
+                        result: bool = ft.result()
+
+                        if result:
+                            sucess += 1
+                        else:
+                            errors += 1
+
+                        if errors > self._error_limit:
+                            raise DownloaderError("Too many errors to continue.")
+                finally:
+                    self._event.set()

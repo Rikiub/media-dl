@@ -8,14 +8,14 @@ _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
 
 
-EXTRACT_OPTS = {
+BASE_OPTS = {
     "ignoreerrors": False,
     "no_warnings": True,
     "noprogress": True,
     "quiet": True,
-    "extract_flat": "in_playlist",
     "logger": _supress_logger,
 }
+EXTRACT_OPTS = {"skip_download": True, "extract_flat": "in_playlist"}
 DOWNLOAD_OPTS = {
     "paths": {
         "home": "",
