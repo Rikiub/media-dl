@@ -1,3 +1,5 @@
+"""Base yt-dlp parameters."""
+
 import logging
 
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
@@ -14,6 +16,7 @@ BASE_OPTS = {
     "noprogress": True,
     "quiet": True,
     "logger": _supress_logger,
+    "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 EXTRACT_OPTS = {"skip_download": True, "extract_flat": "in_playlist"}
 DOWNLOAD_OPTS = {
@@ -25,6 +28,7 @@ DOWNLOAD_OPTS = {
         "default": "%(uploader)s - %(title)s.%(ext)s",
     },
     "overwrites": False,
+    "retries": 3,
     "postprocessors": [
         {
             "key": "FFmpegVideoRemuxer",

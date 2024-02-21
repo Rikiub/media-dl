@@ -23,7 +23,7 @@ theme = Theme(
 
 CONSOLE = Console(theme=theme)
 
+traceback.install(console=CONSOLE)
+
 print = CONSOLE.print
 input = CONSOLE.input
-
-traceback.install(console=CONSOLE)

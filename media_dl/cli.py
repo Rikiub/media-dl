@@ -1,38 +1,34 @@
 from typing import Annotated, Literal, get_args
 from pathlib import Path
-import sys
 
 from typer import Typer, Argument, Option
 from strenum import StrEnum
-from media_dl.downloader import DownloaderError
 
 from media_dl.types.formats import SEARCH_PROVIDER, EXTENSION, FORMAT
+from media_dl.downloader.base import DownloaderError
 from media_dl.extractor import ExtractionError
-from media_dl import YDL, DownloadConfig
-from media_dl.config.theme import print
 from media_dl.config.dirs import APPNAME
+from media_dl.config.theme import print
+from media_dl import YDL, FormatConfig
 
-app = Typer(rich_markup_mode="markdown")
+app = Typer()
 
-Format = StrEnum("Format", get_args(FORMAT))
+Format = StrEnum("Format", get_args(Literal[FORMAT, EXTENSION]))
 Provider = StrEnum("Provider", get_args(Literal[SEARCH_PROVIDER, "url"]))
-Extension = StrEnum("Extension", get_args(Literal[EXTENSION, "disabled"]))
 
 
 class HelpPanel(StrEnum):
-    required = "Required"
+    mode = "Mode"
     formatting = "Formatting"
-    search = "Search"
-    convert = "Conversion (Advanced)"
-    other = "Others (Advanced)"
+    other = "Others"
 
 
-@app.command(name="download", no_args_is_help=True)
+@app.command(no_args_is_help=True)
 def download(
     query: Annotated[
         list[str],
         Argument(
-            help="**URL** or **Query** to process and download.",
+            help="URLs or queries to process and download.",
             show_default=False,
         ),
     ],
@@ -41,9 +37,22 @@ def download(
         Option(
             "--format",
             "-f",
-            help="File type to request. Would fallback to **audio** if **video** is not available.",
-            prompt="What format you want?",
-            rich_help_panel=HelpPanel.required,
+            help="""
+            File type to request.
+            \n
+            - To get BEST, select 'best-video' or 'best-audio' (Fast).
+            \n
+            - To convert, select one file EXTENSION (Slow).
+            """,
+            metavar="BEST | EXTENSION",
+            prompt="""
+What format you want request?
+
+- To get BEST, select 'best-video' or 'best-audio' (Fast).
+- To convert, select one file EXTENSION (Slow).
+
+""",
+            rich_help_panel=HelpPanel.mode,
             show_default=False,
         ),
     ],
@@ -52,19 +61,10 @@ def download(
         Option(
             "--search-from",
             "-s",
-            help="Switch to **search** mode from selected provider.",
-            rich_help_panel=HelpPanel.formatting,
+            help="Switch to search mode from selected provider.",
+            rich_help_panel=HelpPanel.mode,
         ),
     ] = Provider["url"],
-    video_res: Annotated[
-        int,
-        Option(
-            "--video-quality",
-            "-r",
-            help="Prefered video resolution. If selected **quality** is'nt available, closest one is used instead.",
-            rich_help_panel=HelpPanel.formatting,
-        ),
-    ] = 720,
     output: Annotated[
         Path,
         Option(
@@ -73,65 +73,68 @@ def download(
             help="Directory where to save downloads.",
             rich_help_panel=HelpPanel.formatting,
             show_default=False,
+            resolve_path=False,
             file_okay=False,
-            resolve_path=True,
         ),
     ] = Path.cwd(),
-    convert: Annotated[
-        Extension,
+    video_res: Annotated[
+        int,
         Option(
-            "--convert-to",
-            help="Convert final file to wanted extension (Slow process).",
-            rich_help_panel=HelpPanel.convert,
+            "--video-quality",
+            "-vq",
+            help="Prefered video resolution when request a video file.",
+            metavar="RESOLUTION {480-720-1080}",
+            rich_help_panel=HelpPanel.formatting,
         ),
-    ] = Extension["disabled"],
+    ] = 720,
     audio_quality: Annotated[
         int,
         Option(
             "--audio-quality",
-            help="Prefered **audio quality** when do a file conversion. Can be range between **[0-9]** or audio bitrate **[128-360]**",
-            rich_help_panel=HelpPanel.convert,
+            "-aq",
+            help="Prefered audio quality when do a file conversion.",
+            metavar="BITRATE {128-256-320}",
+            rich_help_panel=HelpPanel.formatting,
         ),
     ] = 9,
     threads: Annotated[
         int,
         Option(
             "--threads",
-            help="Max parallel process to execute.",
+            help="Max parallels process to execute.",
             rich_help_panel=HelpPanel.other,
         ),
     ] = 4,
-    debug: Annotated[
+    quiet: Annotated[
         bool,
         Option(
-            "--debug",
-            help="Enable debug mode and tracebacks.",
-            rich_help_panel=HelpPanel.other,
+            "--quiet", "-q", help="Supress output.", rich_help_panel=HelpPanel.other
         ),
     ] = False,
 ):
-    """**yt-dlp** helper with ***nice defaults*** ✨."""
-
-    if not debug:
-        sys.tracebacklimit = 0
+    """
+    yt-dlp helper with nice defaults ✨.
+    """
 
     ydl = YDL(
-        config=DownloadConfig(
+        config=FormatConfig(
             format=format.value,
-            convert_to=convert.value if convert != "disabled" else None,
             video_quality=video_res,
             audio_quality=audio_quality,
             output=output,
         ),
         threads=threads,
+        quiet=quiet,
     )
 
     for url in query:
-        print(f"[status.work][Processing]: [green]'{url}'")
+        if not quiet:
+            print()
+            print(f"[status.work][Processing]: [green]'{url}'")
 
         try:
             if search != "url":
-                info = ydl.extract_from_search(url, search)  # type: ignore
+                info = ydl.extract_from_search(url, search.value)
                 info = info[0]
             else:
                 info = ydl.extract_from_url(url)
@@ -140,13 +143,16 @@ def download(
                 raise ExtractionError(f"'{url}' is invalid or unsupported.")
 
             ydl.download(info)
-        except ExtractionError as err:
-            print(f"[status.work][Error]: {err}")
+        except (ExtractionError, DownloaderError) as err:
+            msg = str(err)
+
+            if not quiet:
+                print("[status.work][Error]: [status.error]" + msg)
+
             continue
-        except DownloaderError as err:
-            print(f"[status.work][Error]: [status.error]{err}")
         else:
-            print(f"[status.work][Done]: {url}")
+            if not quiet:
+                print(f"[status.work][Done]: {url}")
 
 
 def run():

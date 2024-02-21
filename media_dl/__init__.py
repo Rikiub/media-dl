@@ -1,13 +1,18 @@
+from media_dl.downloader.progress import DownloaderProgress, FormatConfig
 from media_dl.extractor import Extractor
-from media_dl.downloader import Downloader
-from media_dl.types.download import DownloadConfig
 
 
-class YDL(Extractor, Downloader):
+class YDL(Extractor, DownloaderProgress):
     def __init__(
         self,
-        config: DownloadConfig | None = None,
+        config: FormatConfig | None = None,
         threads: int = 4,
+        quiet: bool = False,
     ):
         Extractor.__init__(self)
-        Downloader.__init__(self, config=config, max_threads=threads)
+        DownloaderProgress.__init__(
+            self,
+            config=config,
+            max_threads=threads,
+            render=not quiet,
+        )
