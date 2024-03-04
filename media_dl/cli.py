@@ -1,26 +1,74 @@
-from typing import Annotated, Literal, get_args
+from typing import Annotated, Generator, Literal, get_args
 from pathlib import Path
+import logging
 
-from typer import Typer, Argument, Option
+from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
-from media_dl.types.formats import SEARCH_PROVIDER, EXTENSION, FORMAT
-from media_dl.downloader.base import DownloaderError
-from media_dl.extractor import ExtractionError
-from media_dl.config.dirs import APPNAME
-from media_dl.config.theme import print
-from media_dl import YDL, FormatConfig
+from media_dl import YDL
+from media_dl.dirs import APPNAME
+from media_dl.logging import init_logging
+from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
+from media_dl.download import DownloaderError
+from media_dl.download.format_config import EXTENSION, FORMAT_TYPE, VIDEO_RES
+
+log = logging.getLogger(__name__)
 
 app = Typer()
 
-Format = StrEnum("Format", get_args(Literal[FORMAT, EXTENSION]))
-Provider = StrEnum("Provider", get_args(Literal[SEARCH_PROVIDER, "url"]))
+Format = StrEnum("Format", get_args(Literal["best-video", "best-audio", EXTENSION]))
+SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
 
 class HelpPanel(StrEnum):
-    mode = "Mode"
-    formatting = "Formatting"
-    other = "Others"
+    formatting = "Format"
+    advanced = "Advanced"
+
+
+def complete_query(incomplete: str) -> Generator[str, None, None]:
+    for name in SearchFrom:
+        if name.value.startswith(incomplete):
+            yield name.value + ":"
+
+
+def complete_resolution() -> list[str]:
+    return [str(entry) for entry in get_args(VIDEO_RES)]
+
+
+def parse_format(format: str) -> FORMAT_TYPE:
+    if format == "best-video":
+        return "video"
+    elif format == "best-audio":
+        return "only-audio"
+    else:
+        return format  # type: ignore
+
+
+def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
+    providers = [entry.name for entry in SearchFrom]
+    results = []
+
+    for entry in queries:
+        target = entry.split(":")[0]
+
+        if entry.startswith(("http://", "https://")):
+            results.append((SearchFrom["url"], entry))
+
+        elif target in providers:
+            final = entry.split(":")[1]
+            results.append((SearchFrom[target], final))
+
+        else:
+            completed = [i for i in complete_query(target)]
+
+            if completed:
+                msg = f"Maybe you mean the provider '{completed[0]}'?"
+            else:
+                msg = "Should be URL or provider."
+
+            raise BadParameter(f"'{target}' is invalid. {msg}")
+
+    return results
 
 
 @app.command(no_args_is_help=True)
@@ -28,8 +76,14 @@ def download(
     query: Annotated[
         list[str],
         Argument(
-            help="URLs or queries to process and download.",
+            help="""URLs and queries to process.
+            \n
+            - Insert URL to download (Default).\n
+            - Select one PROVIDER to search and download.
+            """,
             show_default=False,
+            autocompletion=complete_query,
+            metavar=f"URL | PROVIDER",
         ),
     ],
     format: Annotated[
@@ -52,19 +106,11 @@ What format you want request?
 - To convert, select one file EXTENSION (Slow).
 
 """,
-            rich_help_panel=HelpPanel.mode,
+            prompt_required=False,
+            rich_help_panel=HelpPanel.formatting,
             show_default=False,
         ),
-    ],
-    search: Annotated[
-        Provider,
-        Option(
-            "--search-from",
-            "-s",
-            help="Switch to search mode from selected provider.",
-            rich_help_panel=HelpPanel.mode,
-        ),
-    ] = Provider["url"],
+    ] = Format["best-video"],
     output: Annotated[
         Path,
         Option(
@@ -77,38 +123,49 @@ What format you want request?
             file_okay=False,
         ),
     ] = Path.cwd(),
-    video_res: Annotated[
+    quality: Annotated[
         int,
         Option(
-            "--video-quality",
-            "-vq",
-            help="Prefered video resolution when request a video file.",
-            metavar="RESOLUTION {480-720-1080}",
+            "--quality",
+            help="Prefered video resolution or audio bitrate to filter.",
+            metavar="RESOLUTION | BITRATE",
             rich_help_panel=HelpPanel.formatting,
+            autocompletion=complete_resolution,
+            show_default=False,
         ),
-    ] = 720,
-    audio_quality: Annotated[
-        int,
+    ] = 0,
+    ffmpeg: Annotated[
+        Path,
         Option(
-            "--audio-quality",
-            "-aq",
-            help="Prefered audio quality when do a file conversion.",
-            metavar="BITRATE {128-256-320}",
-            rich_help_panel=HelpPanel.formatting,
+            "--ffmpeg-location",
+            help="FFmpeg executable to use.",
+            rich_help_panel=HelpPanel.advanced,
+            show_default=False,
+            resolve_path=True,
         ),
-    ] = 9,
+    ] = Path.cwd(),
     threads: Annotated[
         int,
         Option(
             "--threads",
             help="Max parallels process to execute.",
-            rich_help_panel=HelpPanel.other,
+            rich_help_panel=HelpPanel.advanced,
         ),
     ] = 4,
+    verbose: Annotated[
+        bool,
+        Option(
+            "--verbose",
+            help="Display more information on screen. Useful for debugging.",
+            rich_help_panel=HelpPanel.advanced,
+        ),
+    ] = False,
     quiet: Annotated[
         bool,
         Option(
-            "--quiet", "-q", help="Supress output.", rich_help_panel=HelpPanel.other
+            "--quiet",
+            help="Supress screen information.",
+            rich_help_panel=HelpPanel.advanced,
         ),
     ] = False,
 ):
@@ -116,43 +173,43 @@ What format you want request?
     yt-dlp helper with nice defaults ✨.
     """
 
-    ydl = YDL(
-        config=FormatConfig(
-            format=format.value,
-            video_quality=video_res,
-            audio_quality=audio_quality,
-            output=output,
-        ),
-        threads=threads,
-        quiet=quiet,
-    )
+    if quiet:
+        log_level = logging.CRITICAL
+    elif verbose:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
 
-    for url in query:
-        if not quiet:
-            print()
-            print(f"[status.work][Processing]: [green]'{url}'")
+    init_logging(log_level)
+
+    try:
+        ydl = YDL(
+            format=parse_format(format.value),
+            quality=quality if quality != 0 else None,
+            output=output,
+            ffmpeg_location="" if ffmpeg == Path.cwd() else ffmpeg,
+            threads=threads,
+            quiet=quiet,
+        )
+    except FileNotFoundError as err:
+        log.error(err)
+        raise SystemExit(1)
+
+    for target, entry in parse_input(query):
+        log.info("Processing: %s", entry)
 
         try:
-            if search != "url":
-                info = ydl.extract_from_search(url, search.value)
-                info = info[0]
+            if target.value == "url":
+                result = ydl.extract_url(entry)
             else:
-                info = ydl.extract_from_url(url)
+                result = ydl.extract_search(entry, target.value)
+                result = result[1]
 
-            if not info:
-                raise ExtractionError(f"'{url}' is invalid or unsupported.")
-
-            ydl.download(info)
-        except (ExtractionError, DownloaderError) as err:
-            msg = str(err)
-
-            if not quiet:
-                print("[status.work][Error]: [status.error]" + msg)
-
+            ydl.download(result)
+        except (ExtractionError, DownloaderError):
             continue
         else:
-            if not quiet:
-                print(f"[status.work][Done]: {url}")
+            log.info("\nDone: %s", entry)
 
 
 def run():

@@ -4,7 +4,7 @@ import pytest
 
 from media_dl import YDL, FormatConfig
 from media_dl.extractor import ExtractionError
-from media_dl.types.models import Media, Playlist
+from media_dl.types.models import Stream, Playlist
 
 TEMPDIR = TemporaryDirectory()
 
@@ -14,28 +14,28 @@ class TestExtractor:
 
     def test_exceptions(self):
         with pytest.raises(ExtractionError):
-            self.ydl.extract_from_url("https://unkdown.link.com")
+            self.ydl.extract_url("https://unkdown.link.com")
 
     def test_single_url(self):
-        info = self.ydl.extract_from_url("https://www.youtube.com/watch?v=BaW_jenozKc")
-        assert isinstance(info, Media)
+        info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
+        assert isinstance(info, Stream)
 
     def test_plalist_url(self):
-        info = self.ydl.extract_from_url(
+        info = self.ydl.extract_url(
             "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
         )
         assert isinstance(info, Playlist)
 
 
 class TestDownloads:
-    ydl = YDL(FormatConfig("audio", output=TEMPDIR.name))
+    ydl = YDL(FormatConfig("best-audio", output=TEMPDIR.name))
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer
         url = "https://music.youtube.com/watch?v=Kx7B-XvmFtE"
-        info = self.ydl.extract_from_url(url)
+        info = self.ydl.extract_url(url)
 
-        if isinstance(info, Media):
+        if isinstance(info, Stream):
             with TEMPDIR:
                 file_path = self.ydl.download(info)
                 # assert file_path.is_file()
@@ -45,7 +45,7 @@ class TestDownloads:
     def test_download_playlist(self):
         # Playlist: Album - HIVE (Sub Urban)
         url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
-        info = self.ydl.extract_from_url(url)
+        info = self.ydl.extract_url(url)
 
         if isinstance(info, Playlist):
             with TEMPDIR:

@@ -1,13 +1,44 @@
-"""Base yt-dlp parameters."""
+"""Base yt-dlp parameters, functions and helpers used around the project."""
 
+from typing import NewType, Any
 import logging
 
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
-from media_dl.config.dirs import DIR_TEMP
-
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
+
+InfoDict = NewType("InfoDict", dict[str, Any])
+
+
+def is_playlist(info: InfoDict) -> bool:
+    return True if info.get("_type") == "playlist" or info.get("entries") else False
+
+
+def is_single(info: InfoDict) -> bool:
+    return True if info.get("formats") else False
+
+
+def better_exception_msg(msg: str, url: str) -> str:
+    if "HTTP Error" in msg:
+        pass
+
+    elif "Unable to download" in msg or "Got error" in msg:
+        msg = "Unable to download. Check your internet connection."
+
+    elif "is not a valid URL" in msg:
+        msg = url + " is not a valid URL"
+
+    elif "Unsupported URL" in msg:
+        msg = "Unsupported URL: " + url
+
+    elif "ffmpeg not found" in msg:
+        msg = "Postprocessing failed. FFmpeg executable not founded."
+
+    if msg.startswith("ERROR: "):
+        msg = msg.strip("ERROR: ")
+
+    return msg
 
 
 BASE_OPTS = {
@@ -20,20 +51,12 @@ BASE_OPTS = {
 }
 EXTRACT_OPTS = {"skip_download": True, "extract_flat": "in_playlist"}
 DOWNLOAD_OPTS = {
-    "paths": {
-        "home": "",
-        "temp": str(DIR_TEMP),
-    },
     "outtmpl": {
         "default": "%(uploader)s - %(title)s.%(ext)s",
     },
     "overwrites": False,
     "retries": 3,
     "postprocessors": [
-        {
-            "key": "FFmpegVideoRemuxer",
-            "preferedformat": "opus>ogg/aac>m4a/alac>m4a/mov>mp4/webm>mkv",
-        },
         {
             "key": "MetadataParser",
             "when": "pre_process",

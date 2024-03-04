@@ -1,94 +1,33 @@
-from typing import cast
+from typing import cast, Literal
 import logging
 
 from yt_dlp import YoutubeDL, DownloadError
 
-from media_dl.types.models import InfoDict, Media, Playlist, ResultType
-from media_dl.types.formats import SEARCH_PROVIDER
-from media_dl.types import ydl_opts
+from media_dl.ydl_base import InfoDict, better_exception_msg, BASE_OPTS, EXTRACT_OPTS
 
-_supress_logger = logging.getLogger("YoutubeDL")
-_supress_logger.disabled = True
+log = logging.getLogger(__name__)
+
+SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
 
 
 class ExtractionError(Exception):
     pass
 
 
-def resolve_exception_msg(msg: str, url: str) -> str:
-    if "HTTP Error" in msg:
-        pass
-
-    elif "Unable to download webpage" in msg:
-        msg = "Unable to establish internet connection."
-
-    elif "Unable to download" in msg or "Got error" in msg:
-        msg = "Unable to download"
-
-    elif "is not a valid URL" in msg:
-        msg = f"{url} is not a valid URL"
-
-    elif "Unsupported URL" in msg:
-        msg = f"Unsupported URL: {url}"
-
-    elif "ffmpeg not found" in msg:
-        msg = "Unable to process the file"
-
-    elif msg.startswith("ERROR: "):
-        msg = msg.strip("ERROR: ")
-
-    return msg
-
-
 class InfoExtractor:
     def __init__(self):
-        opts = ydl_opts.BASE_OPTS | ydl_opts.EXTRACT_OPTS
+        opts = BASE_OPTS | EXTRACT_OPTS
         self.yt_dlp = YoutubeDL(opts)
 
-    def _fetch_query(self, query: str) -> InfoDict | None:
-        """Base info dict extractor."""
-
-        try:
-            info = self.yt_dlp.extract_info(query, download=False)
-        except DownloadError as err:
-            msg = resolve_exception_msg(str(err), query)
-            raise ExtractionError(msg)
-        else:
-            info = cast(InfoDict, info)
-
-        if not info:
-            return None
-
-        # Some extractors redirect the URL to the "real URL",
-        # For this extractors we need do another request.
-        if info["extractor_key"] == "Generic" and info["url"] != query:
-            return self._fetch_query(info["url"])
-
-        # Check if is a valid playlist and validate
-        if entries := info.get("entries"):
-            for index, item in enumerate(entries):
-                # If item not has the 2 required fields, will be deleted.
-                if not (item.get("ie_key") and item.get("id")):
-                    del entries[index]
-            if entries:
-                info["entries"] = entries
-            else:
-                return None
-        # Check if is a single item and save.
-        elif not info.get("formats"):
-            return None
-
-        return info
-
-    def extract_from_url(self, url: str) -> InfoDict | None:
+    def extract_url(self, url: str) -> InfoDict:
         """Extract info from URL."""
 
         if info := self._fetch_query(url):
             return info
         else:
-            return None
+            raise ExtractionError("Unable to extract", url)
 
-    def extract_from_search(self, query: str, provider: SEARCH_PROVIDER) -> InfoDict:
+    def extract_search(self, query: str, provider: SEARCH_PROVIDER) -> InfoDict:
         """Extract info from search provider."""
 
         search_limit = 20
@@ -101,76 +40,50 @@ class InfoExtractor:
             case "soundcloud":
                 prov = f"scsearch{search_limit}:"
             case _:
-                raise ValueError(f"'{provider}' is invalid.")
+                raise ValueError(provider, "is invalid. Must be:", SEARCH_PROVIDER)
 
         if info := self._fetch_query(prov + query):
             return info
         else:
             return InfoDict({})
 
+    def _fetch_query(self, query: str) -> InfoDict | None:
+        """Base info dict extractor."""
 
-class Extractor:
-    """Extractor, serializer and handler for `Results`."""
-
-    def __init__(self) -> None:
-        self._extr = InfoExtractor()
-
-    def _info_to_media(self, info: InfoDict) -> Media | Playlist:
-        """Serialize raw info dict to its appropiate `Media` object"""
-
-        if info.get("entries"):
-            return Playlist.from_info(info)
+        try:
+            info = self.yt_dlp.extract_info(query, download=False)
+        except DownloadError as err:
+            msg = better_exception_msg(str(err), query)
+            log.debug(msg)
+            raise ExtractionError(msg)
         else:
-            return Media.from_info(info)
+            info = cast(InfoDict, info)
 
-    @staticmethod
-    def resolve_result(data: ResultType) -> list[Media]:
-        """Convert any result to generic list for easy iteration."""
+        if not info:
+            return None
 
-        match data:
-            case Media():
-                return [data]
-            case Playlist():
-                return data.entries
-            case list():
-                return data
-            case _:
-                raise TypeError(data)
+        # Some extractors redirect the URL to the "real URL",
+        # For this extractors we need do another request.
+        if info["extractor_key"] == "Generic" and info["url"] != query:
+            log.debug("Re-fetching %s", query)
+            return self._fetch_query(info["url"])
 
-    def update_media(self, media: Media) -> tuple[Media, InfoDict]:
-        """Create new and complete copy of the provided item. Useful for update `Playlist` entries."""
+        # Check if is a valid playlist and validate
+        if entries := info.get("entries"):
+            for index, item in enumerate(entries):
+                # If item has not the 2 required fields, will be deleted.
+                if not (item.get("ie_key") and item.get("id")):
+                    del entries[index]
 
-        url = media.url
-        info = self._extr.extract_from_url(url)
+            if not entries:
+                log.debug("Not founded valid entries in %s", query)
+                return None
 
-        if info:
-            media = Media.from_info(info)
-            return (media, info)
-        else:
-            raise ExtractionError("Failed to fetch data from:", url)
-
-    def extract_from_url(self, url: str) -> Media | Playlist | None:
-        """Extract and serialize information from URL.
-
-        Returns:
-            `Media` or `Playlist` item.
-
-            If return `Playlist`, its entries will be incomplete.
-            Use `update_media` function to update its entries.
-        """
-
-        if info := self._extr.extract_from_url(url):
-            return self._info_to_media(info)
+            info["entries"] = entries
+        # Check if is a single item and save.
+        elif info.get("formats"):
+            pass
         else:
             return None
 
-    def extract_from_search(self, query: str, provider: SEARCH_PROVIDER) -> list[Media]:
-        """Extract and serialize information from search provider."""
-
-        info = self._extr.extract_from_search(query, provider)
-        info = self._info_to_media(info)
-
-        if isinstance(info, Playlist):
-            return info.entries
-        else:
-            return []
+        return info

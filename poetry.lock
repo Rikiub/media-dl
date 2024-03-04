@@ -424,21 +424,6 @@ files = [
 ]
 
 [[package]]
-name = "platformdirs"
-version = "3.11.0"
-description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "platformdirs-3.11.0-py3-none-any.whl", hash = "sha256:e9d171d00af68be50e9202731309c4e658fd8bc76f55c11c7dd760d023bda68e"},
-    {file = "platformdirs-3.11.0.tar.gz", hash = "sha256:cf8ee52a3afdb965072dcc652433e0c7e3e40cf5ea1477cd4b3b1d2eb75495b3"},
-]
-
-[package.extras]
-docs = ["furo (>=2023.7.26)", "proselint (>=0.13)", "sphinx (>=7.1.1)", "sphinx-autodoc-typehints (>=1.24)"]
-test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4)", "pytest-cov (>=4.1)", "pytest-mock (>=3.11.1)"]
-
-[[package]]
 name = "pluggy"
 version = "1.4.0"
 description = "plugin and hook calling mechanisms for python"
@@ -521,6 +506,17 @@ plugins = ["importlib-metadata"]
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pympler"
+version = "1.0.1"
+description = "A development tool to measure, monitor and analyze the memory behavior of Python objects."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "Pympler-1.0.1-py3-none-any.whl", hash = "sha256:d260dda9ae781e1eab6ea15bacb84015849833ba5555f141d2d9b7b7473b307d"},
+    {file = "Pympler-1.0.1.tar.gz", hash = "sha256:993f1a3599ca3f4fcd7160c7545ad06310c9e12f70174ae7ae8d4e25f6c5d3fa"},
+]
+
+[[package]]
 name = "pytest"
 version = "7.4.4"
 description = "pytest: simple powerful testing with Python"
@@ -565,13 +561,13 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "rich"
-version = "13.7.0"
+version = "13.7.1"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 optional = false
 python-versions = ">=3.7.0"
 files = [
-    {file = "rich-13.7.0-py3-none-any.whl", hash = "sha256:6da14c108c4866ee9520bbffa71f6fe3962e193b7da68720583850cd4548e235"},
-    {file = "rich-13.7.0.tar.gz", hash = "sha256:5cb5123b5cf9ee70584244246816e9114227e0b98ad9176eede6ad54bf5403fa"},
+    {file = "rich-13.7.1-py3-none-any.whl", hash = "sha256:4edbae314f59eb482f54e9e30bf00d33350aaa94f4bfcd4e9e3110e64d0d7222"},
+    {file = "rich-13.7.1.tar.gz", hash = "sha256:9be308cb1fe2f1f57d67ce99e95af38a1e2bc71ad9813b0e247cf7ffbcc3a432"},
 ]
 
 [package.dependencies]
@@ -645,13 +641,13 @@ test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.
 
 [[package]]
 name = "typing-extensions"
-version = "4.9.0"
+version = "4.10.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "typing_extensions-4.9.0-py3-none-any.whl", hash = "sha256:af72aea155e91adfc61c3ae9e0e342dbc0cba726d6cba4b6c72c1f34e47291cd"},
-    {file = "typing_extensions-4.9.0.tar.gz", hash = "sha256:23478f88c37f27d76ac8aee6c905017a143b0b1b886c3c9f66bc2fd94f9f5783"},
+    {file = "typing_extensions-4.10.0-py3-none-any.whl", hash = "sha256:69b1a937c3a517342112fb4c6df7e72fc39a38e7891a5730ed4985b5214b5475"},
+    {file = "typing_extensions-4.10.0.tar.gz", hash = "sha256:b0abd7c89e8fb96f98db18d86106ff1d90ab692004eb746cf6eda2682f91b3cb"},
 ]
 
 [[package]]
@@ -776,4 +772,4 @@ websockets = ">=12.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "1fc24f65fb7cd53ffcc90ebd26265b1db2db65ced663580af78ee2bd7e929a16"
+content-hash = "6fc209689eff6b5b1ba1a1d7c99d93bffbb6c77bebb71e6c2b36284f69474d7b"
