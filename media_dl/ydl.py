@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 class YDL:
     def __init__(
         self,
-        format: FILE_REQUEST,
+        format: FILE_REQUEST = "video",
         quality: int | None = None,
         output: Path | str = Path.cwd(),
         ffmpeg_location: Path | str = "",

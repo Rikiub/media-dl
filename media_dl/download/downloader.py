@@ -6,7 +6,7 @@ from media_dl.download.progress import ProgressHandler, ProgressTask
 from media_dl.download.format_download import FormatDownloader, DownloaderError
 from media_dl.download.format_config import FormatConfig, FILE_REQUEST
 
-from media_dl.models import ExtractResult, Stream, StreamList, Playlist
+from media_dl.models import ExtractResult, Stream, Playlist
 from media_dl.models.format import Format, FormatList
 
 log = logging.getLogger(__name__)

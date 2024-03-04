@@ -12,7 +12,7 @@ class MetaID:
     id: str
     url: str
 
-    def _get_info(self) -> InfoDict:
+    def get_info(self) -> InfoDict:
         return GLOBAL_INFO.load(self.extractor, self.id) or extract_url(self.url)
 
 

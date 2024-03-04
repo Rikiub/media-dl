@@ -43,7 +43,7 @@ class Stream(MetaID):
 
     @classmethod
     def from_format(cls, format: Format) -> Stream:
-        info = format._get_info()
+        info = format.get_info()
         return cls.from_info(info)
 
     @classmethod

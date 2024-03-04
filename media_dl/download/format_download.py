@@ -39,7 +39,7 @@ class FormatDownloader:
             return
         self.run()
 
-    def run(self) -> Path:
+    def run(self) -> str:
         if c := self._callback:
             wrapper = lambda d: self._callback_wraper(d, c)
             progress = {
@@ -54,14 +54,14 @@ class FormatDownloader:
             params = BASE_OPTS | DOWNLOAD_OPTS | self.config.gen_opts() | fmt | progress
 
             with YoutubeDL(params) as ydl:
-                data = ydl.process_ie_result(self.format._get_info(), download=True)
+                data = ydl.process_ie_result(self.format.get_info(), download=True)
 
             path = data["requested_downloads"][0]["filepath"]
 
             if self._callback:
                 self._callback("finished", path, 0, 0)
 
-            return Path(path)
+            return path
         except _DownloaderError as err:
             msg = better_exception_msg(str(err), self.format.url)
 
