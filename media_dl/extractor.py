@@ -5,6 +5,8 @@ from yt_dlp import YoutubeDL, DownloadError
 
 from media_dl.ydl_base import InfoDict, better_exception_msg, BASE_OPTS, EXTRACT_OPTS
 
+__all__ = ["InfoExtractor"]
+
 log = logging.getLogger(__name__)
 
 SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]

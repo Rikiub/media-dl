@@ -9,6 +9,7 @@ import os
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
 from media_dl.dirs import DIR_TEMP
+from media_dl.models.format import FORMAT_TYPE
 from media_dl.ydl_base import BASE_OPTS, DOWNLOAD_OPTS
 
 StrPath = str | PathLike[str]
@@ -26,7 +27,6 @@ EXT_AUDIO = Literal["m4a", "mp3", "ogg"]
 EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
 """Common lossy compression containers formats with thumbnail and metadata support."""
 
-FORMAT_TYPE = Literal["video", "only-audio"]
 FILE_REQUEST = Literal[FORMAT_TYPE, EXTENSION]
 
 
@@ -34,51 +34,52 @@ FILE_REQUEST = Literal[FORMAT_TYPE, EXTENSION]
 class FormatConfig:
     """Helper to create download params to yt-dlp.
 
-    If ffmpeg if not installed, some options will not be available (metadata, remux).
+    If FFmpeg if not installed, options marked with (FFmpeg) will not be available.
+
+    Args:
+        format: Target file format to search or convert if is a extension.
+        output: Directory where to save files.
+        ffmpeg: Path to ffmpeg executable.
+        embed_metadata: Embed things like title, uploader, thumbnail. (FFmpeg)
+        remux: If format extension is not specified, will convert to most compatible extension. (FFmpeg)
     """
 
     format: FILE_REQUEST
     output: StrPath = Path.cwd()
-    ffmpeg_path: StrPath = ""
+    ffmpeg: StrPath | None = None
     embed_metadata: bool = True
     remux: bool = True
 
     def __post_init__(self):
-        # Check if has valid format.
-        self.target_type
-
         # Check if ffmpeg is installed and handle custom path.
-        if self.ffmpeg_path:
-            path = Path(self.ffmpeg_path)
+        if self.ffmpeg:
+            path = Path(self.ffmpeg)
 
-            if not self._valid_executable(path):
+            if not self._executable_exists(path):
                 raise FileNotFoundError(
-                    f"'{path.name}' is not a executable file.",
+                    f"'{path.name}' is not a FFmpeg executable.",
                 )
         else:
-            self.ffmpeg_path = self._get_global_ffmpeg() or ""
+            self.ffmpeg = self._get_global_ffmpeg() or None
 
         self.output = str(self.output)
-        self.ffmpeg_path = str(self.ffmpeg_path)
+        self.ffmpeg = str(self.ffmpeg)
 
     @property
-    def target_type(self) -> FORMAT_TYPE:
+    def type(self) -> FORMAT_TYPE:
         if self.format in get_args(FORMAT_TYPE):
             return cast(FORMAT_TYPE, self.format)
 
         elif self.format in get_args(EXT_VIDEO):
             return "video"
-
         elif self.format in get_args(EXT_AUDIO):
-            return "only-audio"
+            return "audio"
 
         else:
-            raise TypeError(
-                self.format, "is invalid. Should be:", FORMAT_TYPE, EXTENSION
-            )
+            raise TypeError(self.format, "is invalid. Should be:", FILE_REQUEST)
 
     @property
-    def target_convert(self) -> EXTENSION | None:
+    def convert(self) -> EXTENSION | None:
         """Check if can convert the file."""
         return (
             cast(EXTENSION, self.format) if self.format in get_args(EXTENSION) else None
@@ -87,22 +88,17 @@ class FormatConfig:
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def is_ffmpeg_installed(self) -> bool:
-        return self._valid_executable(self.ffmpeg_path)
-
     def gen_opts(self) -> dict[str, Any]:
-        ffmpeg = self.is_ffmpeg_installed()
-
         opts = BASE_OPTS | DOWNLOAD_OPTS
         opts |= {
             "paths": {
                 "home": str(self.output),
                 "temp": str(DIR_TEMP),
             },
-            "ffmpeg_location": str(self.ffmpeg_path) if ffmpeg else "",
+            "ffmpeg_location": str(self.ffmpeg) if self.ffmpeg else None,
         }
 
-        if ffmpeg and self.remux:
+        if self.ffmpeg and self.remux:
             opts["postprocessors"].append(
                 {
                     "key": "FFmpegVideoRemuxer",
@@ -110,20 +106,18 @@ class FormatConfig:
                 },
             )
 
-        match self.target_type:
+        match self.type:
             case "video":
                 opts |= {
-                    "format": "bv+ba/" if ffmpeg else "" + "bv/b",
+                    "format": "bv+ba/" if self.ffmpeg else "" + "bv/b",
                     "merge_output_format": (
-                        self.format
-                        if self.target_convert
-                        else "/".join(get_args(EXT_VIDEO))
+                        self.format if self.convert else "/".join(get_args(EXT_VIDEO))
                     ),
                     "subtitleslangs": "all",
                     "writesubtitles": True,
                 }
 
-                if ffmpeg and self.target_convert:
+                if self.ffmpeg and self.convert:
                     opts |= {"final_ext": self.format}
                     opts["postprocessors"].append(
                         {
@@ -131,7 +125,7 @@ class FormatConfig:
                             "preferedformat": self.format,
                         }
                     )
-            case "only-audio":
+            case "audio":
                 opts |= {
                     "format": "ba/b",
                     "postprocessor_args": {
@@ -144,19 +138,17 @@ class FormatConfig:
                     },
                 }
 
-                if ffmpeg:
+                if self.ffmpeg:
                     opts["postprocessors"].append(
                         {
                             "key": "FFmpegExtractAudio",
                             "nopostoverwrites": True,
-                            "preferredcodec": (
-                                self.format if self.target_convert else None
-                            ),
+                            "preferredcodec": self.format if self.convert else None,
                             "preferredquality": None,
                         }
                     )
 
-                if ffmpeg and self.target_convert:
+                if self.ffmpeg and self.convert:
                     opts |= {"final_ext": self.format}
 
                     """
@@ -170,8 +162,10 @@ class FormatConfig:
                         }
                     )
                     """
+            case _:
+                raise TypeError(self.format, "missmatch.")
 
-        if ffmpeg and self.embed_metadata:
+        if self.ffmpeg and self.embed_metadata:
             # Metadata Postprocessors
             opts["postprocessors"].extend(
                 [
@@ -194,7 +188,7 @@ class FormatConfig:
         else:
             return None
 
-    def _valid_executable(self, file: StrPath) -> bool:
+    def _executable_exists(self, file: StrPath) -> bool:
         path = Path(file)
 
         if path.exists() and os.access(path, os.X_OK):

@@ -7,10 +7,12 @@ from media_dl.download import Downloader, FILE_REQUEST
 
 from media_dl.models import ExtractResult
 from media_dl.models.list import Playlist
-from media_dl.models.stream import Stream, StreamList
+from media_dl.models.stream import Stream
 from media_dl.models.format import Format
 
 import logging
+
+__all__ = ["YDL"]
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +23,7 @@ class YDL:
         format: FILE_REQUEST = "video",
         quality: int | None = None,
         output: Path | str = Path.cwd(),
-        ffmpeg_location: Path | str = "",
+        ffmpeg: Path | str = "",
         embed_metadata: bool = True,
         threads: int = 4,
         quiet: bool = False,
@@ -30,7 +32,7 @@ class YDL:
             format=format,
             quality=quality,
             output=output,
-            ffmpeg_path=ffmpeg_location,
+            ffmpeg=ffmpeg,
             embed_metadata=embed_metadata,
             max_threads=threads,
             render_progress=not quiet,

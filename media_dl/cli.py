@@ -10,13 +10,19 @@ from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
 from media_dl.download import DownloaderError
-from media_dl.download.format_config import EXTENSION, FORMAT_TYPE, VIDEO_RES
+from media_dl.download.format_config import (
+    FILE_REQUEST,
+    FORMAT_TYPE,
+    EXT_VIDEO,
+    EXT_AUDIO,
+    VIDEO_RES,
+)
 
 log = logging.getLogger(__name__)
 
 app = Typer()
 
-Format = StrEnum("Format", get_args(Literal["best-video", "best-audio", EXTENSION]))
+Format = StrEnum("Format", get_args(FILE_REQUEST))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
 
@@ -33,15 +39,6 @@ def complete_query(incomplete: str) -> Generator[str, None, None]:
 
 def complete_resolution() -> list[str]:
     return [str(entry) for entry in get_args(VIDEO_RES)]
-
-
-def parse_format(format: str) -> FORMAT_TYPE:
-    if format == "best-video":
-        return "video"
-    elif format == "best-audio":
-        return "only-audio"
-    else:
-        return format  # type: ignore
 
 
 def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
@@ -62,9 +59,9 @@ def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
             completed = [i for i in complete_query(target)]
 
             if completed:
-                msg = f"Maybe you mean the provider '{completed[0]}'?"
+                msg = f"Did you mean '{completed[0]}'?"
             else:
-                msg = "Should be URL or provider."
+                msg = "Should be URL or search provider."
 
             raise BadParameter(f"'{target}' is invalid. {msg}")
 
@@ -93,24 +90,36 @@ def download(
             "-f",
             help="""
             File type to request.
-            \n
-            - To get BEST, select 'best-video' or 'best-audio' (Fast).
-            \n
-            - To convert, select one file EXTENSION (Slow).
+            
+            - To get BEST, select 'video' or 'audio' (Fast).\n
+            - To convert, select a file EXTENSION (Slow).
             """,
-            metavar="BEST | EXTENSION",
+            metavar=f"""[{'|'.join(get_args(FORMAT_TYPE))}]
+[{'|'.join(get_args(EXT_VIDEO))}]
+[{'|'.join(get_args(EXT_AUDIO))}]
+""",
             prompt="""
 What format you want request?
 
-- To get BEST, select 'best-video' or 'best-audio' (Fast).
-- To convert, select one file EXTENSION (Slow).
+- To get BEST, select 'video' or 'audio' (Fast).
+- To convert, select a file EXTENSION (Slow).
 
 """,
             prompt_required=False,
             rich_help_panel=HelpPanel.formatting,
             show_default=False,
         ),
-    ] = Format["best-video"],
+    ] = Format["video"],
+    quality: Annotated[
+        int,
+        Option(
+            "--quality",
+            help="Prefered video/audio quality to filter.",
+            rich_help_panel=HelpPanel.formatting,
+            autocompletion=complete_resolution,
+            show_default=False,
+        ),
+    ] = 0,
     output: Annotated[
         Path,
         Option(
@@ -123,21 +132,10 @@ What format you want request?
             file_okay=False,
         ),
     ] = Path.cwd(),
-    quality: Annotated[
-        int,
-        Option(
-            "--quality",
-            help="Prefered video resolution or audio bitrate to filter.",
-            metavar="RESOLUTION | BITRATE",
-            rich_help_panel=HelpPanel.formatting,
-            autocompletion=complete_resolution,
-            show_default=False,
-        ),
-    ] = 0,
     ffmpeg: Annotated[
         Path,
         Option(
-            "--ffmpeg-location",
+            "--ffmpeg",
             help="FFmpeg executable to use.",
             rich_help_panel=HelpPanel.advanced,
             show_default=False,
@@ -184,10 +182,10 @@ What format you want request?
 
     try:
         ydl = YDL(
-            format=parse_format(format.value),
+            format=format.value,
             quality=quality if quality != 0 else None,
             output=output,
-            ffmpeg_location="" if ffmpeg == Path.cwd() else ffmpeg,
+            ffmpeg="" if ffmpeg == Path.cwd() else ffmpeg,
             threads=threads,
             quiet=quiet,
         )
@@ -195,21 +193,30 @@ What format you want request?
         log.error(err)
         raise SystemExit(1)
 
-    for target, entry in parse_input(query):
-        log.info("Processing: %s", entry)
+    if not ydl._downloader.config.ffmpeg:
+        log.warning(
+            "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled.\n"
+        )
 
+    for target, entry in parse_input(query):
         try:
             if target.value == "url":
+                log.info("🔎 Extracting '%s'", entry)
                 result = ydl.extract_url(entry)
             else:
+                log.info("🔎 Searching '%s' from '%s'", entry, target.value)
                 result = ydl.extract_search(entry, target.value)
                 result = result[1]
+        except ExtractionError:
+            continue
 
+        try:
             ydl.download(result)
-        except (ExtractionError, DownloaderError):
+        except DownloaderError as err:
+            log.error("❌ %s", str(err))
             continue
         else:
-            log.info("\nDone: %s", entry)
+            log.info("✅ Done '%s'\n", entry)
 
 
 def run():

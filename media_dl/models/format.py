@@ -6,7 +6,7 @@ import bisect
 
 from media_dl.models.base import InfoDict, MetaID, extract_meta
 
-from media_dl.download.format_config import FORMAT_TYPE
+FORMAT_TYPE = Literal["video", "audio"]
 
 
 @dataclass(slots=True, frozen=True, order=True)
@@ -22,15 +22,15 @@ class Format(MetaID):
     def display_quality(self) -> str:
         if self.type == "video":
             return str(self.quality) + "p"
-        elif self.type == "only-audio":
+        elif self.type == "audio":
             return str(round(self.quality)) + "kbps"
         else:
-            raise TypeError(self.type)
+            return ""
 
     @classmethod
     def from_info_format(cls, info: InfoDict, format: dict) -> Format:
         type: FORMAT_TYPE = (
-            "only-audio" if format.get("resolution", "") == "audio only" else "video"
+            "audio" if format.get("resolution", "") == "audio only" else "video"
         )
         extension = format["ext"]
 
@@ -38,7 +38,7 @@ class Format(MetaID):
             case "video":
                 quality = format.get("height")
                 codec = format.get("vcodec")
-            case "only-audio":
+            case "audio":
                 quality = format.get("abr")
                 codec = format.get("acodec")
 
@@ -62,8 +62,8 @@ class FormatList(list[Format]):
 
         if self.filter(type="video"):
             return "video"
-        elif self.filter(type="only-audio"):
-            return "only-audio"
+        elif self.filter(type="audio"):
+            return "audio"
         else:
             return "incomplete"
 

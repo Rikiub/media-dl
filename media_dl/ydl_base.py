@@ -68,7 +68,7 @@ DOWNLOAD_OPTS = {
                 ),
                 (
                     MetadataParserPP.interpretter,
-                    "%(channel,uploader,creator,artist|null)s",
+                    "%(artist,channel,creator,uploader|NA)s",
                     "%(uploader)s",
                 ),
                 (

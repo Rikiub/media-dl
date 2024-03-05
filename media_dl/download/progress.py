@@ -108,27 +108,30 @@ class ProgressTask:
         self.progress.update(self.task_id, visible=True)
         self.started = True
 
-    def ydl_progress_hook(self, status, action, downloaded, total):
+    def ydl_progress_hook(self, status, downloaded, total):
         match status:
             case "downloading":
                 self.status = "Downloading"
                 self.completed = downloaded
                 self.total = total
             case "processing":
-                self.status = "Processing"
-            case "error":
-                self.status = "Error"
+                self.status = "Finishing"
+            case "converting":
+                self.status = "Converting"
             case "finished":
                 self.status = "Done"
+            case "error":
+                self.status = "Error"
 
         self.update()
 
-        if status in ("error", "finished"):
+        if status in ("converting", "processing", "finished"):
             if self.completed == 0:
                 self.completed = 100
                 self.total = 100
                 self.update()
 
+        if status in ("error", "finished"):
             time.sleep(1.5)
             self.finalize()
 
@@ -161,7 +164,7 @@ class ProgressHandler:
             ),
             BarColumn(table_column=Column(justify="right", width=25)),
             DownloadColumn(table_column=Column(justify="right", width=10)),
-            transient=True,
+            transient=False,
             expand=True,
             disable=disable,
         )

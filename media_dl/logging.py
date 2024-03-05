@@ -12,7 +12,7 @@ class LoggingFormatter(logging.Formatter):
             case logging.DEBUG:
                 color = "[blue]"
             case logging.INFO:
-                color = "[green]"
+                color = "[cyan]"
             case logging.WARNING:
                 color = "[yellow]"
             case logging.ERROR:

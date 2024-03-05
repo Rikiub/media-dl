@@ -22,17 +22,12 @@ class Downloader:
         max_threads: int = 4,
         error_limit: int = 4,
         render_progress: bool = True,
-        **config,
+        **format_config,
     ):
         self.render = render_progress
 
         self.quality = quality
-        self.config = FormatConfig(format=format, **config)
-
-        if not self.config.is_ffmpeg_installed():
-            log.warning(
-                "FFmpeg is not installed. File conversion and metadata embeding will be disabled."
-            )
+        self.config = FormatConfig(format=format, **format_config)
 
         self._progress = ProgressHandler(disable=not self.render)
         self._threads = max_threads
@@ -43,7 +38,6 @@ class Downloader:
         """Start download and process the files with provided format parameters."""
 
         log.debug("Downloading with config: %s", self.config.asdict())
-        log.debug("FFmpeg support: %s", self.config.is_ffmpeg_installed())
 
         with self._progress:
             streams = self._prepare_input(data)
@@ -52,30 +46,36 @@ class Downloader:
     def _prepare_input(self, data: ExtractResult | Format) -> list[Stream]:
         match data:
             case Format():
-                log.info("Format %s", data.url)
-                return [Stream.from_format(data)]
+                type = "Format"
+                query = data.url
+                result = [Stream.from_format(data)]
             case Stream():
-                log.info("Stream: '%s'", data.display_name)
-                return [data]
+                type = "Stream"
+                query = data.display_name
+                result = [data]
             case list():
-                return data
+                type = "Stream List"
+                query = ""
+                result = data
             case Playlist():
-                log.info("Playlist: '%s'", data.title)
-                return data.streams
+                type = "Playlist"
+                query = data.title
+                result = data.streams
             case _:
                 raise TypeError(data)
 
+        log.info("🔎 Founded %s: '%s'", type, query)
+        return result
+
     def _process_formats(self, data: list[Stream]) -> None:
         total_entries = len(data)
-
         self._progress.counter.set_total(total_entries)
+        is_single = True if total_entries == 1 else False
 
         log.debug("Founded %s entries", total_entries)
 
         with cf.ThreadPoolExecutor(self._threads) as executor:
             futures = [executor.submit(self._download_thread, task) for task in data]
-
-            is_single = True if total_entries == 1 else False
 
             try:
                 errors = 0
@@ -92,8 +92,7 @@ class Downloader:
                         raise DownloaderError(
                             "Too many errors to continue downloading the playlist."
                         )
-            except DownloaderError as err:
-                log.error("\n" + str(err))
+            except DownloaderError:
                 raise
             finally:
                 self._event.set()
@@ -109,8 +108,9 @@ class Downloader:
         stream, format, progress = self._prepare_stream(stream)
 
         log.debug(
-            "Downloading '%s' with format '%s (%s)'",
+            "Downloading '%s' with format %s (%s %s)",
             stream.display_name,
+            format.format_id,
             format.extension,
             format.display_quality,
         )
@@ -124,7 +124,7 @@ class Downloader:
             ).start()
         except DownloaderError as err:
             log.error("Failed to download '%s'", stream.display_name)
-            log.error("YDL-Error: %s", str(err))
+            log.error("%s: %s", err.__class__.__name__, str(err))
             return False
         else:
             log.info("Finished '%s'", stream.display_name)
@@ -137,7 +137,8 @@ class Downloader:
         if not stream.formats:
             stream = stream.get_updated()
             progress.message = stream.display_name
-            progress.update()
+
+        progress.update()
 
         format = self._get_best_format(stream.formats)
 
@@ -147,16 +148,16 @@ class Downloader:
         conf = self.config
 
         # Filter by extension
-        if f := conf.target_convert and fmt_list.filter(extension=conf.target_convert):
+        if f := conf.convert and fmt_list.filter(extension=conf.convert):
             final = f
         # Filter by type
-        elif f := fmt_list.filter(type=conf.target_type):
+        elif f := fmt_list.filter(type=conf.type):
             final = f
         # Filter fallback to available type.
-        elif f := fmt_list.filter(type="video") or fmt_list.filter(type="only-audio"):
+        elif f := fmt_list.filter(type="video") or fmt_list.filter(type="audio"):
             final = f
         else:
-            raise TypeError("Not matches founded when filter the format list.")
+            raise TypeError("Not matches founded in format list.")
 
         if self.quality:
             return f.get_closest_quality(self.quality)

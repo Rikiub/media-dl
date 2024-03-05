@@ -28,7 +28,7 @@ class TestExtractor:
 
 
 class TestDownloads:
-    ydl = YDL(format="only-audio", output=TEMPDIR.name)
+    ydl = YDL(format="audio", output=TEMPDIR.name)
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer
