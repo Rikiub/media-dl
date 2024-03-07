@@ -37,7 +37,11 @@ class TestDownloads:
 
         if isinstance(stream, Stream):
             with TEMPDIR:
-                self.ydl.download(stream)
+                paths = self.ydl.download(stream)
+                p = paths[0]
+
+                if not p.is_file():
+                    raise FileNotFoundError(p)
         else:
             raise AssertionError(stream)
 
@@ -48,6 +52,10 @@ class TestDownloads:
 
         if isinstance(playlist, Playlist):
             with TEMPDIR:
-                self.ydl.download(playlist)
+                paths = self.ydl.download(playlist)
+                p = paths[0]
+
+                if not p.is_file():
+                    raise FileNotFoundError(p)
         else:
             raise AssertionError(playlist)

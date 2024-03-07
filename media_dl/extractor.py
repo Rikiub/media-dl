@@ -3,7 +3,7 @@ import logging
 
 from yt_dlp import YoutubeDL, DownloadError
 
-from media_dl.ydl_base import InfoDict, better_exception_msg, BASE_OPTS, EXTRACT_OPTS
+from media_dl.helper import InfoDict, better_exception_msg, BASE_OPTS
 
 __all__ = ["InfoExtractor"]
 
@@ -18,11 +18,13 @@ class ExtractionError(Exception):
 
 class InfoExtractor:
     def __init__(self):
-        opts = BASE_OPTS | EXTRACT_OPTS
+        opts = BASE_OPTS | {"skip_download": True, "extract_flat": "in_playlist"}
         self.yt_dlp = YoutubeDL(opts)
 
     def extract_url(self, url: str) -> InfoDict:
         """Extract info from URL."""
+
+        log.debug("Extracting %s", url)
 
         if info := self._fetch_query(url):
             return info
@@ -43,6 +45,8 @@ class InfoExtractor:
                 prov = f"scsearch{search_limit}:"
             case _:
                 raise ValueError(provider, "is invalid. Must be:", SEARCH_PROVIDER)
+
+        log.debug("Searching '%s' from '%s'", query, provider)
 
         if info := self._fetch_query(prov + query):
             return info

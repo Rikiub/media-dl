@@ -19,6 +19,34 @@ def is_single(info: InfoDict) -> bool:
     return True if info.get("formats") else False
 
 
+def extract_thumbnail(info: InfoDict) -> str:
+    if t := info.get("thumbnail"):
+        return t
+    elif t := info.get("thumbnails"):
+        return t[-1]["url"]
+    else:
+        return ""
+
+
+def extract_meta(info: InfoDict) -> tuple[str, str, str]:
+    """Helper for extract essential information from info dict.
+
+    Returns:
+        Tuple with 'extractor', 'id', 'url'.
+    """
+
+    try:
+        extractor = info.get("extractor_key") or info["ie_key"]
+        id = info["id"]
+        url = info.get("original_url") or info["url"]
+    except KeyError:
+        raise TypeError(
+            "Info dict should have the required keys: 'extractor_key', 'id', 'url'."
+        )
+
+    return extractor, id, url
+
+
 def better_exception_msg(msg: str, url: str) -> str:
     if "HTTP Error" in msg:
         pass
@@ -41,6 +69,13 @@ def better_exception_msg(msg: str, url: str) -> str:
     return msg
 
 
+MUSIC_SITES = {
+    "soundcloud.com",
+    "music.youtube.com",
+    "bandcamp.com",
+}
+
+
 BASE_OPTS = {
     "ignoreerrors": False,
     "no_warnings": True,
@@ -48,14 +83,6 @@ BASE_OPTS = {
     "quiet": True,
     "logger": _supress_logger,
     "color": {"stderr": "no_color", "stdout": "no_color"},
-}
-EXTRACT_OPTS = {"skip_download": True, "extract_flat": "in_playlist"}
-DOWNLOAD_OPTS = {
-    "outtmpl": {
-        "default": "%(uploader)s - %(title)s.%(ext)s",
-    },
-    "overwrites": False,
-    "retries": 3,
     "postprocessors": [
         {
             "key": "MetadataParser",

@@ -10,13 +10,7 @@ from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
 from media_dl.download import DownloaderError
-from media_dl.download.format_config import (
-    FILE_REQUEST,
-    FORMAT_TYPE,
-    EXT_VIDEO,
-    EXT_AUDIO,
-    VIDEO_RES,
-)
+from media_dl.download.format_config import FILE_REQUEST, VIDEO_RES
 
 log = logging.getLogger(__name__)
 
@@ -75,8 +69,8 @@ def download(
         Argument(
             help="""URLs and queries to process.
             \n
-            - Insert URL to download (Default).\n
-            - Select one PROVIDER to search and download.
+            - Insert a URL to download (Default).\n
+            - Select a PROVIDER to search and download.
             """,
             show_default=False,
             autocompletion=complete_query,
@@ -88,16 +82,11 @@ def download(
         Option(
             "--format",
             "-f",
-            help="""
-            File type to request.
-            
+            help="""File type to request.\n
             - To get BEST, select 'video' or 'audio' (Fast).\n
             - To convert, select a file EXTENSION (Slow).
             """,
-            metavar=f"""[{'|'.join(get_args(FORMAT_TYPE))}]
-[{'|'.join(get_args(EXT_VIDEO))}]
-[{'|'.join(get_args(EXT_AUDIO))}]
-""",
+            metavar=f"TYPE | EXTENSION",
             prompt="""
 What format you want request?
 
@@ -114,7 +103,7 @@ What format you want request?
         int,
         Option(
             "--quality",
-            help="Prefered video/audio quality to filter.",
+            help="Prefered video/audio quality to try filter.",
             rich_help_panel=HelpPanel.formatting,
             autocompletion=complete_resolution,
             show_default=False,
@@ -154,7 +143,7 @@ What format you want request?
         bool,
         Option(
             "--verbose",
-            help="Display more information on screen. Useful for debugging.",
+            help="Display more information on screen.",
             rich_help_panel=HelpPanel.advanced,
         ),
     ] = False,
@@ -193,7 +182,8 @@ What format you want request?
         log.error(err)
         raise SystemExit(1)
 
-    if not ydl._downloader.config.ffmpeg:
+    conf = ydl._downloader.config
+    if conf.convert and not conf.ffmpeg:
         log.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled.\n"
         )
@@ -206,13 +196,10 @@ What format you want request?
             else:
                 log.info("🔎 Searching '%s' from '%s'", entry, target.value)
                 result = ydl.extract_search(entry, target.value)
-                result = result[1]
-        except ExtractionError:
-            continue
+                result = result[0]
 
-        try:
-            ydl.download(result)
-        except DownloaderError as err:
+            ydl.download_multiple(result)
+        except (DownloaderError, ExtractionError) as err:
             log.error("❌ %s", str(err))
             continue
         else:

@@ -2,38 +2,52 @@ from pathlib import Path
 
 from media_dl.extractor import SEARCH_PROVIDER, InfoExtractor
 
-from media_dl import ydl_base
-from media_dl.download import Downloader, FILE_REQUEST
-
-from media_dl.models import ExtractResult
-from media_dl.models.list import Playlist
-from media_dl.models.stream import Stream
+from media_dl.download.downloader import Downloader
+from media_dl.download.format_config import StrPath, FormatConfig, FILE_REQUEST
+from media_dl.models import ExtractResult, Playlist, Stream
 from media_dl.models.format import Format
+from media_dl import helper
 
-import logging
 
 __all__ = ["YDL"]
 
-log = logging.getLogger(__name__)
-
 
 class YDL:
+    """Media-DL API
+
+    Handler for URLs extraction, serialization and stream downloads.
+
+    If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
+
+    Args:
+        format: Target file format to search or convert if is a extension.
+        quality: Target quality to filter.
+        output: Directory where to save files.
+        ffmpeg: Path to FFmpeg executable.
+        metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
+        remux: If format extension not specified, will convert to most compatible extension when necessary. (FFmpeg)
+    """
+
     def __init__(
         self,
         format: FILE_REQUEST = "video",
         quality: int | None = None,
-        output: Path | str = Path.cwd(),
-        ffmpeg: Path | str = "",
-        embed_metadata: bool = True,
+        output: StrPath = Path.cwd(),
+        ffmpeg: StrPath = "",
+        metadata: bool = True,
+        remux: bool = True,
         threads: int = 4,
         quiet: bool = False,
     ):
         self._downloader = Downloader(
-            format=format,
+            format_config=FormatConfig(
+                format=format,
+                output=output,
+                ffmpeg=ffmpeg,
+                metadata=metadata,
+                remux=remux,
+            ),
             quality=quality,
-            output=output,
-            ffmpeg=ffmpeg,
-            embed_metadata=embed_metadata,
             max_threads=threads,
             render_progress=not quiet,
         )
@@ -47,14 +61,12 @@ class YDL:
             - `Playlist` with multiple `Streams`.
         """
 
-        log.debug("Extracting %s", url)
         info = self._extr.extract_url(url)
-        log.debug("Extraction finished")
 
-        if ydl_base.is_playlist(info):
-            return Playlist.from_info(info)
-        elif ydl_base.is_single(info):
-            return Stream.from_info(info)
+        if helper.is_playlist(info):
+            return Playlist._from_info(info)
+        elif helper.is_single(info):
+            return Stream._from_info(info)
         else:
             raise TypeError(url, "unsupported.")
 
@@ -65,13 +77,11 @@ class YDL:
     ) -> list[Stream]:
         """Extract and serialize information from search provider."""
 
-        log.debug("Searching '%s' from '%s'", query, provider)
         info = self._extr.extract_search(query, provider)
-        log.debug("Search finished")
+        return [Stream._from_info(entry) for entry in info["entries"]]
 
-        return list(Stream.from_info(entry) for entry in info["entries"])
+    def download_multiple(self, data: ExtractResult):
+        return self._downloader.download_multiple(data)
 
-    def download(self, data: ExtractResult | Format) -> None:
-        log.debug("Starting download")
-
-        return self._downloader.download(data)
+    def download(self, stream: Stream, format: Format | None = None) -> Path:
+        return self._downloader.download(stream, format)

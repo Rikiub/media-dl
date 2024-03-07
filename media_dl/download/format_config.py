@@ -10,7 +10,7 @@ from yt_dlp.utils import MEDIA_EXTENSIONS
 
 from media_dl.dirs import DIR_TEMP
 from media_dl.models.format import FORMAT_TYPE
-from media_dl.ydl_base import BASE_OPTS, DOWNLOAD_OPTS
+from media_dl.helper import BASE_OPTS
 
 StrPath = str | PathLike[str]
 
@@ -34,20 +34,20 @@ FILE_REQUEST = Literal[FORMAT_TYPE, EXTENSION]
 class FormatConfig:
     """Helper to create download params to yt-dlp.
 
-    If FFmpeg if not installed, options marked with (FFmpeg) will not be available.
+    If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
     Args:
         format: Target file format to search or convert if is a extension.
         output: Directory where to save files.
-        ffmpeg: Path to ffmpeg executable.
-        embed_metadata: Embed things like title, uploader, thumbnail. (FFmpeg)
-        remux: If format extension is not specified, will convert to most compatible extension. (FFmpeg)
+        ffmpeg: Path to FFmpeg executable.
+        metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
+        remux: If format extension not specified, will convert to most compatible extension when necessary. (FFmpeg)
     """
 
     format: FILE_REQUEST
     output: StrPath = Path.cwd()
     ffmpeg: StrPath | None = None
-    embed_metadata: bool = True
+    metadata: bool = True
     remux: bool = True
 
     def __post_init__(self):
@@ -88,8 +88,12 @@ class FormatConfig:
     def asdict(self) -> dict[str, Any]:
         return asdict(self)
 
-    def gen_opts(self) -> dict[str, Any]:
-        opts = BASE_OPTS | DOWNLOAD_OPTS
+    def _gen_opts(self) -> dict[str, Any]:
+        opts = BASE_OPTS | {
+            "outtmpl": "%(uploader,extractor)s - %(title,id)s.%(ext)s",
+            "overwrites": False,
+            "retries": 3,
+        }
         opts |= {
             "paths": {
                 "home": str(self.output),
@@ -165,7 +169,7 @@ class FormatConfig:
             case _:
                 raise TypeError(self.format, "missmatch.")
 
-        if self.ffmpeg and self.embed_metadata:
+        if self.ffmpeg and self.metadata:
             # Metadata Postprocessors
             opts["postprocessors"].extend(
                 [

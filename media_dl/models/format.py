@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+from typing import Literal, Any, overload
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
 import bisect
 
-from media_dl.models.base import InfoDict, MetaID, extract_meta
+from media_dl.models.base import InfoDict
 
 FORMAT_TYPE = Literal["video", "audio"]
 
 
 @dataclass(slots=True, frozen=True, order=True)
-class Format(MetaID):
-    format_id: str
+class Format:
+    url: str
+    id: str
     type: FORMAT_TYPE
     extension: str
     quality: int = 0
@@ -27,12 +29,34 @@ class Format(MetaID):
         else:
             return ""
 
+    def _simple_format_dict(self) -> InfoDict:
+        d = {
+            "extractor": "generic",
+            "extractor_key": "Generic",
+            "id": self.id,
+            "format_id": self.id,
+            "url": self.url,
+            "ext": self.extension,
+        }
+
+        match self.type:
+            case "video":
+                d |= {"height": self.quality}
+                d |= {"vcodec": self.codec}
+            case "audio":
+                d |= {"abr": self.quality}
+                d |= {"acodec": self.codec}
+
+        if self.filesize:
+            d |= {"filesize": self.filesize}
+
+        return InfoDict(d)
+
     @classmethod
-    def from_info_format(cls, info: InfoDict, format: dict) -> Format:
+    def _from_format_entry(cls, format: dict[str, Any]) -> Format:
         type: FORMAT_TYPE = (
             "audio" if format.get("resolution", "") == "audio only" else "video"
         )
-        extension = format["ext"]
 
         match type:
             case "video":
@@ -43,21 +67,30 @@ class Format(MetaID):
                 codec = format.get("acodec")
 
         return cls(
-            *extract_meta(info),
-            format_id=format["format_id"],
+            url=format["url"],
+            id=format["format_id"],
             type=type,
-            extension=extension,
+            extension=format["ext"],
             quality=quality or 0,
             codec=codec,
             filesize=format.get("filesize") or None,
         )
 
+    def __eq__(self, value) -> bool:
+        if isinstance(value, Format):
+            return self.id == value.id
+        else:
+            return False
 
-class FormatList(list[Format]):
-    def guess_type(self) -> Literal[FORMAT_TYPE, "incomplete"]:
+
+class FormatList(Sequence[Format]):
+    def __init__(self, formats: list[Format]) -> None:
+        self._formats = formats
+
+    def type(self) -> Literal[FORMAT_TYPE, "incomplete"]:
         """
         Determine main format type.
-        It'll check if is video or audio.
+        It'll check if is 'video' or 'audio'.
         """
 
         if self.filter(type="video"):
@@ -74,25 +107,34 @@ class FormatList(list[Format]):
         quality: int | None = None,
         codec: str | None = None,
     ) -> FormatList:
-        if type:
-            self = FormatList(f for f in self if f.type == type)
-        if extension:
-            self = FormatList(f for f in self if f.extension == extension)
-        if quality:
-            self = FormatList(f for f in self if f.quality == quality)
-        if codec:
-            self = FormatList(f for f in self if f.codec and f.codec.startswith(codec))
+        """Get a filtered formats list by provided parameters."""
 
-        return self
+        formats = self._formats
+
+        if type:
+            formats = [f for f in formats if f.type == type]
+        if extension:
+            formats = [f for f in formats if f.extension == extension]
+        if quality:
+            formats = [f for f in formats if f.quality == quality]
+        if codec:
+            formats = [f for f in formats if f.codec and f.codec.startswith(codec)]
+
+        return FormatList(formats)
 
     def sort_by(self, attribute: str, reverse: bool = False) -> FormatList:
-        has_attribute = [f for f in self if getattr(f, attribute) is not None]
-        return FormatList(
-            sorted(has_attribute, key=lambda f: getattr(f, attribute), reverse=reverse)
+        """Sort list by a `Format` available attribute."""
+
+        has_attribute = [f for f in self._formats if getattr(f, attribute) is not None]
+        sorted_list = sorted(
+            has_attribute, key=lambda f: getattr(f, attribute), reverse=reverse
         )
+        return FormatList(sorted_list)
 
     def get_by_id(self, id: str) -> Format | None:
-        if result := [f for f in self if f.format_id == id]:
+        """Get`Format` by id. If not found, will return `None`."""
+
+        if result := [f for f in self if f.id == id]:
             return result[0]
         else:
             return None
@@ -125,8 +167,30 @@ class FormatList(list[Format]):
                 return before
 
     @classmethod
-    def from_info(cls, info: InfoDict) -> FormatList:
-        return cls(
-            Format.from_info_format(info, format)
-            for format in info.get("formats") or {}
-        )
+    def _from_info(cls, info: InfoDict) -> FormatList:
+        new_list = [
+            Format._from_format_entry(format) for format in info.get("formats") or {}
+        ]
+        return FormatList(new_list)
+
+    def __iter__(self):
+        for f in self._formats:
+            yield f
+
+    def __contains__(self, other: Format) -> bool:
+        return True if self.get_by_id(other.id) else False
+
+    def __len__(self) -> int:
+        return len(self._formats)
+
+    @overload
+    def __getitem__(self, index: int) -> Format: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> FormatList: ...
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return FormatList(self._formats[index])
+        else:
+            return self._formats[index]

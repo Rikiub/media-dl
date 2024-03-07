@@ -1,10 +1,12 @@
 from typing import Callable, Literal
 from threading import Event
+from pathlib import Path
 
 from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as _DownloaderError
 
-from media_dl.ydl_base import better_exception_msg
+from media_dl.models.stream import Stream
+from media_dl.helper import better_exception_msg
 from media_dl.download.format_config import FormatConfig
 from media_dl.models.format import Format
 
@@ -27,33 +29,36 @@ class FormatDownloader:
     def __init__(
         self,
         format: Format,
+        meta_stream: Stream | None = None,
         config: FormatConfig | None = None,
         on_progress: ProgressCallback | None = None,
         event: Event | None = None,
     ):
+        """
+        Download a format and get file formatted by provided config.
+        If a stream is provided would format its filename and embed extra metadata like thumbnail and subtitles.
+        """
+
         self.format = format
+        self.stream = meta_stream
         self.config = config if config else FormatConfig(format.type)
-        self.convert = False
 
         # Resolve config to match with requested format.
-        fmt_type = format.type
-        conv_ext = self.config.convert
+        conf_type = self.config.type
+        conf_ext = self.config.convert
 
-        if conv_ext and conv_ext != self.format.extension:
-            self.config.format = conv_ext
-            self.convert = True
-        elif fmt_type != format.type:
-            self.config.format = fmt_type
+        if conf_ext and conf_ext != self.format.extension:
+            self.config.format = conf_ext
+        elif conf_type != self.format.type:
+            self.config.format = conf_type
 
         self._event = event if event else Event()
         self._callback = on_progress
 
-    def start(self) -> None:
+    def start(self) -> Path:
         if self._event.is_set():
-            return
-        self.run()
+            raise DownloaderError("Download cancelled")
 
-    def run(self) -> str:
         if c := self._callback:
             wrapper = lambda d: self._progress_wraper(d, c)
             progress = {
@@ -64,18 +69,26 @@ class FormatDownloader:
             progress = {}
 
         try:
-            fmt = {"format": self.format.format_id}
-            params = self.config.gen_opts() | fmt | progress
+            format_id = {"format": self.format.id}
+            params = self.config._gen_opts() | format_id | progress
 
             with YoutubeDL(params) as ydl:
-                data = ydl.process_ie_result(self.format.get_info(), download=True)
+                try:
+                    data = ydl.process_ie_result(
+                        self.stream.get_info_dict() if self.stream else {},
+                        download=True,
+                    )
+                except _DownloaderError:
+                    data = ydl.process_ie_result(
+                        self.format._simple_format_dict(), download=True
+                    )
 
             path = data["requested_downloads"][0]["filepath"]
 
             if self._callback:
                 self._callback("finished", 0, 0)
 
-            return path
+            return Path(path)
         except _DownloaderError as err:
             msg = better_exception_msg(str(err), self.format.url)
 
@@ -102,7 +115,7 @@ class FormatDownloader:
             case "downloading":
                 status = status
             case "finished":
-                if self.convert:
+                if self.config.convert:
                     status = "converting"
                 else:
                     status = "processing"

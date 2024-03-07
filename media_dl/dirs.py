@@ -3,7 +3,6 @@ import atexit
 import shutil
 
 APPNAME = "media-dl"
-
 DIR_TEMP = mkdtemp(prefix="ydl-")
 
 

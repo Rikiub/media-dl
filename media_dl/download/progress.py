@@ -20,8 +20,8 @@ class CounterProgress:
     def __init__(self, disable: bool = False) -> None:
         self.disable = disable
 
-        self.overall_completed = 0
-        self.overall_total = 0
+        self.completed = 0
+        self.total = 0
 
         self._progress = Progress(
             TextColumn("Total:"),
@@ -31,24 +31,24 @@ class CounterProgress:
         self._task_id = self._progress.add_task("", start=False)
 
     def advance(self, advance: int = 1):
-        self.overall_completed += advance
+        self.completed += advance
         self.update()
 
-    def set_total(self, number: int):
-        self.overall_total = number
+    def set_total(self, total: int):
+        self.total = total
         self.update()
 
     def reset(self):
-        self.overall_completed = 0
-        self.overall_total = 0
+        self.completed = 0
+        self.total = 0
         self.update()
 
     def update(self):
         if not self.disable:
             self._progress.update(
                 self._task_id,
-                total=self.overall_total,
-                completed=self.overall_completed,
+                total=self.total,
+                completed=self.completed,
             )
 
 
@@ -109,31 +109,32 @@ class ProgressTask:
         self.started = True
 
     def ydl_progress_hook(self, status, downloaded, total):
-        match status:
-            case "downloading":
-                self.status = "Downloading"
-                self.completed = downloaded
-                self.total = total
-            case "processing":
-                self.status = "Finishing"
-            case "converting":
-                self.status = "Converting"
-            case "finished":
-                self.status = "Done"
-            case "error":
-                self.status = "Error"
+        if not self.progress.disable:
+            match status:
+                case "downloading":
+                    self.status = "Downloading"
+                    self.completed = downloaded
+                    self.total = total
+                case "processing":
+                    self.status = "Finishing"
+                case "converting":
+                    self.status = "Converting"
+                case "finished":
+                    self.status = "Done"
+                case "error":
+                    self.status = "Error"
 
-        self.update()
+            self.update()
 
-        if status in ("converting", "processing", "finished"):
-            if self.completed == 0:
-                self.completed = 100
-                self.total = 100
-                self.update()
+            if status in ("converting", "processing", "finished"):
+                if self.completed == 0:
+                    self.completed = 100
+                    self.total = 100
+                    self.update()
 
-        if status in ("error", "finished"):
-            time.sleep(1.5)
-            self.finalize()
+            if status in ("error", "finished"):
+                time.sleep(1.5)
+                self.finalize()
 
 
 class ProgressHandler:
@@ -141,6 +142,7 @@ class ProgressHandler:
 
     def __init__(self, disable=False) -> None:
         self.disable = disable
+        self.started = False
 
         self.counter = CounterProgress(disable=disable)
         self._rich_progress = Progress(
@@ -179,14 +181,16 @@ class ProgressHandler:
         self.stop()
 
     def start(self):
-        if not self.disable:
+        if not self.disable and not self.started:
             self._live.update(self._render_group)
             self._live.start()
+            self.started = True
 
     def stop(self):
         if not self.disable:
             self._live.update("")
             self._live.stop()
+            self.started = False
 
     def create_task(self, title: str) -> ProgressTask:
         return ProgressTask(self._rich_progress, self.counter, title)

@@ -1,5 +1,5 @@
-from media_dl.models.stream import Stream, StreamList, Format
-from media_dl.models.list import Playlist
+from media_dl.models.format import Format
+from media_dl.models.stream import Stream
+from media_dl.models.playlist import Playlist
 
-Downloadable = Stream | Format
-ExtractResult = Playlist | StreamList | Stream
+ExtractResult = list[Stream] | Playlist | Stream
