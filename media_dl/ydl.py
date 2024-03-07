@@ -4,15 +4,14 @@ from media_dl.extractor import SEARCH_PROVIDER, InfoExtractor
 
 from media_dl.download.downloader import Downloader
 from media_dl.download.format_config import StrPath, FormatConfig, FILE_REQUEST
-from media_dl.models import ExtractResult, Playlist, Stream
-from media_dl.models.format import Format
+from media_dl.models import Playlist, Stream
 from media_dl import helper
 
 
 __all__ = ["YDL"]
 
 
-class YDL:
+class YDL(Downloader):
     """Media-DL API
 
     Handler for URLs extraction, serialization and stream downloads.
@@ -39,7 +38,7 @@ class YDL:
         threads: int = 4,
         quiet: bool = False,
     ):
-        self._downloader = Downloader(
+        super().__init__(
             format_config=FormatConfig(
                 format=format,
                 output=output,
@@ -75,13 +74,10 @@ class YDL:
         query: str,
         provider: SEARCH_PROVIDER,
     ) -> list[Stream]:
-        """Extract and serialize information from search provider."""
+        """
+        Extract and serialize information from search provider.
+        The streams returned will be incomplete.
+        """
 
         info = self._extr.extract_search(query, provider)
         return [Stream._from_info(entry) for entry in info["entries"]]
-
-    def download_multiple(self, data: ExtractResult):
-        return self._downloader.download_multiple(data)
-
-    def download(self, stream: Stream, format: Format | None = None) -> Path:
-        return self._downloader.download(stream, format)

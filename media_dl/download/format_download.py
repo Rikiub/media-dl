@@ -43,6 +43,9 @@ class FormatDownloader:
         self.stream = meta_stream
         self.config = config if config else FormatConfig(format.type)
 
+        self.downloaded = 0
+        self.total_filesize = 0
+
         # Resolve config to match with requested format.
         conf_type = self.config.type
         conf_ext = self.config.convert
@@ -57,7 +60,11 @@ class FormatDownloader:
 
     def start(self) -> Path:
         if self._event.is_set():
-            raise DownloaderError("Download cancelled")
+            raise DownloaderError("Cancelled")
+
+        # Reset progress
+        self.downloaded = 0
+        self.total_filesize = 0
 
         if c := self._callback:
             wrapper = lambda d: self._progress_wraper(d, c)
@@ -86,7 +93,7 @@ class FormatDownloader:
             path = data["requested_downloads"][0]["filepath"]
 
             if self._callback:
-                self._callback("finished", 0, 0)
+                self._callback("finished", self.total_filesize, self.total_filesize)
 
             return Path(path)
         except _DownloaderError as err:
@@ -107,6 +114,11 @@ class FormatDownloader:
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
+        if completed > self.downloaded:
+            self.downloaded = completed
+        if total > self.total_filesize:
+            self.total_filesize = total
+
         # Exclude pre-processors hooks
         if post == "MetadataParser":
             return
@@ -120,4 +132,4 @@ class FormatDownloader:
                 else:
                     status = "processing"
 
-        callback(status, completed, total)
+        callback(status, self.downloaded, self.total_filesize)

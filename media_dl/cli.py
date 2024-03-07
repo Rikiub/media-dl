@@ -182,7 +182,7 @@ What format you want request?
         log.error(err)
         raise SystemExit(1)
 
-    conf = ydl._downloader.config
+    conf = ydl.config
     if conf.convert and not conf.ffmpeg:
         log.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled.\n"

@@ -14,7 +14,7 @@ class TestExtractor:
 
     def test_exceptions(self):
         with pytest.raises(ExtractionError):
-            self.ydl.extract_url("https://unkdown.link.com")
+            self.ydl.extract_url("https://unkdown.link.com/")
 
     def test_single_url(self):
         info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
@@ -37,11 +37,10 @@ class TestDownloads:
 
         if isinstance(stream, Stream):
             with TEMPDIR:
-                paths = self.ydl.download(stream)
-                p = paths[0]
+                path = self.ydl.download(stream)
 
-                if not p.is_file():
-                    raise FileNotFoundError(p)
+                if not path.is_file():
+                    raise FileNotFoundError(path)
         else:
             raise AssertionError(stream)
 
@@ -52,7 +51,7 @@ class TestDownloads:
 
         if isinstance(playlist, Playlist):
             with TEMPDIR:
-                paths = self.ydl.download(playlist)
+                paths = self.ydl.download_multiple(playlist)
                 p = paths[0]
 
                 if not p.is_file():

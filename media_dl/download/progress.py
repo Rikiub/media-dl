@@ -19,16 +19,21 @@ __all__ = ["ProgressHandler"]
 class CounterProgress:
     def __init__(self, disable: bool = False) -> None:
         self.disable = disable
+        self.visible = True
 
         self.completed = 0
-        self.total = 0
+        self.total = 1
 
         self._progress = Progress(
             TextColumn("Total:"),
             MofNCompleteColumn(),
             disable=disable,
         )
-        self._task_id = self._progress.add_task("", start=False)
+        self._task_id = self._progress.add_task(
+            "",
+            start=False,
+            visible=self.visible,
+        )
 
     def advance(self, advance: int = 1):
         self.completed += advance
@@ -39,8 +44,9 @@ class CounterProgress:
         self.update()
 
     def reset(self):
+        self.visible = True
         self.completed = 0
-        self.total = 0
+        self.total = 1
         self.update()
 
     def update(self):
@@ -49,6 +55,7 @@ class CounterProgress:
                 self._task_id,
                 total=self.total,
                 completed=self.completed,
+                visible=self.visible,
             )
 
 
@@ -142,7 +149,6 @@ class ProgressHandler:
 
     def __init__(self, disable=False) -> None:
         self.disable = disable
-        self.started = False
 
         self.counter = CounterProgress(disable=disable)
         self._rich_progress = Progress(
@@ -175,22 +181,27 @@ class ProgressHandler:
 
     def __enter__(self):
         self.start()
+        return self
 
     def __exit__(self, a, b, c):
-        self.counter.reset()
+        self.reset()
         self.stop()
 
     def start(self):
-        if not self.disable and not self.started:
+        if not self.disable:
             self._live.update(self._render_group)
             self._live.start()
-            self.started = True
 
     def stop(self):
         if not self.disable:
             self._live.update("")
             self._live.stop()
-            self.started = False
+
+    def reset(self):
+        if not self.disable:
+            self.counter.reset()
+            for task_id in self._rich_progress.task_ids:
+                self._rich_progress.remove_task(task_id)
 
     def create_task(self, title: str) -> ProgressTask:
         return ProgressTask(self._rich_progress, self.counter, title)
