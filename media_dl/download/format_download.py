@@ -1,5 +1,4 @@
 from typing import Callable, Literal
-from threading import Event
 from pathlib import Path
 
 from yt_dlp import YoutubeDL
@@ -32,7 +31,6 @@ class FormatDownloader:
         meta_stream: Stream | None = None,
         config: FormatConfig | None = None,
         on_progress: ProgressCallback | None = None,
-        event: Event | None = None,
     ):
         """
         Download a format and get file formatted by provided config.
@@ -55,13 +53,9 @@ class FormatDownloader:
         elif conf_type != self.format.type:
             self.config.format = conf_type
 
-        self._event = event if event else Event()
         self._callback = on_progress
 
     def start(self) -> Path:
-        if self._event.is_set():
-            raise DownloaderError("Cancelled")
-
         # Reset progress
         self.downloaded = 0
         self.total_filesize = 0

@@ -60,6 +60,9 @@ def better_exception_msg(msg: str, url: str) -> str:
     elif "Unsupported URL" in msg:
         msg = "Unsupported URL: " + url
 
+    elif "Unable to rename file" in msg:
+        msg = "Unable to rename file."
+
     elif "ffmpeg not found" in msg:
         msg = "Postprocessing failed. FFmpeg executable not founded."
 

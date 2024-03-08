@@ -1,5 +1,4 @@
 import concurrent.futures as cf
-from threading import Event
 from pathlib import Path
 import logging
 
@@ -35,14 +34,15 @@ class Downloader:
         self._progress = ProgressHandler(disable=not self.render)
         self._threads = max_threads
         self._error_limit = error_limit
-        self._event = Event()
 
     def download_multiple(self, data: ExtractResult):
         log.debug("Downloading with config: %s", self.config.asdict())
 
         streams = self._prepare_input(data)
+
         total = len(streams)
         is_single = True if total == 1 else False
+        error_limit = 1 if is_single else self._error_limit
 
         paths: list[Path] = []
 
@@ -53,39 +53,47 @@ class Downloader:
 
             with cf.ThreadPoolExecutor(self._threads) as executor:
                 futures = [
-                    executor.submit(self._download_thread, task) for task in streams
+                    executor.submit(self._download_task, task) for task in streams
                 ]
 
-                try:
-                    errors = 0
+                success = 0
+                errors = 0
 
+                try:
                     for ft in cf.as_completed(futures):
                         try:
                             paths.append(ft.result())
-                        except:
+                            success += 1
+                        except (cf.CancelledError, DownloaderError):
+                            log.debug("%s Errors catched", errors)
                             errors += 1
 
-                        if is_single and errors >= 1:
-                            raise DownloaderError("Download failed.")
-                        elif errors > self._error_limit:
-                            raise DownloaderError(
-                                "Too many errors to continue downloading the playlist."
+                        if errors >= error_limit:
+                            msg = (
+                                "Download failed"
+                                if is_single
+                                else "Too many errors to continue downloading the playlist."
                             )
+                            raise DownloaderError(msg)
+                except KeyboardInterrupt:
+                    log.warning(
+                        "❗ Canceling downloads... (press Ctrl+C again to force)"
+                    )
+                    raise
                 finally:
-                    self._event.set()
-                    cf.wait(futures)
-                    self._event.clear()
+                    executor.shutdown(wait=False, cancel_futures=True)
+
+                    log.debug(
+                        f"❗ Downloads cancelled. {success} of {total} streams downloaded."
+                    )
         return paths
 
     def download(self, stream: Stream, format: Format | None = None) -> Path:
         with self._progress as prog:
             prog.counter.set_total(1)
-            return self._download_thread(stream, format)
+            return self._download_task(stream, format)
 
-    def _download_thread(self, stream: Stream, format: Format | None = None) -> Path:
-        if self._event.is_set():
-            raise cf.CancelledError()
-
+    def _download_task(self, stream: Stream, format: Format | None = None) -> Path:
         progress = self._progress.create_task(stream.display_name)
 
         # Resolve Format
@@ -129,7 +137,6 @@ class Downloader:
                 meta_stream=stream,
                 config=config,
                 on_progress=progress.ydl_progress_hook,
-                event=self._event,
             ).start()
         except DownloaderError as err:
             log.error("Failed to download '%s'", stream.display_name)
