@@ -83,9 +83,7 @@ class Downloader:
                 finally:
                     executor.shutdown(wait=False, cancel_futures=True)
 
-                    log.debug(
-                        f"❗ Downloads cancelled. {success} of {total} streams downloaded."
-                    )
+                    log.debug(f"❗ {success} of {total} streams downloaded.")
         return paths
 
     def download(self, stream: Stream, format: Format | None = None) -> Path:
@@ -108,9 +106,6 @@ class Downloader:
         if not config.convert:
             for site in MUSIC_SITES:
                 if site in stream.url:
-                    log.debug(
-                        "%s is a music site. Changing config to 'audio'", stream.url
-                    )
                     config.format = "audio"
                     break
 
