@@ -1,7 +1,7 @@
 <div align="center">
 
 # ⏬ Media-DL
-> Download any **video/audio** you want from a simple **URL** ✨
+> Download any **video/audio** you want from a simple **URL** ✨.
 > 
 > *Thanks to [yt-dlp](https://github.com/yt-dlp/)*
 
@@ -17,8 +17,8 @@
     - *YouTube*
     - *YouTube Music*
     - *SoundCloud*
-- ⚡️ Get the file you want in less than a **word**
-- ⚡️ **Multi-thread** to go fast
+- ⚡️ Get the file you want in less than a **word**.
+- ⚡️ **Multi-thread** to go fast.
 - 🌀 Pretty and fancy **CLI** interface.
 - 🌀 Easy and simple **Python API**.
 
