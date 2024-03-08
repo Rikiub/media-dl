@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import YDL
+from media_dl import MediaDL
 from media_dl.extractor import ExtractionError
 from media_dl.models import Stream, Playlist
 
@@ -10,7 +10,7 @@ TEMPDIR = TemporaryDirectory()
 
 
 class TestExtractor:
-    ydl = YDL()
+    ydl = MediaDL()
 
     def test_exceptions(self):
         with pytest.raises(ExtractionError):
@@ -28,7 +28,7 @@ class TestExtractor:
 
 
 class TestDownloads:
-    ydl = YDL(format="audio", output=TEMPDIR.name)
+    ydl = MediaDL(format="audio", output=TEMPDIR.name)
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer

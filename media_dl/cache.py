@@ -7,11 +7,15 @@ from media_dl.helper import InfoDict, extract_meta
 
 
 class InfoStore:
+    """Info-Dict store to avoid repetitive requests."""
+
     def __init__(self, tempdir: Path | str) -> None:
         self.tempdir = Path(tempdir) / "info_cache"
         self.tempdir.mkdir(parents=True, exist_ok=True)
 
     def load(self, extractor: str, id: str) -> InfoDict | None:
+        """Load a info-dict. Returns it if exist."""
+
         file = self._prepare_filename(extractor, id)
 
         if file.exists():
@@ -20,6 +24,8 @@ class InfoStore:
             return None
 
     def save(self, info: InfoDict) -> None:
+        """Save a info-dict for future use."""
+
         extractor, id, _ = extract_meta(info)
         file = self._prepare_filename(extractor, id)
 
@@ -29,6 +35,8 @@ class InfoStore:
             return None
 
     def clean(self) -> None:
+        """Delete store directory."""
+
         shutil.rmtree(self.tempdir)
 
     def _prepare_filename(self, extractor: str, id: str) -> Path:

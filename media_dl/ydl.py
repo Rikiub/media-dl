@@ -8,23 +8,21 @@ from media_dl.models import ExtractResult, Playlist, Stream, Format
 from media_dl import helper
 
 
-__all__ = ["YDL"]
-
-
-class YDL:
-    """Media-DL API
-
-    Handler for URLs extraction, serialization and streams download.
+class MediaDL:
+    """Media-DL API. Handler for URLs extraction, serialization and streams download.
 
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
     Args:
         format: Target file format to search or convert if is a extension.
-        quality: Target quality to filter.
+        quality: Target quality to try filter.
         output: Directory where to save files.
-        ffmpeg: Path to FFmpeg executable.
+        ffmpeg: Path to FFmpeg executable. By default, it'll try get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
         remux: If format extension not specified, will convert to most compatible extension when necessary. (FFmpeg)
+
+    Raises:
+        FileNotFoundError: `ffmpeg` path not is a FFmpeg executable.
     """
 
     def __init__(
@@ -38,15 +36,17 @@ class YDL:
         threads: int = 4,
         quiet: bool = False,
     ):
+        self.downloader_config = FormatConfig(
+            format=format,
+            quality=quality,
+            output=output,
+            ffmpeg=ffmpeg,
+            metadata=metadata,
+            remux=remux,
+        )
+
         self._downloader = Downloader(
-            format_config=FormatConfig(
-                format=format,
-                quality=quality,
-                output=output,
-                ffmpeg=ffmpeg,
-                metadata=metadata,
-                remux=remux,
-            ),
+            format_config=self.downloader_config,
             max_threads=threads,
             render_progress=not quiet,
         )
@@ -56,8 +56,11 @@ class YDL:
         """Extract and serialize information from URL.
 
         Returns:
-            - Single `Stream`
+            - Single `Stream`.
             - `Playlist` with multiple `Streams`.
+
+        Raises:
+            ExtractionError: Something bad happens when try extract the URL.
         """
 
         info = self._extr.extract_url(url)
@@ -74,16 +77,44 @@ class YDL:
         query: str,
         provider: SEARCH_PROVIDER,
     ) -> list[Stream]:
-        """
-        Extract and serialize information from search provider.
-        The streams returned will be incomplete.
+        """Extract and serialize information from search provider.
+
+        Returns:
+            List of streams founded in the search
+            (Streams will be incomplete).
+
+        Raises:
+            ExtractionError: Something bad happens when try extract the query.
         """
 
         info = self._extr.extract_search(query, provider)
         return [Stream._from_info(entry) for entry in info["entries"]]
 
     def download(self, stream: Stream, format: Format | None = None) -> Path:
+        """Download a single `Stream` formatted by the instance options.
+
+        Args:
+            stream: Target `Stream` to download.
+            format: Specific `Stream` format to download. By default will select the BEST format.
+
+        Returns:
+            Path to downloaded file.
+
+        Raises:
+            DownloaderError: Something bad happens when try download.
+            ValueError: Provided `Format` wasn't founded in the `Stream` formats list.
+        """
+
         return self._downloader.download(stream, format)
 
     def download_multiple(self, data: ExtractResult) -> list[Path]:
+        """Download single/multiple results formatted by the instance options.
+
+        Returns:
+            List of paths to downloaded files.
+
+        Raises:
+            DownloaderError: Something bad happens when try download.
+        """
+
         return self._downloader.download_multiple(data)

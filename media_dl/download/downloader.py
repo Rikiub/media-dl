@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 class Downloader:
-    """Multi-thread downloads interface."""
+    """Multi-thread downloader interface."""
 
     def __init__(
         self,

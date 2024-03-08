@@ -17,6 +17,8 @@ class ExtractionError(Exception):
 
 
 class InfoExtractor:
+    """`YT-DLP` extractor helper to get info-dicts and check if are valid."""
+
     def __init__(self):
         opts = BASE_OPTS | {"skip_download": True, "extract_flat": "in_playlist"}
         self.yt_dlp = YoutubeDL(opts)

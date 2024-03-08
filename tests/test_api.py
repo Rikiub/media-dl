@@ -2,14 +2,13 @@ from tempfile import TemporaryDirectory
 
 from rich import print
 
-from media_dl import YDL
-from media_dl.models.format import Format
+from media_dl import MediaDL
 
 TEMPDIR = TemporaryDirectory()
 
 
 def test_api_syntax():
-    ydl = YDL(format="audio", output=TEMPDIR.name)
+    ydl = MediaDL(format="audio", output=TEMPDIR.name)
 
     print("Extraction")
     result = ydl.extract_search("Sub urban", "soundcloud")

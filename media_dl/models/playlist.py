@@ -18,6 +18,8 @@ class _StreamList(ExtractID):
 
 @dataclass(slots=True, frozen=True)
 class Playlist(_StreamList):
+    """List of streams with basic metadata. Access them with the attribute `streams`."""
+
     thumbnail: str
     title: str
 

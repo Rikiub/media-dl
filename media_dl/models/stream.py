@@ -13,6 +13,14 @@ from media_dl.models.format import FormatList
 
 @dataclass(slots=True, frozen=True)
 class Stream(ExtractID):
+    """Single `Stream` information.
+
+    If the `Stream` was obtained from a `Playlist`, it'll be incomplete and it'll not have `formats` to filter.
+    To access to the complete `Stream` information, you'll need do this::
+
+        stream = stream.update()
+    """
+
     title: str
     uploader: str = ""
     thumbnail: str = ""
@@ -20,11 +28,13 @@ class Stream(ExtractID):
     formats: FormatList = FormatList([])
 
     def update(self) -> Stream:
-        """Get a update version of the Stream."""
+        """Get a updated version of the `Stream` doing another request to it-self."""
         return self.from_url(self.url)
 
     @property
     def display_name(self) -> str:
+        """Get a pretty representation of the `Stream` name."""
+
         if self.uploader and self.title:
             return self.uploader + " - " + self.title
         elif self.title:

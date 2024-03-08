@@ -1,32 +1,31 @@
-> yt-dlp helper with nice defaults + fancy output.
+<div align="center">
+
+# Media-DL
+> Download any **video/audio** you want from a simple **URL** ✨
+> 
+> *Thanks to [yt-dlp](https://pypi.org/project/yt-dlp/)*
+
+</div>
 
 ## Features
 
-- Helper for yt-dlp handled by file extension with nice defaults:
-    - Metadata
-    - Thumbnails
-    - Subtitles
-- Simple yt-dlp API.
-- Music search for:
+- Download any supported **URL** and embed basic metadata like:
+    - Title, Artist, Year, etc.
+    - Thumbnails.
+    - Subtittles (Videos).
+- Also, you can **search and download** from:
+    - YouTube
     - YouTube Music
     - SoundCloud
-- Multi-threads for fast downloads.
-- Pretty and fancy CLI interface.
-
-## No supported
-
-- Bulk download of channels (Or anything with multiple Playlists).
+- Get the file you want in less than a **word**.
+- **Multi-thread** downloads to go fast.
+- Pretty and fancy **CLI** interface.
+- Easy and simple **Python API**.
 
 ## Dependencies
 
-- Python 3.10
-- [yt-dlp](https://pypi.org/project/yt-dlp/): Video and Audio downloader.
+> Minimum Python version: **3.10**
+
+- [yt-dlp](https://pypi.org/project/yt-dlp/): *The most important.*
 - [Typer](https://pypi.org/project/typer/): Fancy CLI interface.
 - [Rich](https://pypi.org/project/rich/): Fancy output and progress bars.
-
-## TODO
-
-- [ ] Sync playlists feature.
-- [x] Refactorize CLI.
-- [x] YTMusic and SoundCloud search.
-- [x] Good yt-dlp API helper.

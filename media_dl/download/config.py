@@ -40,7 +40,7 @@ class FormatConfig:
         format: Target file format to search or convert if is a extension.
         quality: Target quality to try filter.
         output: Directory where to save files.
-        ffmpeg: Path to FFmpeg executable.
+        ffmpeg: Path to FFmpeg executable. By default, it'll try get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
         remux: If format extension not specified, will convert to most compatible extension when necessary. (FFmpeg)
     """
@@ -67,6 +67,8 @@ class FormatConfig:
 
     @property
     def type(self) -> FORMAT_TYPE:
+        """Config generic type."""
+
         if self.format in get_args(FORMAT_TYPE):
             return cast(FORMAT_TYPE, self.format)
 
@@ -80,12 +82,19 @@ class FormatConfig:
 
     @property
     def convert(self) -> EXTENSION | None:
-        """Check if can convert the file."""
+        """Check if config would convert the files.
+
+        Returns:
+            If could convert, will return a file extension string. Else return `None`.
+        """
+
         return (
             cast(EXTENSION, self.format) if self.format in get_args(EXTENSION) else None
         )
 
     def asdict(self) -> dict[str, Any]:
+        """Convert config to a simple dict."""
+
         return asdict(self)
 
     def _gen_opts(self) -> dict[str, Any]:

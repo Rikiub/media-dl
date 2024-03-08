@@ -5,7 +5,7 @@ import logging
 from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
-from media_dl import YDL
+from media_dl import MediaDL
 from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
@@ -23,6 +23,7 @@ SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 class HelpPanel(StrEnum):
     formatting = "Format"
     advanced = "Advanced"
+    view = "View"
 
 
 def show_version(show: bool):
@@ -143,39 +144,37 @@ What format you want request?
         int,
         Option(
             "--threads",
-            help="Max process to execute.",
+            help="Maximum processes to execute.",
             rich_help_panel=HelpPanel.advanced,
         ),
     ] = 4,
-    verbose: Annotated[
-        bool,
-        Option(
-            "--verbose",
-            help="Display more information on screen.",
-            rich_help_panel=HelpPanel.advanced,
-        ),
-    ] = False,
     quiet: Annotated[
         bool,
         Option(
             "--quiet",
             help="Supress screen information.",
-            rich_help_panel=HelpPanel.advanced,
+            rich_help_panel=HelpPanel.view,
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        Option(
+            "--verbose",
+            help="Display more information on screen.",
+            rich_help_panel=HelpPanel.view,
         ),
     ] = False,
     version: Annotated[
         bool,
         Option(
             "--version",
-            help="Show program version.",
-            rich_help_panel=HelpPanel.advanced,
+            help="Show current version and exit.",
+            rich_help_panel=HelpPanel.view,
             callback=show_version,
         ),
     ] = False,
 ):
-    """
-    yt-dlp helper with nice defaults ✨.
-    """
+    """Download any video/audio you want from a simple URL ✨"""
 
     if quiet:
         log_level = logging.CRITICAL
@@ -187,7 +186,7 @@ What format you want request?
     init_logging(log_level)
 
     try:
-        ydl = YDL(
+        ydl = MediaDL(
             format=format.value,
             quality=quality if quality != 0 else None,
             output=output,

@@ -36,12 +36,15 @@ class DownloadWorker:
     ):
         """`YT-DLP` wrapper and single stream downloader.
 
-        Download a stream and get file formatted by provided config.
-
-        - By default, will try get the BEST format in the stream.
-        - If a format is provided, will download directly.
-
+        It will download their stream and get a file formatted by provided config.
         The config will be resolved to match with arguments.
+
+        Args:
+            stream: Target `Stream` to download.
+            format: Specific `Stream` format to download. By default will select the BEST format.
+
+        Raises:
+            ValueError: Provided `Format` wasn't founded in the `Stream` formats list.
         """
 
         __slots__ = (
@@ -102,6 +105,8 @@ class DownloadWorker:
                 self.config.format = self.format.type
 
     def start(self) -> Path:
+        """Start download of the instance."""
+
         log.debug(
             "Downloading '%s' with format %s (%s %s) (%s)",
             self.stream.display_name,
@@ -130,11 +135,13 @@ class DownloadWorker:
 
             with YoutubeDL(params) as ydl:
                 try:
+                    # Download with complete stream info-dict.
                     data = ydl.process_ie_result(
                         self.stream.get_info_dict(),
                         download=True,
                     )
                 except _DownloaderError:
+                    # Fallback to simple format.
                     data = ydl.process_ie_result(
                         self.format._simple_format_dict(),
                         download=True,
@@ -159,6 +166,8 @@ class DownloadWorker:
         d: dict,
         callback: ProgressCallback,
     ) -> None:
+        """`YT-DLP` progress hook, but stable and without issues."""
+
         status: PROGRESS_STATUS = d["status"]
         post = d.get("postprocessor") or ""
         completed: int = d.get("downloaded_bytes") or 0
@@ -185,6 +194,8 @@ class DownloadWorker:
         callback(status, self.downloaded, self.total_filesize)
 
     def _get_best_format(self) -> Format:
+        """Resolve and extract the best format in the instance."""
+
         format_list = self.stream.formats
 
         # Filter by extension
