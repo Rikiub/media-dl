@@ -142,7 +142,7 @@ What format you want request?
         int,
         Option(
             "--threads",
-            help="Max parallels process to execute.",
+            help="Max process to execute.",
             rich_help_panel=HelpPanel.advanced,
         ),
     ] = 4,
