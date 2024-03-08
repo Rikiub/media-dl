@@ -3,7 +3,7 @@
 # ⏬ Media-DL
 > Download any **video/audio** you want from a simple **URL** ✨.
 > 
-> *Thanks to [yt-dlp](https://github.com/yt-dlp/)*
+> *Thanks to [yt-dlp](https://github.com/yt-dlp/yt-dlp)*
 
 </div>
 
