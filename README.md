@@ -1,26 +1,26 @@
 <div align="center">
 
-# Media-DL
+# ⏬ Media-DL
 > Download any **video/audio** you want from a simple **URL** ✨
 > 
-> *Thanks to [yt-dlp](https://pypi.org/project/yt-dlp/)*
+> *Thanks to [yt-dlp](https://github.com/yt-dlp/)*
 
 </div>
 
 ## Features
 
-- Download any supported **URL** and embed basic metadata like:
-    - Title, Artist, Year, etc.
-    - Thumbnails.
-    - Subtittles (Videos).
-- Also, you can **search and download** from:
-    - YouTube
-    - YouTube Music
-    - SoundCloud
-- Get the file you want in less than a **word**.
-- **Multi-thread** downloads to go fast.
-- Pretty and fancy **CLI** interface.
-- Easy and simple **Python API**.
+- 🔎 Download any **[supported URL](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)** and **embed** basic metadata like:
+    - *Title, Artist, Year, etc*
+    - *Thumbnails*
+    - *Subtitles*
+- 🔎 **Search and download** from:
+    - *YouTube*
+    - *YouTube Music*
+    - *SoundCloud*
+- ⚡️ Get the file you want in less than a **word**
+- ⚡️ **Multi-thread** to go fast
+- 🌀 Pretty and fancy **CLI** interface.
+- 🌀 Easy and simple **Python API**.
 
 ## Dependencies
 
