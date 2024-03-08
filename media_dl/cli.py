@@ -1,8 +1,8 @@
-from typing import Annotated, Generator, Literal, get_args
+from typing import Annotated, Generator, Literal, get_args, Optional
 from pathlib import Path
 import logging
 
-from typer import CallbackParam, Typer, Argument, Option, BadParameter
+from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
 from media_dl import YDL
@@ -10,7 +10,7 @@ from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
 from media_dl.download import DownloaderError
-from media_dl.download.config import FILE_REQUEST, VIDEO_RES, FormatConfig
+from media_dl.download.config import FILE_REQUEST, VIDEO_RES
 
 log = logging.getLogger(__name__)
 
@@ -25,11 +25,12 @@ class HelpPanel(StrEnum):
     advanced = "Advanced"
 
 
-def validate_ffmpeg(param: CallbackParam, path: Path):
-    if path == Path() or FormatConfig._executable_exists(path):
-        return path
-    else:
-        raise BadParameter(f"'{path.name}' is not a FFmpeg executable", param=param)
+def show_version(show: bool):
+    if show:
+        from importlib.metadata import version
+
+        print(version(Path(__file__).parent.name))
+        raise SystemExit()
 
 
 def complete_query(incomplete: str) -> Generator[str, None, None]:
@@ -102,8 +103,8 @@ What format you want request?
 
 """,
             prompt_required=False,
-            rich_help_panel=HelpPanel.formatting,
             show_default=False,
+            rich_help_panel=HelpPanel.formatting,
         ),
     ] = Format["video"],
     quality: Annotated[
@@ -124,20 +125,20 @@ What format you want request?
             help="Directory where to save downloads.",
             rich_help_panel=HelpPanel.formatting,
             show_default=False,
-            resolve_path=False,
             file_okay=False,
         ),
     ] = Path.cwd(),
     ffmpeg: Annotated[
-        Path,
+        Optional[Path],
         Option(
             "--ffmpeg",
             help="FFmpeg executable to use.",
             rich_help_panel=HelpPanel.advanced,
             show_default=False,
-            callback=validate_ffmpeg,
+            file_okay=True,
+            dir_okay=False,
         ),
-    ] = Path(),
+    ] = None,
     threads: Annotated[
         int,
         Option(
@@ -162,6 +163,15 @@ What format you want request?
             rich_help_panel=HelpPanel.advanced,
         ),
     ] = False,
+    version: Annotated[
+        bool,
+        Option(
+            "--version",
+            help="Show program version.",
+            rich_help_panel=HelpPanel.advanced,
+            callback=show_version,
+        ),
+    ] = False,
 ):
     """
     yt-dlp helper with nice defaults ✨.
@@ -181,7 +191,7 @@ What format you want request?
             format=format.value,
             quality=quality if quality != 0 else None,
             output=output,
-            ffmpeg="" if ffmpeg == Path() else ffmpeg,
+            ffmpeg=ffmpeg,
             threads=threads,
             quiet=quiet,
         )

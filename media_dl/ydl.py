@@ -32,7 +32,7 @@ class YDL:
         format: FILE_REQUEST = "video",
         quality: int | None = None,
         output: StrPath = Path.cwd(),
-        ffmpeg: StrPath = "",
+        ffmpeg: StrPath | None = None,
         metadata: bool = True,
         remux: bool = True,
         threads: int = 4,
