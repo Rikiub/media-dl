@@ -13,13 +13,14 @@ from media_dl.models.format import FormatList
 
 @dataclass(slots=True, frozen=True)
 class Stream(ExtractID):
-    thumbnail: str
     title: str
-    uploader: str
-    duration: int
-    formats: FormatList
+    uploader: str = ""
+    thumbnail: str = ""
+    duration: int = 0
+    formats: FormatList = FormatList([])
 
     def update(self) -> Stream:
+        """Get a update version of the Stream."""
         return self.from_url(self.url)
 
     @property

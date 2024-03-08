@@ -2,38 +2,52 @@ import concurrent.futures as cf
 from pathlib import Path
 import logging
 
-from media_dl.helper import MUSIC_SITES
 from media_dl.download.progress import ProgressHandler
-from media_dl.download.format_download import FormatDownloader, DownloaderError
-from media_dl.download.format_config import FormatConfig
+from media_dl.download.worker import DownloadWorker, DownloaderError
+from media_dl.download.config import FormatConfig
 
 from media_dl.models import ExtractResult, Stream, Playlist, Format
-from media_dl.models.format import Format, FormatList
+from media_dl.models.format import Format
 
 log = logging.getLogger(__name__)
 
-DEFAULT_TEMPLATE = "%(uploader)s - %(title)s"
-
 
 class Downloader:
-    """Multi-thread downloader interface."""
+    """Multi-thread downloads interface."""
 
     def __init__(
         self,
         format_config: FormatConfig,
-        quality: int | None = None,
         max_threads: int = 4,
         error_limit: int = 4,
         render_progress: bool = True,
     ):
-        self.render = render_progress
-
-        self.quality = quality
         self.config = format_config
+        self.render = render_progress
 
         self._progress = ProgressHandler(disable=not self.render)
         self._threads = max_threads
         self._error_limit = error_limit
+
+    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
+        match data:
+            case Stream():
+                type = "Stream"
+                query = data.display_name
+                streams = [data]
+            case Playlist():
+                type = "Playlist"
+                query = data.title
+                streams = data.streams
+            case list():
+                type = "Stream List"
+                query = ""
+                streams = data
+            case _:
+                raise TypeError(data)
+
+        log.info("🔎 Founded %s: '%s'", type, query)
+        return streams
 
     def download_multiple(self, data: ExtractResult):
         log.debug("Downloading with config: %s", self.config.asdict())
@@ -52,9 +66,7 @@ class Downloader:
             prog.counter.set_total(total)
 
             with cf.ThreadPoolExecutor(self._threads) as executor:
-                futures = [
-                    executor.submit(self._download_task, task) for task in streams
-                ]
+                futures = [executor.submit(self._dl_worker, task) for task in streams]
 
                 success = 0
                 errors = 0
@@ -89,9 +101,9 @@ class Downloader:
     def download(self, stream: Stream, format: Format | None = None) -> Path:
         with self._progress as prog:
             prog.counter.set_total(1)
-            return self._download_task(stream, format)
+            return self._dl_worker(stream, format)
 
-    def _download_task(self, stream: Stream, format: Format | None = None) -> Path:
+    def _dl_worker(self, stream: Stream, format: Format | None = None) -> Path:
         progress = self._progress.create_task(stream.display_name)
 
         # Resolve Format
@@ -100,37 +112,11 @@ class Downloader:
             progress.message = stream.display_name
             progress.update()
 
-        config = self.config
-
-        # Change config if stream URL is a music site.
-        if not config.convert:
-            for site in MUSIC_SITES:
-                if site in stream.url:
-                    config.format = "audio"
-                    break
-
-        if format:
-            if not format in stream.formats:
-                raise ValueError(f"'{format.id}' Format ID not founded in Stream.")
-
-            format = format
-        else:
-            format = self._get_best_format(stream.formats, config)
-
-        # Start Download
-        log.debug(
-            "Downloading '%s' with format %s (%s %s)",
-            stream.display_name,
-            format.id,
-            format.extension,
-            format.display_quality,
-        )
-
         try:
-            path = FormatDownloader(
+            path = DownloadWorker(
+                stream=stream,
                 format=format,
-                meta_stream=stream,
-                config=config,
+                config=self.config,
                 on_progress=progress.ydl_progress_hook,
             ).start()
         except DownloaderError as err:
@@ -140,47 +126,3 @@ class Downloader:
 
         log.info("Finished '%s'", stream.display_name)
         return path
-
-    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
-        match data:
-            case Stream():
-                type = "Stream"
-                query = data.display_name
-                result = [data]
-            case Playlist():
-                type = "Playlist"
-                query = data.title
-                result = data.streams
-            case list():
-                type = "Stream List"
-                query = ""
-                result = data
-            case _:
-                raise TypeError(data)
-
-        log.info("🔎 Founded %s: '%s'", type, query)
-        return result
-
-    def _get_best_format(
-        self,
-        format_list: FormatList,
-        custom_config: FormatConfig | None = None,
-    ) -> Format:
-        conf = custom_config if custom_config else self.config
-
-        # Filter by extension
-        if f := conf.convert and format_list.filter(extension=conf.convert):
-            final = f
-        # Filter by type
-        elif f := format_list.filter(type=conf.type):
-            final = f
-        # Filter fallback to available type.
-        elif f := format_list.filter(type="video") or format_list.filter(type="audio"):
-            final = f
-        else:
-            raise TypeError("Not matches founded in format list.")
-
-        if self.quality:
-            return f.get_closest_quality(self.quality)
-        else:
-            return final[-1]

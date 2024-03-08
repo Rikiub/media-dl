@@ -173,6 +173,9 @@ class FormatList(Sequence[Format]):
         ]
         return FormatList(new_list)
 
+    def __bool__(self):
+        return True if self._formats else False
+
     def __iter__(self):
         for f in self._formats:
             yield f

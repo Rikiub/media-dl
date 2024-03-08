@@ -32,12 +32,13 @@ FILE_REQUEST = Literal[FORMAT_TYPE, EXTENSION]
 
 @dataclass(slots=True)
 class FormatConfig:
-    """Helper to create download params to yt-dlp.
+    """Helper to create download params to `YT-DLP` and provide a simple interface for others downloaders.
 
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
     Args:
         format: Target file format to search or convert if is a extension.
+        quality: Target quality to try filter.
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
@@ -45,6 +46,7 @@ class FormatConfig:
     """
 
     format: FILE_REQUEST
+    quality: int | None = None
     output: StrPath = Path.cwd()
     ffmpeg: StrPath | None = None
     metadata: bool = True

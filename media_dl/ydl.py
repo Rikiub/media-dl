@@ -3,7 +3,7 @@ from pathlib import Path
 from media_dl.extractor import SEARCH_PROVIDER, InfoExtractor
 
 from media_dl.download.downloader import Downloader
-from media_dl.download.format_config import StrPath, FormatConfig, FILE_REQUEST
+from media_dl.download.config import StrPath, FormatConfig, FILE_REQUEST
 from media_dl.models import ExtractResult, Playlist, Stream, Format
 from media_dl import helper
 
@@ -14,7 +14,7 @@ __all__ = ["YDL"]
 class YDL:
     """Media-DL API
 
-    Handler for URLs extraction, serialization and stream downloads.
+    Handler for URLs extraction, serialization and streams download.
 
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
@@ -41,12 +41,12 @@ class YDL:
         self._downloader = Downloader(
             format_config=FormatConfig(
                 format=format,
+                quality=quality,
                 output=output,
                 ffmpeg=ffmpeg,
                 metadata=metadata,
                 remux=remux,
             ),
-            quality=quality,
             max_threads=threads,
             render_progress=not quiet,
         )

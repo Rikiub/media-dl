@@ -66,7 +66,7 @@ class ProgressTask:
         counter: CounterProgress,
         title: str,
     ):
-        __slots__ = [
+        __slots__ = (
             "message",
             "status",
             "completed",
@@ -75,7 +75,7 @@ class ProgressTask:
             "progress",
             "counter",
             "task_id",
-        ]
+        )
 
         self.message: str = title
         self.status: str = "Starting"

@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 from rich import print
 
 from media_dl import YDL
+from media_dl.models.format import Format
 
 TEMPDIR = TemporaryDirectory()
 
