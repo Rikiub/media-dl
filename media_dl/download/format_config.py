@@ -56,9 +56,7 @@ class FormatConfig:
             path = Path(self.ffmpeg)
 
             if not self._executable_exists(path):
-                raise FileNotFoundError(
-                    f"'{path.name}' is not a FFmpeg executable.",
-                )
+                raise FileNotFoundError(f"'{path.name}' is not a FFmpeg executable.")
         else:
             self.ffmpeg = self._get_global_ffmpeg() or None
 
@@ -186,16 +184,18 @@ class FormatConfig:
 
         return opts
 
-    def _get_global_ffmpeg(self) -> str | None:
+    @staticmethod
+    def _get_global_ffmpeg() -> str | None:
         if final_path := shutil.which("ffmpeg"):
             return str(final_path)
         else:
             return None
 
-    def _executable_exists(self, file: StrPath) -> bool:
+    @staticmethod
+    def _executable_exists(file: StrPath) -> bool:
         path = Path(file)
 
-        if path.exists() and os.access(path, os.X_OK):
+        if path.is_file() and os.access(path, os.X_OK):
             return True
         else:
             return False

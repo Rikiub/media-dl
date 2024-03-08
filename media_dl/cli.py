@@ -2,7 +2,7 @@ from typing import Annotated, Generator, Literal, get_args
 from pathlib import Path
 import logging
 
-from typer import Typer, Argument, Option, BadParameter
+from typer import CallbackParam, Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
 from media_dl import YDL
@@ -10,7 +10,7 @@ from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
 from media_dl.download import DownloaderError
-from media_dl.download.format_config import FILE_REQUEST, VIDEO_RES
+from media_dl.download.format_config import FILE_REQUEST, VIDEO_RES, FormatConfig
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +23,13 @@ SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 class HelpPanel(StrEnum):
     formatting = "Format"
     advanced = "Advanced"
+
+
+def validate_ffmpeg(param: CallbackParam, path: Path):
+    if path == Path() or FormatConfig._executable_exists(path):
+        return path
+    else:
+        raise BadParameter(f"'{path.name}' is not a FFmpeg executable", param=param)
 
 
 def complete_query(incomplete: str) -> Generator[str, None, None]:
@@ -128,9 +135,9 @@ What format you want request?
             help="FFmpeg executable to use.",
             rich_help_panel=HelpPanel.advanced,
             show_default=False,
-            resolve_path=True,
+            callback=validate_ffmpeg,
         ),
-    ] = Path.cwd(),
+    ] = Path(),
     threads: Annotated[
         int,
         Option(
@@ -174,13 +181,12 @@ What format you want request?
             format=format.value,
             quality=quality if quality != 0 else None,
             output=output,
-            ffmpeg="" if ffmpeg == Path.cwd() else ffmpeg,
+            ffmpeg="" if ffmpeg == Path() else ffmpeg,
             threads=threads,
             quiet=quiet,
         )
     except FileNotFoundError as err:
-        log.error(err)
-        raise SystemExit(1)
+        raise BadParameter(str(err))
 
     conf = ydl._downloader.config
     if conf.convert and not conf.ffmpeg:
