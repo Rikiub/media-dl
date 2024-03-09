@@ -9,14 +9,15 @@
 
 ## Features
 
-- 🔎 Download content from any **[supported URL](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)** and **embed** basic metadata like:
-    - *Title, Artist, Year, etc*
-    - *Thumbnails*
-    - *Subtitles*
+- 🔎 **Download** content from any **[supported URL](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)**.
 - 🔎 **Search and download** from:
     - *YouTube*
     - *YouTube Music*
     - *SoundCloud*
+- ⚡️ Automatically **embed metadata** like:
+    - *Title, Artist, Year, etc*
+    - *Thumbnails*
+    - *Subtitles*
 - ⚡️ Get the file you want in less than a **word**.
 - ⚡️ **Multi-thread** to go fast.
 - 🌀 Pretty and fancy **CLI** interface.
