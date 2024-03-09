@@ -56,9 +56,6 @@ class DownloadWorker:
             "_callback",
         )
 
-        self.downloaded = 0
-        self.total_filesize = 0
-
         if not stream.formats:
             self.stream = stream.update()
         else:
@@ -103,6 +100,9 @@ class DownloadWorker:
                 )
 
                 self.config.format = self.format.type
+
+        self.downloaded = 0
+        self.total_filesize = 0
 
     def start(self) -> Path:
         """Start download of the instance."""
@@ -169,7 +169,7 @@ class DownloadWorker:
         """`YT-DLP` progress hook, but stable and without issues."""
 
         status: PROGRESS_STATUS = d["status"]
-        post = d.get("postprocessor") or ""
+        post: str = d.get("postprocessor") or ""
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
@@ -177,10 +177,6 @@ class DownloadWorker:
             self.downloaded = completed
         if total > self.total_filesize:
             self.total_filesize = total
-
-        # Exclude pre-processors hooks
-        if post == "MetadataParser":
-            return
 
         match status:
             case "downloading":

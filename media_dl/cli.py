@@ -8,8 +8,8 @@ from strenum import StrEnum
 from media_dl import MediaDL
 from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
+from media_dl.download.downloader import DownloaderError
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
-from media_dl.download import DownloaderError
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
 
 log = logging.getLogger(__name__)

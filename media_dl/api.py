@@ -90,8 +90,8 @@ class MediaDL:
         info = self._extr.extract_search(query, provider)
         return [Stream._from_info(entry) for entry in info["entries"]]
 
-    def download(self, stream: Stream, format: Format | None = None) -> Path:
-        """Download a single `Stream` formatted by the instance options.
+    def download_single(self, stream: Stream, format: Format | None = None) -> Path:
+        """Download a single `Stream` formatted by instance options.
 
         Args:
             stream: Target `Stream` to download.
@@ -102,13 +102,13 @@ class MediaDL:
 
         Raises:
             DownloaderError: Something bad happens when try download.
-            ValueError: Provided `Format` wasn't founded in the `Stream` formats list.
+            ValueError: Provided `Format` wasn't founded in `Stream`.
         """
 
-        return self._downloader.download(stream, format)
+        return self._downloader.download_single(stream, format)
 
     def download_multiple(self, data: ExtractResult) -> list[Path]:
-        """Download single/multiple results formatted by the instance options.
+        """Download one or more results formatted by instance options.
 
         Returns:
             List of paths to downloaded files.

@@ -1,3 +1,3 @@
-from media_dl.ydl import MediaDL, FILE_REQUEST, ExtractResult
-from media_dl.download import DownloaderError
+from media_dl.api import MediaDL, ExtractResult, FILE_REQUEST, SEARCH_PROVIDER
 from media_dl.extractor import ExtractionError
+from media_dl.download.downloader import DownloaderError

@@ -3,8 +3,6 @@
 from typing import NewType, Any
 import logging
 
-from yt_dlp.postprocessor.metadataparser import MetadataParserPP
-
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
 
@@ -86,37 +84,4 @@ BASE_OPTS = {
     "quiet": True,
     "logger": _supress_logger,
     "color": {"stderr": "no_color", "stdout": "no_color"},
-    "postprocessors": [
-        {
-            "key": "MetadataParser",
-            "when": "pre_process",
-            "actions": [
-                (
-                    MetadataParserPP.interpretter,
-                    "%(track,title)s",
-                    "%(title)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(artist,channel,creator,uploader|NA)s",
-                    "%(uploader)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(album_artist,uploader)s",
-                    "%(album_artist)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(album,title)s",
-                    "%(meta_album)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(release_year,release_date>%Y,upload_date>%Y)s",
-                    "%(meta_date)s",
-                ),
-            ],
-        },
-    ],
 }

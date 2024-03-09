@@ -28,7 +28,7 @@ class Stream(ExtractID):
     formats: FormatList = FormatList([])
 
     def update(self) -> Stream:
-        """Get a updated version of the `Stream` doing another request to it-self."""
+        """Get a updated version of the `Stream` doing another request."""
         return self.from_url(self.url)
 
     @property

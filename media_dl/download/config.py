@@ -6,19 +6,56 @@ import shutil
 from os import PathLike
 import os
 
+from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
 from media_dl.dirs import DIR_TEMP
 from media_dl.models.format import FORMAT_TYPE
 from media_dl.helper import BASE_OPTS
 
-StrPath = str | PathLike[str]
-
 
 class SupportedExtensions(set[str], Enum):
     video = set(MEDIA_EXTENSIONS.video)
     audio = set(MEDIA_EXTENSIONS.audio)
 
+
+POST_METADATA_OPTS = {
+    "postprocessors": [
+        {
+            "key": "MetadataParser",
+            "when": "post_process",
+            "actions": [
+                (
+                    MetadataParserPP.interpretter,
+                    "%(track,title)s",
+                    "%(title)s",
+                ),
+                (
+                    MetadataParserPP.interpretter,
+                    "%(artist,channel,creator,uploader|NA)s",
+                    "%(uploader)s",
+                ),
+                (
+                    MetadataParserPP.interpretter,
+                    "%(album_artist,uploader)s",
+                    "%(album_artist)s",
+                ),
+                (
+                    MetadataParserPP.interpretter,
+                    "%(album,title)s",
+                    "%(meta_album)s",
+                ),
+                (
+                    MetadataParserPP.interpretter,
+                    "%(release_year,release_date>%Y,upload_date>%Y)s",
+                    "%(meta_date)s",
+                ),
+            ],
+        },
+    ],
+}
+
+StrPath = str | PathLike[str]
 
 VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
 
@@ -98,18 +135,24 @@ class FormatConfig:
         return asdict(self)
 
     def _gen_opts(self) -> dict[str, Any]:
-        opts = BASE_OPTS | {
-            "outtmpl": "%(uploader,extractor)s - %(title,id)s.%(ext)s",
-            "overwrites": False,
-            "retries": 3,
-        }
+        opts = (
+            BASE_OPTS
+            | POST_METADATA_OPTS
+            | {
+                "outtmpl": "%(uploader,extractor)s - %(title,id)s.%(ext)s",
+                "overwrites": False,
+                "retries": 3,
+            }
+        )
         opts |= {
             "paths": {
                 "home": str(self.output),
                 "temp": str(DIR_TEMP),
             },
-            "ffmpeg_location": str(self.ffmpeg) if self.ffmpeg else None,
         }
+
+        if self.ffmpeg:
+            opts |= {"ffmpeg_location": self.ffmpeg}
 
         if self.ffmpeg and self.remux:
             opts["postprocessors"].append(

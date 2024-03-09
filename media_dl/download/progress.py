@@ -140,6 +140,10 @@ class ProgressTask:
                     self.update()
 
             if status in ("error", "finished"):
+                self.completed = total
+                self.total = total
+                self.update()
+
                 time.sleep(1.5)
                 self.finalize()
 

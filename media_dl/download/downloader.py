@@ -98,7 +98,7 @@ class Downloader:
                     log.debug(f"❗ {success} of {total} streams downloaded.")
         return paths
 
-    def download(self, stream: Stream, format: Format | None = None) -> Path:
+    def download_single(self, stream: Stream, format: Format | None = None) -> Path:
         with self._progress as prog:
             prog.counter.set_total(1)
             return self._dl_worker(stream, format)
