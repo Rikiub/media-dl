@@ -1,9 +1,12 @@
 <div align="center">
 
 # ⏬ Media-DL
+
 > Download any **video/audio** you want from a simple **URL** ✨.
 > 
 > *Thanks to [yt-dlp](https://github.com/yt-dlp/yt-dlp)*
+
+[![Supported Sites](https://img.shields.io/badge/-Supported_Sites-brightgreen.svg?style=for-the-badge)](supportedsites.md "Supported Sites")
 
 </div>
 
