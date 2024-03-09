@@ -9,7 +9,7 @@
 
 ## Features
 
-- 🔎 Download any **[supported URL](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)** and **embed** basic metadata like:
+- 🔎 Download content from any **[supported URL](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)** and **embed** basic metadata like:
     - *Title, Artist, Year, etc*
     - *Thumbnails*
     - *Subtitles*
