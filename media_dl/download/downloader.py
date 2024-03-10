@@ -124,6 +124,6 @@ class Downloader:
             log.error("Failed to download '%s'", stream.display_name)
             log.error("%s: %s", err.__class__.__name__, str(err))
             raise
-
-        log.info("Finished '%s'", stream.display_name)
-        return path
+        else:
+            log.info("Finished '%s'", stream.display_name)
+            return path
