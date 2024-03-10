@@ -108,12 +108,12 @@ class Downloader:
         progress = self._progress.create_task(stream.display_name)
 
         # Resolve Format
-        if not stream.formats:
-            stream = stream.update()
-            progress.message = stream.display_name
-            progress.update()
-
         try:
+            if not stream.formats:
+                stream = stream.update()
+                progress.message = stream.display_name
+                progress.update()
+
             path = DownloadWorker(
                 stream=stream,
                 format=format,
