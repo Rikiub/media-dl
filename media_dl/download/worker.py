@@ -142,7 +142,7 @@ class DownloadWorker:
                 except _DownloadError as msg:
                     if "HTTP Error 403" in str(msg):
                         log.debug(
-                            "'%s' threw HTTP Error 403. Retrying again.",
+                            "HTTP Error 403 in '%s'. Retrying again.",
                             self.stream.display_name,
                         )
 

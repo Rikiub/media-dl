@@ -77,8 +77,8 @@ class Downloader:
                             paths.append(ft.result())
                             success += 1
                         except (cf.CancelledError, DownloaderError):
-                            log.debug("%s Errors catched", errors)
                             errors += 1
+                            log.debug("%s Errors catched", errors)
 
                         if errors >= error_limit:
                             msg = (
