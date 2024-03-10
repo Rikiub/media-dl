@@ -11,7 +11,6 @@ from yt_dlp.utils import MEDIA_EXTENSIONS
 
 from media_dl.dirs import DIR_TEMP
 from media_dl.models.format import FORMAT_TYPE
-from media_dl.helper import BASE_OPTS
 
 
 class SupportedExtensions(set[str], Enum):
@@ -135,27 +134,22 @@ class FormatConfig:
         return asdict(self)
 
     def _gen_opts(self) -> dict[str, Any]:
-        opts = (
-            BASE_OPTS
-            | POST_METADATA_OPTS
-            | {
-                "outtmpl": "%(uploader,extractor)s - %(title,id)s.%(ext)s",
-                "overwrites": False,
-                "retries": 3,
-            }
-        )
-        opts |= {
+        opts = POST_METADATA_OPTS | {
             "paths": {
                 "home": str(self.output),
                 "temp": str(DIR_TEMP),
             },
+            "outtmpl": {"default": "%(uploader,extractor)s - %(title,id)s.%(ext)s"},
+            "overwrites": False,
+            "retries": 3,
         }
+        postprocessors = []
 
         if self.ffmpeg:
             opts |= {"ffmpeg_location": self.ffmpeg}
 
         if self.ffmpeg and self.remux:
-            opts["postprocessors"].append(
+            postprocessors.append(
                 {
                     "key": "FFmpegVideoRemuxer",
                     "preferedformat": "opus>ogg/aac>m4a/alac>m4a/mov>mp4/webm>mkv",
@@ -175,7 +169,7 @@ class FormatConfig:
 
                 if self.ffmpeg and self.convert:
                     opts |= {"final_ext": self.format}
-                    opts["postprocessors"].append(
+                    postprocessors.append(
                         {
                             "key": "FFmpegVideoConvertor",
                             "preferedformat": self.format,
@@ -195,7 +189,7 @@ class FormatConfig:
                 }
 
                 if self.ffmpeg:
-                    opts["postprocessors"].append(
+                    postprocessors.append(
                         {
                             "key": "FFmpegExtractAudio",
                             "nopostoverwrites": True,
@@ -223,7 +217,7 @@ class FormatConfig:
 
         if self.ffmpeg and self.metadata:
             # Metadata Postprocessors
-            opts["postprocessors"].extend(
+            postprocessors.extend(
                 [
                     {
                         "key": "FFmpegMetadata",
@@ -236,6 +230,7 @@ class FormatConfig:
                 ]
             )
 
+        opts |= {"postprocessors": postprocessors}
         return opts
 
     @staticmethod

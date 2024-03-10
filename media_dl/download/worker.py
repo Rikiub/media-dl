@@ -1,14 +1,15 @@
-from typing import Callable, Literal
+from typing import Callable, Literal, cast
 from pathlib import Path
 import logging
 
 from yt_dlp import YoutubeDL
-from yt_dlp import DownloadError as _DownloaderError
+from yt_dlp import DownloadError as _DownloadError
 
 from media_dl.models.stream import Stream
-from media_dl.helper import better_exception_msg, MUSIC_SITES
-from media_dl.download.config import FormatConfig
 from media_dl.models.format import Format
+
+from media_dl.helper import BASE_OPTS, better_exception_msg, MUSIC_SITES, InfoDict
+from media_dl.download.config import FormatConfig
 
 log = logging.getLogger(__name__)
 
@@ -131,30 +132,34 @@ class DownloadWorker:
 
         try:
             format_id = {"format": self.format.id}
-            params = self.config._gen_opts() | format_id | progress
+            params = BASE_OPTS | self.config._gen_opts() | format_id | progress
 
+            # Download with complete stream info-dict.
             with YoutubeDL(params) as ydl:
                 try:
-                    # Download with complete stream info-dict.
-                    data = ydl.process_ie_result(
-                        self.stream.get_info_dict(),
-                        download=True,
-                    )
-                except _DownloaderError:
-                    # Fallback to simple format.
-                    data = ydl.process_ie_result(
-                        self.format._simple_format_dict(),
-                        download=True,
-                    )
+                    info = self.stream.get_info_dict()
+                    info = ydl.process_ie_result(info, download=True)
+                except _DownloadError as msg:
+                    if "HTTP Error 403" in str(msg):
+                        log.debug(
+                            "'%s' threw HTTP Error 403. Retrying again.",
+                            self.stream.display_name,
+                        )
 
-            path = data["requested_downloads"][0]["filepath"]
+                        info = ydl.extract_info(self.stream.url, download=True)
+                        info = cast(InfoDict, info)
+                    else:
+                        raise
+
+            # Extract final file path
+            path = info["requested_downloads"][0]["filepath"]
 
             if self._callback:
                 self._callback("finished", self.total_filesize, self.total_filesize)
 
             return Path(path)
-        except _DownloaderError as err:
-            msg = better_exception_msg(str(err), self.format.url)
+        except _DownloadError as err:
+            msg = better_exception_msg(str(err))
 
             if self._callback:
                 self._callback("error", self.downloaded, self.total_filesize)

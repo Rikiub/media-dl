@@ -95,7 +95,7 @@ class Downloader:
                 finally:
                     executor.shutdown(wait=False, cancel_futures=True)
 
-                    log.debug(f"❗ {success} of {total} streams downloaded.")
+                    log.debug(f"{success} of {total} streams downloaded.")
         return paths
 
     def download_single(self, stream: Stream, format: Format | None = None) -> Path:

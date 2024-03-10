@@ -6,6 +6,23 @@ import logging
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
 
+BASE_OPTS = {
+    "logger": _supress_logger,
+    "ignoreerrors": False,
+    "no_warnings": True,
+    "noprogress": True,
+    "quiet": True,
+    "color": {"stderr": "no_color", "stdout": "no_color"},
+}
+
+
+MUSIC_SITES = {
+    "soundcloud.com",
+    "music.youtube.com",
+    "bandcamp.com",
+}
+
+
 InfoDict = NewType("InfoDict", dict[str, Any])
 
 
@@ -45,18 +62,31 @@ def extract_meta(info: InfoDict) -> tuple[str, str, str]:
     return extractor, id, url
 
 
-def better_exception_msg(msg: str, url: str) -> str:
+def better_exception_msg(msg: str) -> str:
     if "HTTP Error" in msg:
         pass
 
     elif "Unable to download" in msg or "Got error" in msg:
-        msg = "Unable to download. Check your internet connection."
+        msg = "Unable to download."
+
+    elif "[Errno -3]" in msg:
+        msg = "Unable to establish internet connection."
+
+    # Incomplete URL
+    elif (
+        "Unable to download webpage" in msg
+        and "[Errno -2]" in msg
+        or "[Errno -5]" in msg
+    ):
+        msg = "Invalid URL"
 
     elif "is not a valid URL" in msg:
-        msg = url + " is not a valid URL"
+        splits = msg.split()
+        msg = splits[1] + " is not a valid URL"
 
     elif "Unsupported URL" in msg:
-        msg = "Unsupported URL: " + url
+        splits = msg.split()
+        msg = "Unsupported URL: " + splits[3]
 
     elif "Unable to rename file" in msg:
         msg = "Unable to rename file."
@@ -68,20 +98,3 @@ def better_exception_msg(msg: str, url: str) -> str:
         msg = msg.strip("ERROR: ")
 
     return msg
-
-
-MUSIC_SITES = {
-    "soundcloud.com",
-    "music.youtube.com",
-    "bandcamp.com",
-}
-
-
-BASE_OPTS = {
-    "ignoreerrors": False,
-    "no_warnings": True,
-    "noprogress": True,
-    "quiet": True,
-    "logger": _supress_logger,
-    "color": {"stderr": "no_color", "stdout": "no_color"},
-}

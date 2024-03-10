@@ -61,8 +61,7 @@ class InfoExtractor:
         try:
             info = self.yt_dlp.extract_info(query, download=False)
         except DownloadError as err:
-            msg = better_exception_msg(str(err), query)
-            log.debug(msg)
+            msg = better_exception_msg(str(err))
             raise ExtractionError(msg)
         else:
             info = cast(InfoDict, info)
@@ -70,7 +69,7 @@ class InfoExtractor:
         if not info:
             return None
 
-        # Some extractors redirect the URL to the "real URL",
+        # Some extractors need redirect to "real URL" (Pinterest)
         # For this extractors we need do another request.
         if info["extractor_key"] == "Generic" and info["url"] != query:
             log.debug("Re-fetching %s", query)
