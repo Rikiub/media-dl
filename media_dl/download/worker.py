@@ -23,7 +23,7 @@ PROGRESS_STATUS = Literal[
 ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
 
 
-class DownloaderError(Exception):
+class DownloadError(Exception):
     pass
 
 
@@ -164,7 +164,7 @@ class DownloadWorker:
             if self._callback:
                 self._callback("error", self.downloaded, self.total_filesize)
 
-            raise DownloaderError(msg)
+            raise DownloadError(msg)
 
     def _progress_wraper(
         self,

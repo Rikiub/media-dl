@@ -3,9 +3,10 @@ from pathlib import Path
 import logging
 
 from media_dl.download.progress import ProgressHandler
-from media_dl.download.worker import DownloadWorker, DownloaderError
+from media_dl.download.worker import DownloadWorker, DownloadError
 from media_dl.download.config import FormatConfig
 
+from media_dl.extractor import ExtractionError
 from media_dl.models import ExtractResult, Stream, Playlist, Format
 from media_dl.models.format import Format
 
@@ -76,7 +77,7 @@ class Downloader:
                         try:
                             paths.append(ft.result())
                             success += 1
-                        except (cf.CancelledError, DownloaderError):
+                        except (cf.CancelledError, DownloadError):
                             errors += 1
                             log.debug("%s Errors catched", errors)
 
@@ -86,7 +87,7 @@ class Downloader:
                                 if is_single
                                 else "Too many errors to continue downloading the playlist."
                             )
-                            raise DownloaderError(msg)
+                            raise DownloadError(msg)
                 except KeyboardInterrupt:
                     log.warning(
                         "❗ Canceling downloads... (press Ctrl+C again to force)"
@@ -119,7 +120,7 @@ class Downloader:
                 config=self.config,
                 on_progress=progress.ydl_progress_hook,
             ).start()
-        except DownloaderError as err:
+        except (DownloadError, ExtractionError) as err:
             log.error("Failed to download '%s'", stream.display_name)
             log.error("%s: %s", err.__class__.__name__, str(err))
             raise
