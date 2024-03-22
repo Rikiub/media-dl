@@ -6,7 +6,7 @@
 > 
 > *Thanks to [yt-dlp](https://github.com/yt-dlp/yt-dlp)*
 
-[![Supported Sites](https://img.shields.io/badge/-Supported_Sites-brightgreen.svg?style=for-the-badge)](supportedsites.md "Supported Sites")
+[![Supported Sites](https://img.shields.io/badge/-Supported_Sites-brightgreen.svg?style=for-the-badge)](https://github.com/yt-dlp/yt-dlp/blob/master/README.md)
 
 </div>
 
