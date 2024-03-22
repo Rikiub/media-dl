@@ -28,7 +28,7 @@ class TestExtractor:
 
 
 class TestDownloads:
-    ydl = MediaDL(format="audio", output=TEMPDIR.name)
+    ydl = MediaDL(format="audio", quality=1, output=TEMPDIR.name)
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer
@@ -61,7 +61,7 @@ class TestDownloads:
 
 
 def test_api_syntax():
-    ydl = MediaDL(format="audio", output=TEMPDIR.name)
+    ydl = MediaDL(format="audio", quality=1, output=TEMPDIR.name)
 
     print("Extraction")
     result = ydl.extract_search("Sub urban", "soundcloud")

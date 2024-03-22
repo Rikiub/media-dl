@@ -112,6 +112,7 @@ What format you want request?
         int,
         Option(
             "--quality",
+            "-q",
             help="Prefered video/audio quality to try filter.",
             rich_help_panel=HelpPanel.formatting,
             autocompletion=complete_resolution,

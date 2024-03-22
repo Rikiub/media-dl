@@ -29,7 +29,7 @@ class Format:
 
     @property
     def display_quality(self) -> str:
-        """Get a pretty representation of the `Format` quality."""
+        """Get a pretty representation of `Format` quality."""
 
         if self.type == "video":
             return str(self.quality) + "p"
@@ -118,7 +118,7 @@ class FormatList(Sequence[Format]):
         quality: int | None = None,
         codec: str | None = None,
     ) -> FormatList:
-        """Get a filtered formats list by provided arguments."""
+        """Get a filtered format list by provided arguments."""
 
         formats = self._formats
 
@@ -186,7 +186,9 @@ class FormatList(Sequence[Format]):
     @classmethod
     def _from_info(cls, info: InfoDict) -> FormatList:
         new_list = [
-            Format._from_format_entry(format) for format in info.get("formats") or {}
+            Format._from_format_entry(format)
+            for format in info.get("formats") or {}
+            if format["ext"] != "mhtml"
         ]
         return FormatList(new_list)
 
@@ -197,8 +199,11 @@ class FormatList(Sequence[Format]):
         for f in self._formats:
             yield f
 
-    def __contains__(self, other: Format) -> bool:
-        return True if self.get_by_id(other.id) else False
+    def __contains__(self, other) -> bool:
+        if isinstance(other, Format) and self.get_by_id(other.id):
+            return True
+        else:
+            return False
 
     def __len__(self) -> int:
         return len(self._formats)
