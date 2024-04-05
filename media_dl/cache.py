@@ -3,7 +3,7 @@ import shutil
 import json
 
 from media_dl.dirs import DIR_TEMP
-from media_dl.helper import InfoDict, extract_meta
+from media_dl.helper import InfoDict, info_extract_meta
 
 
 class InfoStore:
@@ -26,7 +26,7 @@ class InfoStore:
     def save(self, info: InfoDict) -> None:
         """Save a info-dict for future use."""
 
-        extractor, id, _ = extract_meta(info)
+        extractor, id, _ = info_extract_meta(info)
         file = self._prepare_filename(extractor, id)
 
         if not file.exists():

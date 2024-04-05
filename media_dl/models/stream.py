@@ -44,16 +44,16 @@ class Stream(ExtractID):
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Stream:
-        if helper.is_playlist(info):
+        if helper.info_is_playlist(info):
             raise TypeError(
                 "Unable to serialize dict. It is a playlist, not a single stream."
             )
-        elif helper.is_single(info):
+        elif helper.info_is_single(info):
             GLOBAL_INFO.save(info)
 
         return cls(
-            *helper.extract_meta(info),
-            thumbnail=helper.extract_thumbnail(info),
+            *helper.info_extract_meta(info),
+            thumbnail=helper.info_extract_thumbnail(info),
             title=info.get("track") or info.get("title") or "",
             uploader=(
                 info.get("artist")

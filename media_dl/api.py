@@ -65,9 +65,9 @@ class MediaDL:
 
         info = self._extr.extract_url(url)
 
-        if helper.is_playlist(info):
+        if helper.info_is_playlist(info):
             return Playlist._from_info(info)
-        elif helper.is_single(info):
+        elif helper.info_is_single(info):
             return Stream._from_info(info)
         else:
             raise TypeError(url, "unsupported.")

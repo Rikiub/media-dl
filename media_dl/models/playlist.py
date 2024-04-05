@@ -25,12 +25,12 @@ class Playlist(_StreamList):
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Playlist:
-        if not helper.is_playlist(info):
+        if not helper.info_is_playlist(info):
             raise TypeError("Unable to serialize dict. Not is a playlist.")
 
         return cls(
-            *helper.extract_meta(info),
-            thumbnail=helper.extract_thumbnail(info),
+            *helper.info_extract_meta(info),
+            thumbnail=helper.info_extract_thumbnail(info),
             title=info.get("title") or "",
             lenght=info["playlist_count"],
             streams=list(Stream._from_info(entry) for entry in info["entries"]),

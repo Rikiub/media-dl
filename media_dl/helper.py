@@ -26,15 +26,15 @@ MUSIC_SITES = {
 InfoDict = NewType("InfoDict", dict[str, Any])
 
 
-def is_playlist(info: InfoDict) -> bool:
+def info_is_playlist(info: InfoDict) -> bool:
     return True if info.get("_type") == "playlist" or info.get("entries") else False
 
 
-def is_single(info: InfoDict) -> bool:
+def info_is_single(info: InfoDict) -> bool:
     return True if info.get("formats") else False
 
 
-def extract_thumbnail(info: InfoDict) -> str:
+def info_extract_thumbnail(info: InfoDict) -> str:
     if t := info.get("thumbnail"):
         return t
     elif t := info.get("thumbnails"):
@@ -43,7 +43,7 @@ def extract_thumbnail(info: InfoDict) -> str:
         return ""
 
 
-def extract_meta(info: InfoDict) -> tuple[str, str, str]:
+def info_extract_meta(info: InfoDict) -> tuple[str, str, str]:
     """Helper for extract essential information from info dict.
 
     Returns:
