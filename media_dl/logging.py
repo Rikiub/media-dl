@@ -30,10 +30,11 @@ def init_logging(level: int | str):
         log_level = level
 
     msg_format = "%(message)s"
-    verbose = True
 
     if log_level >= 20:
         verbose = False
+    else:
+        verbose = True
 
     rich_handler = RichHandler(
         level=log_level,

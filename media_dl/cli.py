@@ -6,11 +6,11 @@ from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
 from media_dl import MediaDL
-from media_dl.dirs import APPNAME
+from media_dl.helper import APPNAME
 from media_dl.logging import init_logging
 from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
-from media_dl.download.downloader import DownloadError
+from media_dl.download.handler import DownloadError
 
 log = logging.getLogger(__name__)
 

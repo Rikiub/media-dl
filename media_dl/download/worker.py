@@ -6,10 +6,8 @@ import logging
 from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as _DownloadError
 
-from media_dl.dirs import DIR_TEMP
 from media_dl.models.format import Format
-
-from media_dl.helper import YDL_BASE_OPTS, better_exception_msg
+from media_dl.helper import YDL_BASE_OPTS, DIR_TEMP, better_exception_msg
 
 log = logging.getLogger(__name__)
 
@@ -44,12 +42,11 @@ class FormatWorker:
         """Start download of the instance."""
 
         log.debug(
-            "Downloading format %s (%s %s) (%s) from '%s'",
+            "Downloading format %s (%s %s) (%s)",
             self.format.id,
             self.format.extension,
             self.format.display_quality,
             self.format.type,
-            self.format.url,
         )
 
         # Reset progress

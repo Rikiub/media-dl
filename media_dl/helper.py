@@ -1,13 +1,22 @@
 """Base yt-dlp parameters, functions and helpers used around the project."""
 
 from typing import NewType, Any, cast
+from tempfile import mkdtemp
+from pathlib import Path
 import logging
+import atexit
+import shutil
 
 from yt_dlp import YoutubeDL
 
+# Directories
+APPNAME = "media-dl"
+DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
+
+
+# YTDLP Base
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
-
 
 YDL_BASE_OPTS = {
     "logger": _supress_logger,
@@ -18,12 +27,13 @@ YDL_BASE_OPTS = {
     "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 
-YTDLP = YoutubeDL(YDL_BASE_OPTS)
-
-
 InfoDict = NewType("InfoDict", dict[str, Any])
+YTDLP = YoutubeDL(
+    YDL_BASE_OPTS | {"skip_download": True, "extract_flat": "in_playlist"}
+)
 
 
+# Helper functions
 def sanitize_info(info: InfoDict) -> InfoDict:
     info = cast(InfoDict, YTDLP.sanitize_info(info))
 
@@ -118,3 +128,11 @@ def better_exception_msg(msg: str) -> str:
         msg = msg.strip("ERROR: ")
 
     return msg
+
+
+# Cleaner
+def clean_tempdir():
+    shutil.rmtree(DIR_TEMP)
+
+
+atexit.register(clean_tempdir)

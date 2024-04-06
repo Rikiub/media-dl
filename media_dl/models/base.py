@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from media_dl.extractor import InfoExtractor, InfoDict
-
-
-_EXTR = InfoExtractor()
+from media_dl import extractor
+from media_dl.helper import InfoDict
 
 
 @dataclass(slots=True, frozen=True)
@@ -20,7 +18,7 @@ class ExtractID(ABC):
 
     @classmethod
     def from_url(cls, url: str):
-        info = _EXTR.extract_url(url)
+        info = extractor.from_url(url)
         return cls._from_info(info)
 
     @classmethod

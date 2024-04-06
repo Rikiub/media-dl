@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from media_dl.extractor import SEARCH_PROVIDER, InfoExtractor
+from media_dl import extractor
+from media_dl.extractor import SEARCH_PROVIDER
 
-from media_dl.download.downloader import Downloader
+from media_dl.download.handler import Downloader
 from media_dl.download.config import StrPath, FormatConfig, FILE_REQUEST
 from media_dl.models import ExtractResult, Playlist, Stream, Format
 from media_dl import helper
@@ -44,13 +45,11 @@ class MediaDL:
             metadata=metadata,
             remux=remux,
         )
-
         self._downloader = Downloader(
             format_config=self.downloader_config,
             max_threads=threads,
             render_progress=not quiet,
         )
-        self._extr = InfoExtractor()
 
     def extract_url(self, url: str) -> Stream | Playlist:
         """Extract and serialize information from URL.
@@ -63,7 +62,7 @@ class MediaDL:
             ExtractionError: Something bad happens when try extract the URL.
         """
 
-        info = self._extr.extract_url(url)
+        info = extractor.from_url(url)
 
         if helper.info_is_playlist(info):
             return Playlist._from_info(info)
@@ -87,7 +86,7 @@ class MediaDL:
             ExtractionError: Something bad happens when try extract the query.
         """
 
-        info = self._extr.extract_search(query, provider)
+        info = extractor.from_search(query, provider)
         return [Stream._from_info(entry) for entry in info["entries"]]
 
     def download_single(self, stream: Stream, format: Format | None = None) -> Path:
