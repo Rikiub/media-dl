@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import Literal, Any, overload
+from dataclasses import dataclass, field
 from collections.abc import Sequence
-from dataclasses import dataclass
 import bisect
 
 from media_dl.models.base import InfoDict
@@ -26,6 +26,7 @@ class Format:
     quality: int = 0
     codec: str | None = None
     filesize: int | None = None
+    _downloader_options: dict = field(default_factory=dict, repr=False)
 
     @property
     def display_quality(self) -> str:
@@ -46,6 +47,7 @@ class Format:
             "format_id": self.id,
             "url": self.url,
             "ext": self.extension,
+            "downloader_options": self._downloader_options,
         }
 
         match self.type:
@@ -83,6 +85,7 @@ class Format:
             quality=quality or 0,
             codec=codec,
             filesize=format.get("filesize") or None,
+            _downloader_options=format.get("downloader_options") or {},
         )
 
     def __eq__(self, value) -> bool:
@@ -191,6 +194,9 @@ class FormatList(Sequence[Format]):
             if format["ext"] != "mhtml"
         ]
         return FormatList(new_list)
+
+    def __rich_repr__(self):
+        yield self._formats
 
     def __bool__(self):
         return True if self._formats else False

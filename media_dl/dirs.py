@@ -1,10 +1,11 @@
 from tempfile import mkdtemp
+from pathlib import Path
 import atexit
 import shutil
 
 
 APPNAME = "media-dl"
-DIR_TEMP = mkdtemp(prefix="ydl-")
+DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
 
 
 def clean():

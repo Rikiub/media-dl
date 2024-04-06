@@ -3,7 +3,7 @@ import logging
 
 from yt_dlp import YoutubeDL, DownloadError
 
-from media_dl.helper import InfoDict, better_exception_msg, BASE_OPTS
+from media_dl.helper import InfoDict, better_exception_msg, YDL_BASE_OPTS
 
 __all__ = ["InfoExtractor"]
 
@@ -20,7 +20,7 @@ class InfoExtractor:
     """`YT-DLP` extractor helper to get info-dicts and check if are valid."""
 
     def __init__(self):
-        opts = BASE_OPTS | {"skip_download": True, "extract_flat": "in_playlist"}
+        opts = YDL_BASE_OPTS | {"skip_download": True, "extract_flat": "in_playlist"}
         self.yt_dlp = YoutubeDL(opts)
 
     def extract_url(self, url: str) -> InfoDict:

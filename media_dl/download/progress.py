@@ -116,7 +116,7 @@ class ProgressTask:
         self.started = True
 
     def ydl_progress_hook(self, status, downloaded, total):
-        if not self.progress.disable:
+        if not (self.progress.disable or self.progress.finished):
             match status:
                 case "downloading":
                     self.status = "Downloading"

@@ -1,12 +1,15 @@
 """Base yt-dlp parameters, functions and helpers used around the project."""
 
-from typing import NewType, Any
+from typing import NewType, Any, cast
 import logging
+
+from yt_dlp import YoutubeDL
 
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
 
-BASE_OPTS = {
+
+YDL_BASE_OPTS = {
     "logger": _supress_logger,
     "ignoreerrors": False,
     "no_warnings": True,
@@ -15,15 +18,32 @@ BASE_OPTS = {
     "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 
-
-MUSIC_SITES = {
-    "soundcloud.com",
-    "music.youtube.com",
-    "bandcamp.com",
-}
+YTDLP = YoutubeDL(YDL_BASE_OPTS)
 
 
 InfoDict = NewType("InfoDict", dict[str, Any])
+
+
+def sanitize_info(info: InfoDict) -> InfoDict:
+    info = cast(InfoDict, YTDLP.sanitize_info(info))
+
+    keys_to_remove = {
+        "formats",
+        "requested_formats",
+        "requested_subtitles",
+        "heatmap",
+        "_version",
+    }
+
+    for key in keys_to_remove:
+        info.pop(key, None)
+
+    return info
+
+
+def gen_output_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
+    name = YTDLP.prepare_outtmpl(template, info)
+    return cast(str, name)
 
 
 def info_is_playlist(info: InfoDict) -> bool:

@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from media_dl import helper
-from media_dl.models.base import (
-    GLOBAL_INFO,
-    ExtractID,
-    InfoDict,
-)
+from media_dl.models.base import ExtractID, InfoDict
 from media_dl.models.format import FormatList
 
 
@@ -21,6 +17,7 @@ class Stream(ExtractID):
         stream = stream.update()
     """
 
+    _extra_info: InfoDict = field(repr=False)
     title: str
     uploader: str = ""
     thumbnail: str = ""
@@ -48,12 +45,10 @@ class Stream(ExtractID):
             raise TypeError(
                 "Unable to serialize dict. It is a playlist, not a single stream."
             )
-        elif helper.info_is_single(info):
-            GLOBAL_INFO.save(info)
 
         return cls(
             *helper.info_extract_meta(info),
-            thumbnail=helper.info_extract_thumbnail(info),
+            _extra_info=helper.sanitize_info(info),
             title=info.get("track") or info.get("title") or "",
             uploader=(
                 info.get("artist")
@@ -62,6 +57,7 @@ class Stream(ExtractID):
                 or info.get("uploader")
                 or ""
             ),
+            thumbnail=helper.info_extract_thumbnail(info),
             duration=info.get("duration") or 0,
             formats=FormatList._from_info(info),
         )

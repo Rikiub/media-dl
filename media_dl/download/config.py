@@ -7,9 +7,11 @@ from os import PathLike
 import os
 
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
+from media_dl.helper import YDL_BASE_OPTS, InfoDict
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
-from media_dl.dirs import DIR_TEMP
+from yt_dlp import YoutubeDL
+
 from media_dl.models.format import FORMAT_TYPE
 
 
@@ -19,38 +21,34 @@ class SupportedExtensions(set[str], Enum):
 
 
 POST_METADATA_OPTS = {
-    "postprocessors": [
-        {
-            "key": "MetadataParser",
-            "when": "post_process",
-            "actions": [
-                (
-                    MetadataParserPP.interpretter,
-                    "%(track,title)s",
-                    "%(title)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(artist,channel,creator,uploader|NA)s",
-                    "%(uploader)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(album_artist,uploader)s",
-                    "%(album_artist)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(album,title)s",
-                    "%(meta_album)s",
-                ),
-                (
-                    MetadataParserPP.interpretter,
-                    "%(release_year,release_date>%Y,upload_date>%Y)s",
-                    "%(meta_date)s",
-                ),
-            ],
-        },
+    "key": "MetadataParser",
+    "when": "post_process",
+    "actions": [
+        (
+            MetadataParserPP.interpretter,
+            "%(track,title)s",
+            "%(title)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(artist,channel,creator,uploader|NA)s",
+            "%(uploader)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(album_artist,uploader)s",
+            "%(album_artist)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(album,title)s",
+            "%(meta_album)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(release_year,release_date>%Y,upload_date>%Y)s",
+            "%(meta_date)s",
+        ),
     ],
 }
 
@@ -134,16 +132,8 @@ class FormatConfig:
         return asdict(self)
 
     def _gen_opts(self) -> dict[str, Any]:
-        opts = POST_METADATA_OPTS | {
-            "paths": {
-                "home": str(self.output),
-                "temp": str(DIR_TEMP),
-            },
-            "outtmpl": {"default": "%(uploader,extractor)s - %(title,id)s.%(ext)s"},
-            "overwrites": False,
-            "retries": 3,
-        }
-        postprocessors = []
+        opts = POST_METADATA_OPTS | {"overwrites": False, "retries": 3}
+        postprocessors = [POST_METADATA_OPTS]
 
         if self.ffmpeg:
             opts |= {"ffmpeg_location": self.ffmpeg}
@@ -159,10 +149,6 @@ class FormatConfig:
         match self.type:
             case "video":
                 opts |= {
-                    "format": "bv+ba/" if self.ffmpeg else "" + "bv/b",
-                    "merge_output_format": (
-                        self.format if self.convert else "/".join(get_args(EXT_VIDEO))
-                    ),
                     "subtitleslangs": "all",
                     "writesubtitles": True,
                 }
@@ -177,7 +163,6 @@ class FormatConfig:
                     )
             case "audio":
                 opts |= {
-                    "format": "ba/b",
                     "postprocessor_args": {
                         "thumbnailsconvertor+ffmpeg_o": [
                             "-c:v",
@@ -248,3 +233,11 @@ class FormatConfig:
             return True
         else:
             return False
+
+
+def execute_postprocessors(
+    file: StrPath, info: InfoDict, config: FormatConfig
+) -> InfoDict:
+    with YoutubeDL(YDL_BASE_OPTS | config._gen_opts()) as ydl:
+        info = ydl.post_process(filename=file, info=info)
+        return cast(InfoDict, info)
