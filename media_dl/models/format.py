@@ -20,7 +20,7 @@ class Format:
     """
 
     url: str
-    id: str
+    id: str = field(hash=True, compare=True)
     type: FORMAT_TYPE
     extension: str
     quality: int = 0
@@ -121,7 +121,7 @@ class FormatList(Sequence[Format]):
         quality: int | None = None,
         codec: str | None = None,
     ) -> FormatList:
-        """Get filtered format list by provided arguments."""
+        """Get filtered format list by provided options."""
 
         formats = self._formats
 
@@ -145,22 +145,26 @@ class FormatList(Sequence[Format]):
         )
         return FormatList(sorted_list)
 
-    def get_by_id(self, id: str) -> Format | None:
-        """Get `Format` by `id`. If not found, will return `None`."""
+    def get_by_id(self, id: str) -> Format:
+        """Get `Format` by `id`.
+
+        Raises:
+            IndexError: Provided id has not been founded.
+        """
 
         if result := [f for f in self if f.id == id]:
             return result[0]
         else:
-            return None
+            raise IndexError(f"Format with id '{id}' has not been founded")
 
     def get_best_quality(self) -> Format:
-        """Get `Format` with best quality in the list."""
+        """Get `Format` with best quality."""
 
         formats = self.sort_by("quality")
         return formats[-1]
 
     def get_worst_quality(self) -> Format:
-        """Get `Format` with worst quality in the list."""
+        """Get `Format` with worst quality."""
 
         formats = self.sort_by("quality")
         return formats[0]

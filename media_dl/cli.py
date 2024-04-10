@@ -5,12 +5,12 @@ import logging
 from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
-from media_dl import MediaDL
+from media_dl import api
 from media_dl.helper import APPNAME
 from media_dl.logging import init_logging
-from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
+from media_dl.extractor import SEARCH_PROVIDER
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
-from media_dl.download.handler import DownloadError
+from media_dl.exceptions import MediaError
 
 log = logging.getLogger(__name__)
 
@@ -187,7 +187,7 @@ What format you want request?
     init_logging(log_level)
 
     try:
-        ydl = MediaDL(
+        downloader = api.Downloader(
             format=format.value,
             quality=quality if quality != 0 else None,
             output=output,
@@ -198,7 +198,7 @@ What format you want request?
     except FileNotFoundError as err:
         raise BadParameter(str(err))
 
-    conf = ydl._downloader.config
+    conf = downloader._downloader.config
     if conf.convert and not conf.ffmpeg:
         log.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled.\n"
@@ -208,14 +208,14 @@ What format you want request?
         try:
             if target.value == "url":
                 log.info('🔎 Extracting "%s".', entry)
-                result = ydl.extract_url(entry)
+                result = api.extract_url(entry)
             else:
                 log.info('🔎 Searching "%s" from "%s".', entry, target.value)
-                result = ydl.extract_search(entry, target.value)
+                result = api.extract_search(entry, target.value)
                 result = result[0]
 
-            ydl.download_multiple(result)
-        except (DownloadError, ExtractionError) as err:
+            downloader.download_multiple(result)
+        except MediaError as err:
             log.error("❌ %s", str(err))
             continue
         else:

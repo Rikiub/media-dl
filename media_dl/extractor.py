@@ -17,15 +17,12 @@ import logging
 
 from yt_dlp import DownloadError
 
+from media_dl.exceptions import ExtractError
 from media_dl.helper import InfoDict, YTDLP, better_exception_msg
 
 log = logging.getLogger(__name__)
 
 SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
-
-
-class ExtractionError(Exception):
-    pass
 
 
 def from_url(url: str) -> InfoDict:
@@ -36,7 +33,7 @@ def from_url(url: str) -> InfoDict:
     if info := _fetch_query(url):
         return info
     else:
-        raise ExtractionError("Unable to extract.", url)
+        raise ExtractError("Unable to extract.", url)
 
 
 def from_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
@@ -69,7 +66,7 @@ def _fetch_query(query: str) -> InfoDict | None:
         info = YTDLP.extract_info(query, download=False)
     except DownloadError as err:
         msg = better_exception_msg(str(err))
-        raise ExtractionError(msg)
+        raise ExtractError(msg)
     else:
         info = cast(InfoDict, info)
 

@@ -80,6 +80,7 @@ def sanitize_info(info: InfoDict) -> InfoDict:
         "requested_formats",
         "formats",
         "heatmap",
+        "_type",
         "_version",
     }
 
@@ -89,7 +90,7 @@ def sanitize_info(info: InfoDict) -> InfoDict:
     return info
 
 
-def gen_output_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
+def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
     name = YTDLP.prepare_outtmpl(template, info)
     return cast(str, name)
 
@@ -135,8 +136,9 @@ def better_exception_msg(msg: str) -> str:
         pass
 
     elif "Read timed out" in msg:
-        msg = "Download timeout"
+        msg = "Download timeout."
 
+    # General error
     elif "Unable to download" in msg or "Got error" in msg:
         msg = "Unable to download."
 
@@ -149,11 +151,11 @@ def better_exception_msg(msg: str) -> str:
         and "[Errno -2]" in msg
         or "[Errno -5]" in msg
     ):
-        msg = "Invalid URL"
+        msg = "Invalid URL."
 
     elif "is not a valid URL" in msg:
         splits = msg.split()
-        msg = splits[1] + " is not a valid URL"
+        msg = splits[1] + " is not a valid URL."
 
     elif "Unsupported URL" in msg:
         splits = msg.split()

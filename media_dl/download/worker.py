@@ -4,10 +4,11 @@ import tempfile
 import logging
 
 from yt_dlp import YoutubeDL
-from yt_dlp import DownloadError as _DownloadError
+from yt_dlp import DownloadError as YTDLPDownloadError
 
 from media_dl.models.format import Format
 from media_dl.helper import OPTS_BASE, DIR_TEMP, better_exception_msg
+from media_dl.exceptions import DownloadError
 
 log = logging.getLogger(__name__)
 
@@ -17,10 +18,6 @@ PROGRESS_STATUS = Literal[
     "error",
 ]
 ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
-
-
-class DownloadError(Exception):
-    pass
 
 
 class FormatWorker:
@@ -79,7 +76,7 @@ class FormatWorker:
                 self._callback("finished", self.total_filesize, self.total_filesize)
 
             return Path(path)
-        except _DownloadError as err:
+        except YTDLPDownloadError as err:
             msg = better_exception_msg(str(err))
 
             if self._callback:

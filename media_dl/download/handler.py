@@ -4,13 +4,12 @@ import logging
 import shutil
 import time
 
+from media_dl.download.worker import FormatWorker
 from media_dl.download.progress import ProgressHandler
-from media_dl.download.worker import FormatWorker, DownloadError
 from media_dl.download.config import FormatConfig, SupportedExtensions
-
-from media_dl.extractor import ExtractionError
 from media_dl.models.format import Format, FormatList
 from media_dl.models import ExtractResult, Stream, Playlist
+from media_dl.exceptions import MediaError
 
 log = logging.getLogger(__name__)
 
@@ -71,7 +70,7 @@ class Downloader:
                         try:
                             final_paths.append(ft.result())
                             success += 1
-                        except (cf.CancelledError, DownloadError):
+                        except (cf.CancelledError, MediaError):
                             errors += 1
                             log.debug("%s Errors catched.", errors)
                 except KeyboardInterrupt:
@@ -95,8 +94,8 @@ class Downloader:
             return path
 
     @staticmethod
-    def extract_best_format(format_list: FormatList, config: FormatConfig) -> Format:
-        """Resolve and extract the best format in the instance."""
+    def _extract_best_format(format_list: FormatList, config: FormatConfig) -> Format:
+        """Extract best format in stream formats."""
 
         # Filter by extension
         if f := config.convert and format_list.filter(extension=config.convert):
@@ -201,7 +200,7 @@ class Downloader:
                     )
                     config.format = "audio"
 
-                format = self.extract_best_format(stream.formats, config)
+                format = self._extract_best_format(stream.formats, config)
 
                 if not config.convert and config.type != format.type:
                     log.debug(
@@ -228,7 +227,7 @@ class Downloader:
             log.debug('Postprocessing "%s"', stream.display_name)
             self._progress.update(task_id, status=status)
 
-            filepath = config.run_postproces(filepath, stream._extra_info)
+            filepath = config._run_postproces(filepath, stream._extra_info)
             filename = filename + filepath.suffix
 
             # Move file
@@ -240,7 +239,7 @@ class Downloader:
 
             log.info('[Finished]: "%s".', stream.display_name)
             return filepath
-        except (DownloadError, ExtractionError) as err:
+        except MediaError as err:
             error_name = err.__class__.__name__
 
             log.error('Failed to download "%s".', stream.display_name)

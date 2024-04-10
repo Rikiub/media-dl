@@ -2,42 +2,40 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import MediaDL
-from media_dl.extractor import ExtractionError
+import media_dl
 from media_dl.models import Stream, Playlist
+from media_dl.exceptions import ExtractError, DownloadError
 
 TEMPDIR = TemporaryDirectory()
 
 
 class TestExtractor:
-    ydl = MediaDL()
-
     def test_exceptions(self):
-        with pytest.raises(ExtractionError):
-            self.ydl.extract_url("https://unkdown.link.com/")
+        with pytest.raises(ExtractError):
+            media_dl.extract_url("https://unkdown.link.com/")
 
     def test_single_url(self):
-        info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
+        info = media_dl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
         assert isinstance(info, Stream)
 
     def test_plalist_url(self):
-        info = self.ydl.extract_url(
+        info = media_dl.extract_url(
             "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
         )
         assert isinstance(info, Playlist)
 
 
 class TestDownloads:
-    ydl = MediaDL(format="audio", quality=1, output=TEMPDIR.name)
+    downloader = media_dl.Downloader(format="audio", quality=1, output=TEMPDIR.name)
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer
         url = "https://music.youtube.com/watch?v=Kx7B-XvmFtE"
-        stream = self.ydl.extract_url(url)
+        stream = media_dl.extract_url(url)
 
         if isinstance(stream, Stream):
             with TEMPDIR:
-                path = self.ydl.download_single(stream)
+                path = self.downloader.download_single(stream)
 
                 if not path.is_file():
                     raise FileNotFoundError(path)
@@ -47,11 +45,11 @@ class TestDownloads:
     def test_download_playlist(self):
         # Playlist: Album - HIVE (Sub Urban)
         url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
-        playlist = self.ydl.extract_url(url)
+        playlist = media_dl.extract_url(url)
 
         if isinstance(playlist, Playlist):
             with TEMPDIR:
-                paths = self.ydl.download_multiple(playlist)
+                paths = self.downloader.download_multiple(playlist)
                 p = paths[0]
 
                 if not p.is_file():
@@ -61,20 +59,16 @@ class TestDownloads:
 
 
 def test_api_syntax():
-    ydl = MediaDL(format="audio", quality=1, output=TEMPDIR.name)
+    URL = "https://music.youtube.com/watch?v=hkcN1FnjmbU"
 
-    print("Extraction")
-    result = ydl.extract_search("Sub urban", "soundcloud")
-    print("Extraction Done")
-
-    print("Update")
-    stream = result[0].update()
-    print("Update Done")
-
-    print("Filter")
-    format = stream.formats.filter("audio").get_best_quality()
-    print("Filter Done")
+    downloader = media_dl.Downloader("audio", quality=1, output=TEMPDIR.name)
+    result = media_dl.extract_url(URL)
 
     with TEMPDIR:
-        path = ydl.download_single(stream, format)
+        if stream := isinstance(result, Stream) and result.update():
+            format = stream.formats.filter(type="audio").get_best_quality()
+            path = downloader.download_single(stream, format)
+        else:
+            path = downloader.download_multiple(result)
+
         print(path)

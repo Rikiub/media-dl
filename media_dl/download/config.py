@@ -6,7 +6,6 @@ import shutil
 from os import PathLike
 import os
 
-from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from media_dl.helper import OPTS_BASE, OPTS_METAPARSER, InfoDict
 
 from yt_dlp.utils import MEDIA_EXTENSIONS
@@ -93,7 +92,7 @@ class FormatConfig:
         )
 
     def asdict(self) -> dict[str, Any]:
-        """Convert config to a simple dict."""
+        """Convert config to simple dict."""
 
         d = asdict(self)
 
@@ -102,7 +101,7 @@ class FormatConfig:
 
         return d
 
-    def run_postproces(self, file: StrPath, info: InfoDict) -> Path:
+    def _run_postproces(self, file: StrPath, info: InfoDict) -> Path:
         with YoutubeDL(OPTS_BASE | self._gen_opts()) as ydl:
             info = ydl.post_process(filename=str(file), info=info)
             return Path(info["filepath"])
