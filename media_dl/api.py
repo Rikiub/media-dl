@@ -17,7 +17,7 @@ def extract_url(url: str) -> Stream | Playlist:
         - `Playlist` with multiple `Streams`.
 
     Raises:
-        ExtractionError: Something bad happens when try extract the URL.
+        ExtractError: Something bad happens when try extract the URL.
     """
 
     info = extractor.from_url(url)
@@ -38,7 +38,7 @@ def extract_search(query: str, provider: SEARCH_PROVIDER) -> list[Stream]:
         (Streams will be incomplete).
 
     Raises:
-        ExtractionError: Something bad happens when try extract the query.
+        ExtractError: Something bad happens when try extract the query.
     """
 
     info = extractor.from_search(query, provider)
@@ -95,7 +95,7 @@ class Downloader:
             Path to downloaded file.
 
         Raises:
-            DownloaderError: Something bad happens when try download.
+            DownloadError: Something bad happens when try download.
             ValueError: Provided `Format` wasn't founded in `Stream`.
         """
 
@@ -108,7 +108,7 @@ class Downloader:
             List of paths to downloaded files.
 
         Raises:
-            DownloaderError: Something bad happens when try download.
+            DownloadError: Something bad happens when try download.
         """
 
         return self._downloader.download_multiple(data)

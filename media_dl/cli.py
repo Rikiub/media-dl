@@ -76,7 +76,7 @@ def download(
     query: Annotated[
         list[str],
         Argument(
-            help="""URLs and queries to process.
+            help="""Input to process.
             \n
             - Insert a URL to download (Default).\n
             - Select a PROVIDER to search and download.
@@ -113,7 +113,7 @@ What format you want request?
         Option(
             "--quality",
             "-q",
-            help="Prefered video/audio quality to try filter.",
+            help="Prefered video/audio quality to filter.",
             rich_help_panel=HelpPanel.formatting,
             autocompletion=complete_resolution,
             show_default=False,
