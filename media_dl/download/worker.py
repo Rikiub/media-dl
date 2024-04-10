@@ -7,14 +7,12 @@ from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as _DownloadError
 
 from media_dl.models.format import Format
-from media_dl.helper import YDL_BASE_OPTS, DIR_TEMP, better_exception_msg
+from media_dl.helper import OPTS_BASE, DIR_TEMP, better_exception_msg
 
 log = logging.getLogger(__name__)
 
 PROGRESS_STATUS = Literal[
     "downloading",
-    "processing",
-    "converting",
     "finished",
     "error",
 ]
@@ -55,17 +53,14 @@ class FormatWorker:
 
         if c := self._callback:
             wrapper = lambda d: self._progress_wraper(d, c)
-            progress = {
-                "progress_hooks": [wrapper],
-                "postprocessor_hooks": [wrapper],
-            }
+            progress = {"progress_hooks": [wrapper]}
         else:
             progress = {}
 
         try:
             format_id = {"format": self.format.id}
             params = (
-                YDL_BASE_OPTS
+                OPTS_BASE
                 | format_id
                 | progress
                 | {"outtmpl": tempfile.mktemp(dir=DIR_TEMP) + ".%(ext)s"}
@@ -74,8 +69,7 @@ class FormatWorker:
             # Download with complete stream info-dict.
             with YoutubeDL(params) as ydl:
                 info = ydl.process_ie_result(
-                    self.format._simple_format_dict() | self.format._downloader_options,
-                    download=True,
+                    self.format._simple_format_dict(), download=True
                 )
 
             # Extract final file path
@@ -100,7 +94,6 @@ class FormatWorker:
     ) -> None:
         """`YT-DLP` progress hook, but stable and without issues."""
 
-        status: PROGRESS_STATUS = d["status"]
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
@@ -109,4 +102,4 @@ class FormatWorker:
         if total > self.total_filesize:
             self.total_filesize = total
 
-        callback(status, self.downloaded, self.total_filesize)
+        callback("downloading", self.downloaded, self.total_filesize)

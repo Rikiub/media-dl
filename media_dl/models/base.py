@@ -7,10 +7,7 @@ from media_dl.helper import InfoDict
 
 @dataclass(slots=True, frozen=True)
 class ExtractID(ABC):
-    """Base identifier for all media objects.
-
-    Essential to downloaders.
-    """
+    """Base identifier for media objects."""
 
     extractor: str
     id: str

@@ -31,12 +31,12 @@ class ExtractionError(Exception):
 def from_url(url: str) -> InfoDict:
     """Extract info from URL."""
 
-    log.debug("Extracting %s", url)
+    log.debug("Extracting: %s", url)
 
     if info := _fetch_query(url):
         return info
     else:
-        raise ExtractionError("Unable to extract", url)
+        raise ExtractionError("Unable to extract.", url)
 
 
 def from_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
@@ -54,7 +54,7 @@ def from_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
         case _:
             raise ValueError(provider, "is invalid. Must be:", SEARCH_PROVIDER)
 
-    log.debug("Searching '%s' from '%s'", query, provider)
+    log.debug("Searching '%s' from '%s'.", query, provider)
 
     if info := _fetch_query(prov + query):
         return info
@@ -90,7 +90,7 @@ def _fetch_query(query: str) -> InfoDict | None:
                 del entries[index]
 
         if not entries:
-            log.debug("Not founded valid entries in %s", query)
+            log.debug("Not founded valid entries in %s.", query)
             return None
 
         info["entries"] = entries

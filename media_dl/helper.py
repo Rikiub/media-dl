@@ -8,6 +8,7 @@ import atexit
 import shutil
 
 from yt_dlp import YoutubeDL
+from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
 # Directories
 APPNAME = "media-dl"
@@ -18,7 +19,7 @@ DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
 
-YDL_BASE_OPTS = {
+OPTS_BASE = {
     "logger": _supress_logger,
     "ignoreerrors": False,
     "no_warnings": True,
@@ -27,9 +28,46 @@ YDL_BASE_OPTS = {
     "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 
+OPTS_METAPARSER = {
+    "key": "MetadataParser",
+    "when": "pre_process",
+    "actions": [
+        (
+            MetadataParserPP.interpretter,
+            "%(track,title)s",
+            "%(title)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(artist,channel,creator,uploader|NA)s",
+            "%(uploader)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(album_artist,uploader)s",
+            "%(meta_album_artist)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(album,title)s",
+            "%(meta_album)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(release_year,release_date>%Y,upload_date>%Y)s",
+            "%(meta_date)s",
+        ),
+    ],
+}
+
 InfoDict = NewType("InfoDict", dict[str, Any])
 YTDLP = YoutubeDL(
-    YDL_BASE_OPTS | {"skip_download": True, "extract_flat": "in_playlist"}
+    OPTS_BASE
+    | {
+        "skip_download": True,
+        "extract_flat": "in_playlist",
+        "postprocessors": [OPTS_METAPARSER],
+    }
 )
 
 
@@ -38,9 +76,9 @@ def sanitize_info(info: InfoDict) -> InfoDict:
     info = cast(InfoDict, YTDLP.sanitize_info(info))
 
     keys_to_remove = {
-        "formats",
-        "requested_formats",
         "requested_subtitles",
+        "requested_formats",
+        "formats",
         "heatmap",
         "_version",
     }
@@ -95,6 +133,9 @@ def info_extract_meta(info: InfoDict) -> tuple[str, str, str]:
 def better_exception_msg(msg: str) -> str:
     if "HTTP Error" in msg:
         pass
+
+    elif "Read timed out" in msg:
+        msg = "Download timeout"
 
     elif "Unable to download" in msg or "Got error" in msg:
         msg = "Unable to download."

@@ -7,9 +7,9 @@ from os import PathLike
 import os
 
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
-from media_dl.helper import YDL_BASE_OPTS, InfoDict
-from yt_dlp.utils import MEDIA_EXTENSIONS
+from media_dl.helper import OPTS_BASE, OPTS_METAPARSER, InfoDict
 
+from yt_dlp.utils import MEDIA_EXTENSIONS
 from yt_dlp import YoutubeDL
 
 from media_dl.models.format import FORMAT_TYPE
@@ -19,38 +19,6 @@ class SupportedExtensions(set[str], Enum):
     video = set(MEDIA_EXTENSIONS.video)
     audio = set(MEDIA_EXTENSIONS.audio)
 
-
-POST_METADATA_OPTS = {
-    "key": "MetadataParser",
-    "when": "post_process",
-    "actions": [
-        (
-            MetadataParserPP.interpretter,
-            "%(track,title)s",
-            "%(title)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(artist,channel,creator,uploader|NA)s",
-            "%(uploader)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(album_artist,uploader)s",
-            "%(album_artist)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(album,title)s",
-            "%(meta_album)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(release_year,release_date>%Y,upload_date>%Y)s",
-            "%(meta_date)s",
-        ),
-    ],
-}
 
 StrPath = str | PathLike[str]
 
@@ -87,17 +55,15 @@ class FormatConfig:
     remux: bool = True
 
     def __post_init__(self):
-        # Check if ffmpeg is installed and handle custom path.
-        if self.ffmpeg:
-            path = Path(self.ffmpeg)
+        self.output = Path(self.output)
+        self.ffmpeg = Path(self.ffmpeg) if self.ffmpeg else None
 
-            if not self._executable_exists(path):
-                raise FileNotFoundError(f"'{path.name}' is not a FFmpeg executable.")
+        # Check if ffmpeg is installed and handle custom path.
+        if p := self.ffmpeg:
+            if not self._executable_exists(p):
+                raise FileNotFoundError(f"'{p.name}' is not a FFmpeg executable.")
         else:
             self.ffmpeg = self._get_global_ffmpeg() or None
-
-        self.output = str(self.output)
-        self.ffmpeg = str(self.ffmpeg)
 
     @property
     def type(self) -> FORMAT_TYPE:
@@ -129,14 +95,27 @@ class FormatConfig:
     def asdict(self) -> dict[str, Any]:
         """Convert config to a simple dict."""
 
-        return asdict(self)
+        d = asdict(self)
+
+        d["output"] = str(d["output"])
+        d["ffmpeg"] = str(d["ffmpeg"])
+
+        return d
+
+    def run_postproces(self, file: StrPath, info: InfoDict) -> Path:
+        with YoutubeDL(OPTS_BASE | self._gen_opts()) as ydl:
+            info = ydl.post_process(filename=str(file), info=info)
+            return Path(info["filepath"])
 
     def _gen_opts(self) -> dict[str, Any]:
-        opts = POST_METADATA_OPTS | {"overwrites": False, "retries": 3}
-        postprocessors = [POST_METADATA_OPTS]
+        opts = {"overwrites": False, "retries": 3}
+
+        post = OPTS_METAPARSER
+        post["when"] = "post_process"
+        postprocessors = [OPTS_METAPARSER]
 
         if self.ffmpeg:
-            opts |= {"ffmpeg_location": self.ffmpeg}
+            opts |= {"ffmpeg_location": str(self.ffmpeg)}
 
         if self.ffmpeg and self.remux:
             postprocessors.append(
@@ -219,25 +198,17 @@ class FormatConfig:
         return opts
 
     @staticmethod
-    def _get_global_ffmpeg() -> str | None:
-        if final_path := shutil.which("ffmpeg"):
-            return str(final_path)
+    def _get_global_ffmpeg() -> Path | None:
+        if path := shutil.which("ffmpeg"):
+            return Path(path)
         else:
             return None
 
     @staticmethod
     def _executable_exists(file: StrPath) -> bool:
-        path = Path(file)
+        file = Path(file)
 
-        if path.is_file() and os.access(path, os.X_OK):
+        if file.is_file() and os.access(file, os.X_OK):
             return True
         else:
             return False
-
-
-def execute_postprocessors(
-    file: StrPath, info: InfoDict, config: FormatConfig
-) -> InfoDict:
-    with YoutubeDL(YDL_BASE_OPTS | config._gen_opts()) as ydl:
-        info = ydl.post_process(filename=file, info=info)
-        return cast(InfoDict, info)

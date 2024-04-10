@@ -12,7 +12,7 @@ FORMAT_TYPE = Literal["video", "audio"]
 
 @dataclass(slots=True, frozen=True, order=True)
 class Format:
-    """Representation of a remote file from a `Stream`.
+    """Remote `Stream` representation.
 
     Their fields are determined by their `type`. For example:
     - If is `video`, `extension` and `codec` would be mp4 and vp9.
@@ -104,7 +104,7 @@ class FormatList(Sequence[Format]):
     def type(self) -> Literal[FORMAT_TYPE, "incomplete"]:
         """
         Determine main format type.
-        It'll check if is 'video' or 'audio'.
+        It will check if is 'video' or 'audio'.
         """
 
         if self.filter(type="video"):
@@ -121,7 +121,7 @@ class FormatList(Sequence[Format]):
         quality: int | None = None,
         codec: str | None = None,
     ) -> FormatList:
-        """Get a filtered format list by provided arguments."""
+        """Get filtered format list by provided arguments."""
 
         formats = self._formats
 
@@ -137,7 +137,7 @@ class FormatList(Sequence[Format]):
         return FormatList(formats)
 
     def sort_by(self, attribute: str, reverse: bool = False) -> FormatList:
-        """Sort list by a `Format` attribute."""
+        """Sort list by `Format` attribute."""
 
         has_attribute = [f for f in self._formats if getattr(f, attribute) is not None]
         sorted_list = sorted(
@@ -146,7 +146,7 @@ class FormatList(Sequence[Format]):
         return FormatList(sorted_list)
 
     def get_by_id(self, id: str) -> Format | None:
-        """Get a `Format` by `id`. If not found, will return `None`."""
+        """Get `Format` by `id`. If not found, will return `None`."""
 
         if result := [f for f in self if f.id == id]:
             return result[0]
@@ -154,19 +154,19 @@ class FormatList(Sequence[Format]):
             return None
 
     def get_best_quality(self) -> Format:
-        """Get the `Format` with best quality in the list."""
+        """Get `Format` with best quality in the list."""
 
         formats = self.sort_by("quality")
         return formats[-1]
 
     def get_worst_quality(self) -> Format:
-        """Get the `Format` with worst quality in the list."""
+        """Get `Format` with worst quality in the list."""
 
         formats = self.sort_by("quality")
         return formats[0]
 
     def get_closest_quality(self, quality: int) -> Format:
-        """Get the `Format` with the closest quality provided."""
+        """Get `Format` with closest quality provided."""
 
         self = self.sort_by("quality")
 

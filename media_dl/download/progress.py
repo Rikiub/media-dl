@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import time
-
 from rich.console import Group
 from rich.table import Column
 from rich.live import Live
 from rich.progress import (
     MofNCompleteColumn,
     DownloadColumn,
+    TaskID,
     TextColumn,
     BarColumn,
     Progress,
@@ -16,10 +15,9 @@ from rich.progress import (
 __all__ = ["ProgressHandler"]
 
 
-class CounterProgress:
+class CounterProgress(Group):
     def __init__(self, disable: bool = False) -> None:
         self.disable = disable
-        self.visible = True
 
         self.completed = 0
         self.total = 1
@@ -27,13 +25,13 @@ class CounterProgress:
         self._progress = Progress(
             TextColumn("Total:"),
             MofNCompleteColumn(),
-            disable=disable,
+            disable=self.disable,
         )
         self._task_id = self._progress.add_task(
-            "",
-            start=False,
-            visible=self.visible,
+            "", start=False, completed=self.completed, total=self.total
         )
+
+        super().__init__(self._progress)
 
     def advance(self, advance: int = 1):
         self.completed += advance
@@ -44,7 +42,6 @@ class CounterProgress:
         self.update()
 
     def reset(self):
-        self.visible = True
         self.completed = 0
         self.total = 1
         self.update()
@@ -55,107 +52,18 @@ class CounterProgress:
                 self._task_id,
                 total=self.total,
                 completed=self.completed,
-                visible=self.visible,
             )
 
 
-class ProgressTask:
-    def __init__(
-        self,
-        progress: Progress,
-        counter: CounterProgress,
-        title: str,
-    ):
-        __slots__ = (
-            "message",
-            "status",
-            "completed",
-            "total",
-            "started",
-            "progress",
-            "counter",
-            "task_id",
-        )
-
-        self.message: str = title
-        self.status: str = "Starting"
-        self.completed: int = 0
-        self.total: int = 100
-
-        self.started = False
-
-        self.progress = progress
-        self.counter = counter
-
-        self.task_id = self.progress.add_task(
-            self.message,
-            status=self.status,
-            start=False,
-            visible=True,
-        )
-
-    def update(self):
-        if not self.started:
-            self.initialize()
-
-        self.progress.update(
-            self.task_id,
-            description=self.message,
-            status=self.status,
-            completed=self.completed,
-            total=self.total,
-        )
-
-    def finalize(self):
-        self.counter.advance(1)
-        self.progress.remove_task(self.task_id)
-
-    def initialize(self):
-        self.progress.start_task(self.task_id)
-        self.progress.update(self.task_id, visible=True)
-        self.started = True
-
-    def ydl_progress_hook(self, status, downloaded, total):
-        if not (self.progress.disable or self.progress.finished):
-            match status:
-                case "downloading":
-                    self.status = "Downloading"
-                    self.completed = downloaded
-                    self.total = total
-                case "processing":
-                    self.status = "Finishing"
-                case "converting":
-                    self.status = "Converting"
-                case "finished":
-                    self.status = "Done"
-                case "error":
-                    self.status = "Error"
-
-            self.update()
-
-            if status in ("converting", "processing", "finished"):
-                if self.completed == 0:
-                    self.completed = 100
-                    self.total = 100
-                    self.update()
-
-            if status in ("error", "finished"):
-                self.completed = total
-                self.total = total
-                self.update()
-
-                time.sleep(1.5)
-                self.finalize()
-
-
-class ProgressHandler:
+class ProgressHandler(Group):
     """Start and render progress bar."""
 
     def __init__(self, disable=False) -> None:
         self.disable = disable
+        self.live = Live()
 
-        self.counter = CounterProgress(disable=disable)
-        self._rich_progress = Progress(
+        self.counter = CounterProgress(disable=self.disable)
+        self._progress = Progress(
             TextColumn(
                 "[white]{task.description}",
                 table_column=Column(
@@ -178,34 +86,42 @@ class ProgressHandler:
             DownloadColumn(table_column=Column(justify="right", width=10)),
             transient=False,
             expand=True,
-            disable=disable,
+            disable=self.disable,
         )
-        self._render_group = Group(self.counter._progress, self._rich_progress)
-        self._live = Live()
+        super().__init__(self.counter, self._progress)
 
     def __enter__(self):
         self.start()
         return self
 
     def __exit__(self, a, b, c):
-        self.reset()
+        self.clean()
         self.stop()
 
     def start(self):
         if not self.disable:
-            self._live.update(self._render_group)
-            self._live.start()
+            self.live.update(self)
+            self.live.start(refresh=True)
 
     def stop(self):
         if not self.disable:
-            self._live.update("")
-            self._live.stop()
+            self.live.update("")
+            self.live.stop()
 
-    def reset(self):
+    def clean(self):
         if not self.disable:
             self.counter.reset()
-            for task_id in self._rich_progress.task_ids:
-                self._rich_progress.remove_task(task_id)
 
-    def create_task(self, title: str) -> ProgressTask:
-        return ProgressTask(self._rich_progress, self.counter, title)
+            for task_id in self._progress.task_ids:
+                self._progress.remove_task(task_id)
+
+    def update(self, task_id: TaskID, **kwargs):
+        self._progress.update(task_id, **kwargs)
+
+    def add_task(self, description: str, status: str, **kwargs) -> TaskID:
+        return self._progress.add_task(
+            description=description, status=status, total=None, **kwargs
+        )
+
+    def remove_task(self, task_id: TaskID) -> None:
+        self._progress.remove_task(task_id)

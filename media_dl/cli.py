@@ -207,10 +207,10 @@ What format you want request?
     for target, entry in parse_input(query):
         try:
             if target.value == "url":
-                log.info("🔎 Extracting '%s'", entry)
+                log.info('🔎 Extracting "%s".', entry)
                 result = ydl.extract_url(entry)
             else:
-                log.info("🔎 Searching '%s' from '%s'", entry, target.value)
+                log.info('🔎 Searching "%s" from "%s".', entry, target.value)
                 result = ydl.extract_search(entry, target.value)
                 result = result[0]
 
@@ -219,7 +219,7 @@ What format you want request?
             log.error("❌ %s", str(err))
             continue
         else:
-            log.info("✅ Done '%s'\n", entry)
+            log.info('✅ Done "%s".\n', entry)
 
 
 def run():
