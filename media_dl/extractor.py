@@ -79,7 +79,7 @@ def _fetch_query(query: str) -> InfoDict | None:
         log.debug("Re-fetching %s", query)
         return _fetch_query(info["url"])
 
-    # Check if is a valid playlist and validate
+    # Validate playlist
     if entries := info.get("entries"):
         for index, item in enumerate(entries):
             # If item has not the 2 required fields, will be deleted.
@@ -91,10 +91,8 @@ def _fetch_query(query: str) -> InfoDict | None:
             return None
 
         info["entries"] = entries
-    # Check if is a single item and save.
-    elif info.get("formats"):
-        pass
-    else:
+    # Check if is single item
+    elif not info.get("formats"):
         return None
 
     return info

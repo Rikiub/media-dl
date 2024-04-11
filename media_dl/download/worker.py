@@ -6,9 +6,9 @@ import logging
 from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as YTDLPDownloadError
 
-from media_dl.models.format import Format
 from media_dl.helper import OPTS_BASE, DIR_TEMP, better_exception_msg
 from media_dl.exceptions import DownloadError
+from media_dl.models.format import Format
 
 log = logging.getLogger(__name__)
 

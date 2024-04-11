@@ -101,6 +101,22 @@ class FormatConfig:
 
         return d
 
+    @staticmethod
+    def _get_global_ffmpeg() -> Path | None:
+        if path := shutil.which("ffmpeg"):
+            return Path(path)
+        else:
+            return None
+
+    @staticmethod
+    def _executable_exists(file: StrPath) -> bool:
+        file = Path(file)
+
+        if file.is_file() and os.access(file, os.X_OK):
+            return True
+        else:
+            return False
+
     def _run_postproces(self, file: StrPath, info: InfoDict) -> Path:
         with YoutubeDL(OPTS_BASE | self._gen_opts()) as ydl:
             info = ydl.post_process(filename=str(file), info=info)
@@ -195,19 +211,3 @@ class FormatConfig:
 
         opts |= {"postprocessors": postprocessors}
         return opts
-
-    @staticmethod
-    def _get_global_ffmpeg() -> Path | None:
-        if path := shutil.which("ffmpeg"):
-            return Path(path)
-        else:
-            return None
-
-    @staticmethod
-    def _executable_exists(file: StrPath) -> bool:
-        file = Path(file)
-
-        if file.is_file() and os.access(file, os.X_OK):
-            return True
-        else:
-            return False

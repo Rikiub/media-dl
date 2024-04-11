@@ -12,7 +12,7 @@ FORMAT_TYPE = Literal["video", "audio"]
 
 @dataclass(slots=True, frozen=True, order=True)
 class Format:
-    """Remote `Stream` representation.
+    """Remote file representation.
 
     Their fields are determined by their `type`. For example:
     - If is `video`, `extension` and `codec` would be mp4 and vp9.
@@ -30,7 +30,7 @@ class Format:
 
     @property
     def display_quality(self) -> str:
-        """Get a pretty representation of `Format` quality."""
+        """Get pretty representation of `Format` quality."""
 
         if self.type == "video":
             return str(self.quality) + "p"

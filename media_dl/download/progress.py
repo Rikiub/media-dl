@@ -65,7 +65,7 @@ class ProgressHandler(Group):
         self.counter = CounterProgress(disable=self.disable)
         self._progress = Progress(
             TextColumn(
-                "[white]{task.description}",
+                "{task.description}",
                 table_column=Column(
                     justify="left",
                     width=40,
@@ -74,7 +74,7 @@ class ProgressHandler(Group):
                 ),
             ),
             TextColumn(
-                "[progress.percentage]{task.fields[status]}",
+                "[turquoise2]{task.fields[status]}",
                 table_column=Column(
                     justify="right",
                     width=15,

@@ -14,22 +14,6 @@ from media_dl.exceptions import MediaError
 log = logging.getLogger(__name__)
 
 
-def progress_hook(progress: ProgressHandler, task_id, status, completed, total):
-    match status:
-        case "error":
-            status = "Error"
-        case "downloading":
-            status = "Downloading"
-        case "finished":
-            status = "Download Finished"
-
-            if completed == 0:
-                completed = 100
-                total = 100
-
-    progress.update(task_id, status=status, completed=completed, total=total)
-
-
 class Downloader:
     """Multi-thread downloader interface."""
 
@@ -140,46 +124,30 @@ class Downloader:
         )
         config = self.config
 
+        # Create output directory
+        output = Path(config.output)
+        output.mkdir(parents=True, exist_ok=True)
+
         try:
             # Resolve stream
             if not stream.formats:
                 stream = stream.update()
                 self._progress.update(task_id, description=stream.display_name)
-            else:
-                stream = stream
 
-            # Create output directory
-            output = Path(config.output)
-            output.mkdir(parents=True, exist_ok=True)
             filename = stream.display_name
 
-            # Resolve duplicates
-            matches = list(output.glob(filename + ".*"))
-
-            if (
-                p := matches
-                and config.convert
-                and [path for path in matches if path.suffix[1:] == config.convert]
-                or not config.convert
-                and [
-                    path
-                    for path in matches
-                    if path.stem == filename
-                    and path.suffix[1:] in SupportedExtensions.audio
-                ]
-            ):
-                p = p[0]
-
+            # If is duplicated will stop.
+            if path := self._check_file_duplicate(filename):
                 self._progress.update(
                     task_id, status="Skipped", completed=100, total=100
                 )
 
                 log.info(
-                    '[Skipped]: "%s" (File already exists as "%s").',
+                    'Skipped: "%s" (File already exists as "%s").',
                     stream.display_name,
-                    p.suffix[1:],
+                    path.suffix[1:],
                 )
-                return p
+                return path
 
             # Resolve format
             if format:
@@ -215,7 +183,9 @@ class Downloader:
             # Start download
             filepath = FormatWorker(
                 format=format,
-                on_progress=lambda *args: progress_hook(self._progress, task_id, *args),
+                on_progress=lambda *args: self._progress_hook(
+                    self._progress, task_id, *args
+                ),
             ).start()
 
             # Postprocessing
@@ -237,7 +207,7 @@ class Downloader:
             # Finish
             self._progress.update(task_id, status="Finished")
 
-            log.info('[Finished]: "%s".', stream.display_name)
+            log.info('Finished: "%s".', stream.display_name)
             return filepath
         except MediaError as err:
             error_name = err.__class__.__name__
@@ -251,3 +221,36 @@ class Downloader:
             self._progress.counter.advance()
             time.sleep(1.0)
             self._progress.remove_task(task_id)
+
+    def _check_file_duplicate(self, filename: str) -> Path | None:
+        output = Path(self.config.output)
+        matches = list(output.glob(filename + ".*"))
+
+        if extension := self.config.convert:
+            path = [path for path in matches if path.suffix[1:] == extension]
+        else:
+            path = [
+                path
+                for path in matches
+                if path.stem == filename
+                and path.suffix[1:] in SupportedExtensions.audio
+            ]
+
+        return path[0] if path else None
+
+    def _progress_hook(
+        self, progress: ProgressHandler, task_id, status, completed, total
+    ):
+        match status:
+            case "error":
+                status = "Error"
+            case "downloading":
+                status = "Downloading"
+            case "finished":
+                status = "Download Finished"
+
+                if completed == 0:
+                    completed = 100
+                    total = 100
+
+        progress.update(task_id, status=status, completed=completed, total=total)

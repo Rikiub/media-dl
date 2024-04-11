@@ -3,7 +3,7 @@ import logging
 from rich.logging import RichHandler
 
 
-class LoggingFormatter(logging.Formatter):
+class ColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = super().format(record)
         color = ""
@@ -12,9 +12,9 @@ class LoggingFormatter(logging.Formatter):
             case logging.DEBUG:
                 color = "[blue]"
             case logging.INFO:
-                color = "[cyan]"
+                color = "[khaki1]"
             case logging.WARNING:
-                color = "[yellow]"
+                color = "[yellow][italic]"
             case logging.ERROR:
                 color = "[red]"
             case logging.CRITICAL:
@@ -43,7 +43,7 @@ def init_logging(level: int | str):
         show_time=verbose,
         markup=True,
     )
-    rich_handler.setFormatter(LoggingFormatter(msg_format))
+    rich_handler.setFormatter(ColorFormatter(msg_format))
 
     logging.basicConfig(
         level=log_level,

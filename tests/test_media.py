@@ -14,6 +14,14 @@ class TestExtractor:
         with pytest.raises(ExtractError):
             media_dl.extract_url("https://unkdown.link.com/")
 
+        # YouTube [Private video]
+        with pytest.raises(ExtractError):
+            result = media_dl.extract_url("https://www.youtube.com/watch?v=yi50KlsCBio")
+
+        # YouTube [Deleted video]
+        with pytest.raises(ExtractError):
+            result = media_dl.extract_url("https://www.youtube.com/watch?v=JUf1zxjR_Qw")
+
     def test_single_url(self):
         info = media_dl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
         assert isinstance(info, Stream)
@@ -27,17 +35,6 @@ class TestExtractor:
 
 class TestDownloads:
     downloader = media_dl.Downloader(format="audio", quality=1, output=TEMPDIR.name)
-
-    def test_exceptions(self):
-        # YouTube [Private video]
-        with pytest.raises(DownloadError):
-            result = media_dl.extract_url("https://www.youtube.com/watch?v=yi50KlsCBio")
-            self.downloader.download_multiple(result)
-
-        # YouTube [Deleted video]
-        with pytest.raises(DownloadError):
-            result = media_dl.extract_url("https://www.youtube.com/watch?v=JUf1zxjR_Qw")
-            self.downloader.download_multiple(result)
 
     def test_download_single(self):
         # Song: Imagine Dragons - Believer
