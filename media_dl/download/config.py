@@ -6,11 +6,10 @@ import shutil
 from os import PathLike
 import os
 
-from media_dl.helper import OPTS_BASE, OPTS_METAPARSER, InfoDict
-
 from yt_dlp.utils import MEDIA_EXTENSIONS
 from yt_dlp import YoutubeDL
 
+from media_dl.helper import OPTS_BASE, OPTS_METAPARSER, InfoDict
 from media_dl.models.format import FORMAT_TYPE
 
 
@@ -21,14 +20,13 @@ class SupportedExtensions(set[str], Enum):
 
 StrPath = str | PathLike[str]
 
-VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
-
 EXT_VIDEO = Literal["mp4", "mkv"]
 EXT_AUDIO = Literal["m4a", "mp3", "ogg"]
 EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
 """Common lossy compression containers formats with thumbnail and metadata support."""
 
 FILE_REQUEST = Literal[FORMAT_TYPE, EXTENSION]
+VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
 
 
 @dataclass(slots=True)

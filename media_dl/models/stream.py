@@ -43,7 +43,7 @@ class Stream(ExtractID):
         track = self._extra_info.get("track")
         artist = self._extra_info.get("artist")
 
-        if artist and track or self.url in ("soundcloud.com"):
+        if track and artist or self.url in ("soundcloud.com"):
             return True
         else:
             return False

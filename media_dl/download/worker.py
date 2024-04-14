@@ -1,4 +1,4 @@
-from typing import Callable, Literal
+from typing import Callable
 from pathlib import Path
 import tempfile
 import logging
@@ -12,29 +12,23 @@ from media_dl.models.format import Format
 
 log = logging.getLogger(__name__)
 
-PROGRESS_STATUS = Literal[
-    "downloading",
-    "finished",
-    "error",
-]
-ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
+DownloadCallback = Callable[[int, int], None]
 
 
 class FormatWorker:
     def __init__(
         self,
         format: Format,
-        on_progress: ProgressCallback | None = None,
+        on_progress: list[DownloadCallback] | None = None,
     ):
-        self._callback = on_progress
+        self._downloaded = 0
+        self._total_filesize = 0
+        self._callbacks = on_progress
 
         self.format = format
 
-        self.downloaded = 0
-        self.total_filesize = 0
-
     def start(self) -> Path:
-        """Start download of the instance."""
+        """Start download."""
 
         log.debug(
             "Downloading format %s (%s %s) (%s)",
@@ -45,12 +39,15 @@ class FormatWorker:
         )
 
         # Reset progress
-        self.downloaded = 0
-        self.total_filesize = 0
+        self._downloaded = 0
+        self._total_filesize = 0
 
-        if c := self._callback:
-            wrapper = lambda d: self._progress_wraper(d, c)
-            progress = {"progress_hooks": [wrapper]}
+        if self._callbacks:
+            wrap = [
+                lambda d: self._progress_wraper(d, callback)
+                for callback in self._callbacks
+            ]
+            progress = {"progress_hooks": wrap}
         else:
             progress = {}
 
@@ -72,31 +69,28 @@ class FormatWorker:
             # Extract final file path
             path = info["requested_downloads"][0]["filepath"]
 
-            if self._callback:
-                self._callback("finished", self.total_filesize, self.total_filesize)
-
             return Path(path)
         except YTDLPDownloadError as err:
             msg = better_exception_msg(str(err))
-
-            if self._callback:
-                self._callback("error", self.downloaded, self.total_filesize)
-
             raise DownloadError(msg)
 
     def _progress_wraper(
         self,
         d: dict,
-        callback: ProgressCallback,
+        callback: DownloadCallback,
     ) -> None:
         """`YT-DLP` progress hook, but stable and without issues."""
 
+        status = d.get("status")
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
-        if completed > self.downloaded:
-            self.downloaded = completed
-        if total > self.total_filesize:
-            self.total_filesize = total
+        if completed > self._downloaded:
+            self._downloaded = completed
+        if total > self._total_filesize:
+            self._total_filesize = total
 
-        callback("downloading", self.downloaded, self.total_filesize)
+        callback(
+            self._downloaded if status != "finished" else self._total_filesize,
+            self._total_filesize,
+        )

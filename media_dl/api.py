@@ -79,12 +79,14 @@ class Downloader:
             metadata=metadata,
         )
         self._downloader = _Downloader(
-            format_config=self.downloader_config,
-            max_threads=threads,
-            render_progress=not quiet,
+            config=self.downloader_config,
+            threads=threads,
+            render=not quiet,
         )
 
-    def download_single(self, stream: Stream, format: Format | None = None) -> Path:
+    def download_single(
+        self, stream: Stream, format: Format | None = None, on_progress=None
+    ) -> Path:
         """Download a single `Stream` formatted by instance options.
 
         Args:
@@ -99,7 +101,7 @@ class Downloader:
             ValueError: Provided `Format` wasn't founded in `Stream`.
         """
 
-        return self._downloader.download_single(stream, format)
+        return self._downloader.download(stream, format)
 
     def download_multiple(self, data: ExtractResult) -> list[Path]:
         """Download one or more results formatted by instance options.

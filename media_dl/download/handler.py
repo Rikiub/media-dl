@@ -1,3 +1,4 @@
+from typing import Literal, Callable
 import concurrent.futures as cf
 from pathlib import Path
 import logging
@@ -13,24 +14,31 @@ from media_dl.exceptions import MediaError
 
 log = logging.getLogger(__name__)
 
+PROGRESS_STATUS = Literal[
+    "downloading",
+    "processing",
+    "finished",
+]
+ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
+
 
 class Downloader:
-    """Multi-thread downloader interface."""
+    """Multi-thread downloader."""
 
     def __init__(
         self,
-        format_config: FormatConfig,
-        max_threads: int = 4,
-        render_progress: bool = True,
+        config: FormatConfig,
+        threads: int = 4,
+        render: bool = True,
     ):
-        self.config = format_config
-        self.render = render_progress
+        self.config = config
+        self.render = render
 
+        self._threads = threads
         self._progress = ProgressHandler(disable=not self.render)
-        self._threads = max_threads
 
-    def download_multiple(self, data: ExtractResult):
-        log.debug("Downloading with config: %s", self.config.asdict())
+    def download_multiple(self, data: ExtractResult) -> list[Path]:
+        log.debug("Download config: %s", self.config.asdict())
 
         streams = self._prepare_input(data)
         total_streams = len(streams)
@@ -39,12 +47,10 @@ class Downloader:
         log.debug("Founded %s entries.", total_streams)
 
         with self._progress as progress:
-            progress.counter.set_total(total_streams)
+            progress.counter.reset(total_streams)
 
             with cf.ThreadPoolExecutor(self._threads) as executor:
-                futures = [
-                    executor.submit(self._download_worker, task) for task in streams
-                ]
+                futures = [executor.submit(self.download, task) for task in streams]
 
                 success = 0
                 errors = 0
@@ -69,56 +75,12 @@ class Downloader:
 
         return final_paths
 
-    def download_single(self, stream: Stream, format: Format | None = None) -> Path:
-        with self._progress as progress:
-            progress.counter.set_total(1)
-
-            path = self._download_worker(stream, format)
-
-            return path
-
-    @staticmethod
-    def _extract_best_format(format_list: FormatList, config: FormatConfig) -> Format:
-        """Extract best format in stream formats."""
-
-        # Filter by extension
-        if f := config.convert and format_list.filter(extension=config.convert):
-            final = f
-        # Filter by type
-        elif f := format_list.filter(type=config.type):
-            final = f
-        # Filter fallback to available type.
-        elif f := format_list.filter(type="video") or format_list.filter(type="audio"):
-            final = f
-        else:
-            raise TypeError("Not matches founded in format list.")
-
-        if config.quality:
-            return f.get_closest_quality(config.quality)
-        else:
-            return final[-1]
-
-    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
-        match data:
-            case Stream():
-                type = "Stream"
-                query = data.display_name
-                streams = [data]
-            case Playlist():
-                type = "Playlist"
-                query = data.title
-                streams = data.streams
-            case list():
-                type = "Stream List"
-                query = ""
-                streams = data
-            case _:
-                raise TypeError(data)
-
-        log.info('🔎 Founded %s: "%s".\n', type, query)
-        return streams
-
-    def _download_worker(self, stream: Stream, format: Format | None = None) -> Path:
+    def download(
+        self,
+        stream: Stream,
+        format: Format | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> Path:
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
         )
@@ -180,23 +142,43 @@ class Downloader:
                     )
                     config.format = format.type
 
-            # Start download
-            filepath = FormatWorker(
-                format=format,
-                on_progress=lambda *args: self._progress_hook(
-                    self._progress, task_id, *args
-                ),
-            ).start()
+            # STATUS: Download
+            self._progress.update(task_id, status="Downloading")
 
-            # Postprocessing
+            callbacks = [
+                lambda completed, total: self._progress.update(
+                    task_id, completed=completed, total=total
+                )
+            ]
+            (
+                callbacks.append(
+                    lambda completed, total: on_progress(
+                        "downloading", completed, total
+                    )
+                )
+                if on_progress
+                else None
+            )
+
+            # Run download
+            worker = FormatWorker(format=format, on_progress=callbacks)
+            filepath = worker.start()
+
+            # STATUS: Postprocessing
             if config.convert:
                 status = "Converting"
             else:
                 status = "Processing"
 
-            log.debug('Postprocessing "%s"', stream.display_name)
             self._progress.update(task_id, status=status)
+            (
+                on_progress("processing", worker._downloaded, worker._total_filesize)
+                if on_progress
+                else None
+            )
+            log.debug('Postprocessing "%s"', stream.display_name)
 
+            # Run postprocessing
             filepath = config._run_postproces(filepath, stream._extra_info)
             filename = filename + filepath.suffix
 
@@ -204,10 +186,15 @@ class Downloader:
             filepath = filepath.rename(filepath.parent / filename)
             filepath = shutil.move(filepath, output / filename)
 
-            # Finish
+            # STATUS: Finish
             self._progress.update(task_id, status="Finished")
-
+            (
+                on_progress("finished", worker._downloaded, worker._total_filesize)
+                if on_progress
+                else None
+            )
             log.info('Finished: "%s".', stream.display_name)
+
             return filepath
         except MediaError as err:
             error_name = err.__class__.__name__
@@ -221,6 +208,50 @@ class Downloader:
             self._progress.counter.advance()
             time.sleep(1.0)
             self._progress.remove_task(task_id)
+
+    def _extract_best_format(
+        self, format_list: FormatList, custom_config: FormatConfig | None = None
+    ) -> Format:
+        """Extract best format in stream formats."""
+
+        config = custom_config if custom_config else self.config
+
+        # Filter by extension
+        if f := config.convert and format_list.filter(extension=config.convert):
+            final = f
+        # Filter by type
+        elif f := format_list.filter(type=config.type):
+            final = f
+        # Filter fallback to available type.
+        elif f := format_list.filter(type="video") or format_list.filter(type="audio"):
+            final = f
+        else:
+            raise TypeError("Not matches founded in format list.")
+
+        if config.quality:
+            return f.get_closest_quality(config.quality)
+        else:
+            return final[-1]
+
+    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
+        match data:
+            case Stream():
+                type = "Stream"
+                query = data.display_name
+                streams = [data]
+            case Playlist():
+                type = "Playlist"
+                query = data.title
+                streams = data.streams
+            case list():
+                type = "Stream List"
+                query = ""
+                streams = data
+            case _:
+                raise TypeError(data)
+
+        log.info('🔎 Founded %s: "%s".', type, query)
+        return streams
 
     def _check_file_duplicate(self, filename: str) -> Path | None:
         output = Path(self.config.output)
@@ -237,20 +268,3 @@ class Downloader:
             ]
 
         return path[0] if path else None
-
-    def _progress_hook(
-        self, progress: ProgressHandler, task_id, status, completed, total
-    ):
-        match status:
-            case "error":
-                status = "Error"
-            case "downloading":
-                status = "Downloading"
-            case "finished":
-                status = "Download Finished"
-
-                if completed == 0:
-                    completed = 100
-                    total = 100
-
-        progress.update(task_id, status=status, completed=completed, total=total)

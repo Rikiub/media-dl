@@ -37,7 +37,7 @@ class Format:
         elif self.type == "audio":
             return str(round(self.quality)) + "kbps"
         else:
-            return ""
+            return "?"
 
     def _simple_format_dict(self) -> InfoDict:
         d = {

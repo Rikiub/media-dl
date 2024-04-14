@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from rich.console import Group
+from rich.console import Group, RenderableType
 from rich.table import Column
-from rich.live import Live
 from rich.progress import (
     MofNCompleteColumn,
     DownloadColumn,
-    TaskID,
     TextColumn,
     BarColumn,
     Progress,
@@ -16,54 +14,48 @@ __all__ = ["ProgressHandler"]
 
 
 class CounterProgress(Group):
-    def __init__(self, disable: bool = False) -> None:
+    def __init__(self, total: int = 1, disable: bool = False) -> None:
         self.disable = disable
 
-        self.completed = 0
-        self.total = 1
+        self._completed = 0
+        self._total = total
 
         self._progress = Progress(
             TextColumn("Total:"),
             MofNCompleteColumn(),
             disable=self.disable,
+            transient=True,
         )
         self._task_id = self._progress.add_task(
-            "", start=False, completed=self.completed, total=self.total
+            "", start=False, completed=self._completed, total=self._total
         )
 
         super().__init__(self._progress)
 
     def advance(self, advance: int = 1):
-        self.completed += advance
-        self.update()
+        self._completed += advance
+        self._update()
 
-    def set_total(self, total: int):
-        self.total = total
-        self.update()
+    def reset(self, total: int = 1):
+        self._completed = 0
+        self._total = total
+        self._update()
 
-    def reset(self):
-        self.completed = 0
-        self.total = 1
-        self.update()
-
-    def update(self):
+    def _update(self):
         if not self.disable:
             self._progress.update(
                 self._task_id,
-                total=self.total,
-                completed=self.completed,
+                total=self._total,
+                completed=self._completed,
             )
 
 
-class ProgressHandler(Group):
+class ProgressHandler(Progress):
     """Start and render progress bar."""
 
-    def __init__(self, disable=False) -> None:
-        self.disable = disable
-        self.live = Live()
-
-        self.counter = CounterProgress(disable=self.disable)
-        self._progress = Progress(
+    def __init__(self, count_total: int = 1, disable: bool = False) -> None:
+        self.counter = CounterProgress(total=count_total, disable=disable)
+        super().__init__(
             TextColumn(
                 "{task.description}",
                 table_column=Column(
@@ -84,44 +76,26 @@ class ProgressHandler(Group):
             ),
             BarColumn(table_column=Column(justify="right", width=25)),
             DownloadColumn(table_column=Column(justify="right", width=10)),
-            transient=False,
+            transient=True,
             expand=True,
-            disable=self.disable,
+            disable=disable,
         )
-        super().__init__(self.counter, self._progress)
 
-    def __enter__(self):
-        self.start()
+    def __enter__(self) -> ProgressHandler:
+        super().__enter__()
         return self
 
-    def __exit__(self, a, b, c):
-        self.clean()
-        self.stop()
-
-    def start(self):
-        if not self.disable:
-            self.live.update(self)
-            self.live.start(refresh=True)
-
     def stop(self):
-        if not self.disable:
-            self.live.update("")
-            self.live.stop()
+        self.clean()
+        super().stop()
 
     def clean(self):
         if not self.disable:
             self.counter.reset()
 
-            for task_id in self._progress.task_ids:
-                self._progress.remove_task(task_id)
+            for task_id in self.task_ids:
+                self.remove_task(task_id)
 
-    def update(self, task_id: TaskID, **kwargs):
-        self._progress.update(task_id, **kwargs)
-
-    def add_task(self, description: str, status: str, **kwargs) -> TaskID:
-        return self._progress.add_task(
-            description=description, status=status, total=None, **kwargs
-        )
-
-    def remove_task(self, task_id: TaskID) -> None:
-        self._progress.remove_task(task_id)
+    def get_renderable(self) -> RenderableType:
+        renderable = Group(self.counter, *self.get_renderables())
+        return renderable
