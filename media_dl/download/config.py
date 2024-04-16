@@ -85,8 +85,10 @@ class FormatConfig:
 
         d = asdict(self)
 
-        d["output"] = str(d["output"])
-        d["ffmpeg"] = str(d["ffmpeg"])
+        # Convert pathlib.Path to string
+        for key, value in d.items():
+            if isinstance(value, Path):
+                d[key] = str(value)
 
         return d
 
