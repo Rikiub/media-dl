@@ -65,7 +65,6 @@ OPTS_METAPARSER = {
 }
 
 InfoDict = NewType("InfoDict", dict[str, Any])
-
 YTDLP = YoutubeDL(
     OPTS_BASE
     | {
