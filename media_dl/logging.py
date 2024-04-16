@@ -6,7 +6,6 @@ from rich.logging import RichHandler
 class ColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = super().format(record)
-        color = ""
 
         match record.levelno:
             case logging.DEBUG:
@@ -19,6 +18,8 @@ class ColorFormatter(logging.Formatter):
                 color = "[red]"
             case logging.CRITICAL:
                 color = "[bold red]"
+            case _:
+                color = ""
 
         return color + message
 
@@ -29,18 +30,18 @@ def init_logging(level: int | str):
     else:
         log_level = level
 
-    msg_format = "%(message)s"
-
     if log_level >= 20:
         verbose = False
     else:
         verbose = True
 
+    msg_format = "%(message)s"
+
     rich_handler = RichHandler(
         level=log_level,
         show_level=verbose,
-        show_path=verbose,
         show_time=verbose,
+        show_path=verbose,
         markup=True,
     )
     rich_handler.setFormatter(ColorFormatter(msg_format))

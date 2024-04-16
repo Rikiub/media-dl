@@ -77,7 +77,7 @@ class Downloader:
 
         log.debug("Download config: %s", self.config.asdict())
 
-        streams = self._prepare_input(media)
+        streams = self._media_to_list(media)
         total_streams = len(streams)
         final_paths: list[Path] = []
 
@@ -257,22 +257,22 @@ class Downloader:
             time.sleep(1.0)
             self._progress.remove_task(task_id)
 
-    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
-        match data:
+    def _media_to_list(self, media: ExtractResult) -> list[Stream]:
+        match media:
             case Stream():
                 type = "Stream"
-                query = data.display_name
-                streams = [data]
+                query = media.display_name
+                streams = [media]
             case Playlist():
                 type = "Playlist"
-                query = data.title
-                streams = data.streams
+                query = media.title
+                streams = media.streams
             case list():
                 type = "Stream List"
                 query = ""
-                streams = data
+                streams = media
             case _:
-                raise TypeError(data)
+                raise TypeError(media)
 
         log.info('🔎 Founded %s: "%s".', type, query)
         return streams
