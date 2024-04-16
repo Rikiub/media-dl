@@ -10,8 +10,6 @@ from rich.progress import (
     Progress,
 )
 
-__all__ = ["ProgressHandler"]
-
 
 class CounterProgress(Group):
     def __init__(self, total: int = 1, disable: bool = False) -> None:

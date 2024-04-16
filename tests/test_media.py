@@ -4,7 +4,7 @@ import pytest
 
 import media_dl
 from media_dl.models import Stream, Playlist
-from media_dl.exceptions import ExtractError, DownloadError
+from media_dl.exceptions import ExtractError
 
 TEMPDIR = TemporaryDirectory()
 
@@ -43,7 +43,7 @@ class TestDownloads:
 
         if isinstance(stream, Stream):
             with TEMPDIR:
-                path = self.downloader.download_single(stream)
+                path = self.downloader.download(stream)
 
                 if not path.is_file():
                     raise FileNotFoundError(path)
@@ -57,7 +57,7 @@ class TestDownloads:
 
         if isinstance(playlist, Playlist):
             with TEMPDIR:
-                paths = self.downloader.download_multiple(playlist)
+                paths = self.downloader.download_all(playlist)
                 p = paths[0]
 
                 if not p.is_file():

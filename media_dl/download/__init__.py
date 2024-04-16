@@ -5,9 +5,14 @@ import logging
 import shutil
 import time
 
+from media_dl.helper import SupportedExtensions
 from media_dl.download.worker import FormatWorker
 from media_dl.download.progress import ProgressHandler
-from media_dl.download.config import FormatConfig, SupportedExtensions
+from media_dl.download.config import (
+    FILE_REQUEST,
+    FormatConfig,
+    StrPath,
+)
 from media_dl.models.format import Format, FormatList
 from media_dl.models import ExtractResult, Stream, Playlist
 from media_dl.exceptions import MediaError
@@ -23,24 +28,56 @@ ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
 
 
 class Downloader:
-    """Multi-thread downloader."""
+    """Multi-thread result downloader.
+
+    If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
+
+    Args:
+        format: File format to search or convert if is a extension.
+        quality: Quality to filter.
+        output: Directory where to save files.
+        ffmpeg: Path to FFmpeg executable. By default, it will try get the global installed FFmpeg.
+        metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
+
+    Raises:
+        FileNotFoundError: `ffmpeg` path not is a FFmpeg executable.
+    """
 
     def __init__(
         self,
-        config: FormatConfig,
+        format: FILE_REQUEST = "video",
+        quality: int | None = None,
+        output: StrPath = Path.cwd(),
+        ffmpeg: StrPath | None = None,
+        metadata: bool = True,
         threads: int = 4,
-        render: bool = True,
+        quiet: bool = False,
     ):
-        self.config = config
-        self.render = render
+        self.config = FormatConfig(
+            format=format,
+            quality=quality,
+            output=output,
+            ffmpeg=ffmpeg,
+            metadata=metadata,
+        )
+        self.quiet = quiet
+        self.threads = threads
 
-        self._threads = threads
-        self._progress = ProgressHandler(disable=not self.render)
+        self._progress = ProgressHandler(disable=self.quiet)
 
-    def download_multiple(self, data: ExtractResult) -> list[Path]:
+    def download_all(self, media: ExtractResult) -> list[Path]:
+        """Download any result.
+
+        Returns:
+            List of paths to downloaded files.
+
+        Raises:
+            MediaError: Something bad happens when download.
+        """
+
         log.debug("Download config: %s", self.config.asdict())
 
-        streams = self._prepare_input(data)
+        streams = self._prepare_input(media)
         total_streams = len(streams)
         final_paths: list[Path] = []
 
@@ -49,7 +86,7 @@ class Downloader:
         with self._progress as progress:
             progress.counter.reset(total_streams)
 
-            with cf.ThreadPoolExecutor(self._threads) as executor:
+            with cf.ThreadPoolExecutor(self.threads) as executor:
                 futures = [executor.submit(self.download, task) for task in streams]
 
                 success = 0
@@ -81,6 +118,21 @@ class Downloader:
         format: Format | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> Path:
+        """Download a single `Stream` result.
+
+        Args:
+            stream: Target `Stream` to download.
+            format: Specific `Stream` format to download. By default will select BEST format.
+            on_progress: Callback function to get download progress information.
+
+        Returns:
+            Path to downloaded file.
+
+        Raises:
+            MediaError: Something bad happens when download.
+            ValueError: Provided `Format` wasn't founded in `Stream`.
+        """
+
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
         )
@@ -161,7 +213,7 @@ class Downloader:
             )
 
             # Run download
-            worker = FormatWorker(format=format, on_progress=callbacks)
+            worker = FormatWorker(format=format, callbacks=callbacks)
             filepath = worker.start()
 
             # STATUS: Postprocessing
@@ -197,17 +249,33 @@ class Downloader:
 
             return filepath
         except MediaError as err:
-            error_name = err.__class__.__name__
-
-            log.error('Failed to download "%s".', stream.display_name)
-            log.error("%s: %s", error_name, str(err))
-
             self._progress.update(task_id, status="Error")
+            log.error('Failed to download "%s": %s', stream.display_name, str(err))
             raise
         finally:
             self._progress.counter.advance()
             time.sleep(1.0)
             self._progress.remove_task(task_id)
+
+    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
+        match data:
+            case Stream():
+                type = "Stream"
+                query = data.display_name
+                streams = [data]
+            case Playlist():
+                type = "Playlist"
+                query = data.title
+                streams = data.streams
+            case list():
+                type = "Stream List"
+                query = ""
+                streams = data
+            case _:
+                raise TypeError(data)
+
+        log.info('🔎 Founded %s: "%s".', type, query)
+        return streams
 
     def _extract_best_format(
         self, format_list: FormatList, custom_config: FormatConfig | None = None
@@ -232,26 +300,6 @@ class Downloader:
             return f.get_closest_quality(config.quality)
         else:
             return final[-1]
-
-    def _prepare_input(self, data: ExtractResult) -> list[Stream]:
-        match data:
-            case Stream():
-                type = "Stream"
-                query = data.display_name
-                streams = [data]
-            case Playlist():
-                type = "Playlist"
-                query = data.title
-                streams = data.streams
-            case list():
-                type = "Stream List"
-                query = ""
-                streams = data
-            case _:
-                raise TypeError(data)
-
-        log.info('🔎 Founded %s: "%s".', type, query)
-        return streams
 
     def _check_file_duplicate(self, filename: str) -> Path | None:
         output = Path(self.config.output)

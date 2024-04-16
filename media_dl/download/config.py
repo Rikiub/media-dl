@@ -1,22 +1,13 @@
 from typing import Literal, Any, cast, get_args
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from enum import Enum
 import shutil
 from os import PathLike
 import os
 
-from yt_dlp.utils import MEDIA_EXTENSIONS
 from yt_dlp import YoutubeDL
 
-from media_dl.helper import OPTS_BASE, OPTS_METAPARSER, InfoDict
-from media_dl.models.format import FORMAT_TYPE
-
-
-class SupportedExtensions(set[str], Enum):
-    video = set(MEDIA_EXTENSIONS.video)
-    audio = set(MEDIA_EXTENSIONS.audio)
-
+from media_dl.helper import OPTS_BASE, OPTS_METAPARSER, FORMAT_TYPE, InfoDict
 
 StrPath = str | PathLike[str]
 

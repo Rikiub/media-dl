@@ -1,24 +1,13 @@
-"""
-Raw info extractor.
-
-Should be used as module, example:
-
->>> from media_dl import extractor
->>> url = "https://www.youtube.com/watch?v=BaW_jenozKc"
->>> extractor.from_url(url)
-
-For searching:
-
->>> extractor.from_search("Sub Urban - Cradles", provider="ytmusic")
-"""
+"""Raw info extractor."""
 
 from typing import cast, Literal
 import logging
 
 from yt_dlp import DownloadError
+from yt_dlp.networking.exceptions import RequestError
 
 from media_dl.exceptions import ExtractError
-from media_dl.helper import InfoDict, YTDLP, better_exception_msg
+from media_dl.helper import InfoDict, YTDLP, format_except_msg
 
 log = logging.getLogger(__name__)
 
@@ -64,8 +53,8 @@ def _fetch_query(query: str) -> InfoDict | None:
 
     try:
         info = YTDLP.extract_info(query, download=False)
-    except DownloadError as err:
-        msg = better_exception_msg(str(err))
+    except (DownloadError, RequestError) as err:
+        msg = format_except_msg(err)
         raise ExtractError(msg)
     else:
         info = cast(InfoDict, info)

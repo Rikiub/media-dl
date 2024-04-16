@@ -5,12 +5,13 @@ import logging
 from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
-from media_dl import api
+import media_dl
 from media_dl.exceptions import MediaError
+
 from media_dl.helper import APPNAME
-from media_dl.logging import init_logging
 from media_dl.extractor import SEARCH_PROVIDER
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
+from media_dl.logging import init_logging
 
 log = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ What format you want request?
     init_logging(log_level)
 
     try:
-        downloader = api.Downloader(
+        downloader = media_dl.Downloader(
             format=format.value,
             quality=quality if quality != 0 else None,
             output=output,
@@ -198,28 +199,28 @@ What format you want request?
     except FileNotFoundError as err:
         raise BadParameter(str(err))
 
-    conf = downloader._downloader.config
-    if conf.convert and not conf.ffmpeg:
+    if downloader.config.convert and not downloader.config.ffmpeg:
         log.warning(
-            "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled.\n"
+            "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
         )
 
     for target, entry in parse_input(query):
         try:
             if target.value == "url":
                 log.info('🔎 Extracting "%s".', entry)
-                result = api.extract_url(entry)
+                result = media_dl.extract_url(entry)
             else:
                 log.info('🔎 Searching "%s" from "%s".', entry, target.value)
-                result = api.extract_search(entry, target.value)
+                result = media_dl.extract_search(entry, target.value)
                 result = result[0]
 
-            downloader.download_multiple(result)
+            downloader.download_all(result)
+            log.info('✅ Done "%s".', entry)
         except MediaError as err:
             log.error("❌ %s", str(err))
             continue
-        else:
-            log.info('✅ Done "%s".\n', entry)
+        finally:
+            log.info("")
 
 
 def run():

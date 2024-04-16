@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from media_dl import helper
+from media_dl.extractor import serializer
 from media_dl.models.base import ExtractID, InfoDict
 from media_dl.models.format import FormatList
 
@@ -50,17 +50,17 @@ class Stream(ExtractID):
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Stream:
-        if helper.info_is_playlist(info):
+        if serializer.info_is_playlist(info):
             raise TypeError(
                 "Unable to serialize dict. It's a playlist, not single stream."
             )
 
         return cls(
-            *helper.info_extract_meta(info),
-            _extra_info=helper.sanitize_info(info),
+            *serializer.info_extract_meta(info),
+            _extra_info=serializer.sanitize_info(info),
             title=info.get("title") or "",
             uploader=info.get("uploader") or "",
-            thumbnail=helper.info_extract_thumbnail(info),
+            thumbnail=serializer.info_extract_thumbnail(info),
             duration=info.get("duration") or 0,
             formats=FormatList._from_info(info),
         )

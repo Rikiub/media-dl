@@ -6,7 +6,7 @@ import logging
 from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as YTDLPDownloadError
 
-from media_dl.helper import OPTS_BASE, DIR_TEMP, better_exception_msg
+from media_dl.helper import OPTS_BASE, DIR_TEMP, format_except_msg
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
 
@@ -19,11 +19,11 @@ class FormatWorker:
     def __init__(
         self,
         format: Format,
-        on_progress: list[DownloadCallback] | None = None,
+        callbacks: list[DownloadCallback] | None = None,
     ):
         self._downloaded = 0
         self._total_filesize = 0
-        self._callbacks = on_progress
+        self._callbacks = callbacks
 
         self.format = format
 
@@ -71,7 +71,7 @@ class FormatWorker:
 
             return Path(path)
         except YTDLPDownloadError as err:
-            msg = better_exception_msg(str(err))
+            msg = format_except_msg(err)
             raise DownloadError(msg)
 
     def _progress_wraper(
@@ -85,12 +85,12 @@ class FormatWorker:
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
-        if completed > self._downloaded:
-            self._downloaded = completed
         if total > self._total_filesize:
             self._total_filesize = total
+        if completed > self._downloaded:
+            self._downloaded = completed
 
-        callback(
-            self._downloaded if status != "finished" else self._total_filesize,
-            self._total_filesize,
-        )
+            callback(
+                self._downloaded if status != "finished" else self._total_filesize,
+                self._total_filesize,
+            )

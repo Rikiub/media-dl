@@ -5,9 +5,8 @@ from dataclasses import dataclass, field
 from collections.abc import Sequence
 import bisect
 
+from media_dl.helper import FORMAT_TYPE
 from media_dl.models.base import InfoDict
-
-FORMAT_TYPE = Literal["video", "audio"]
 
 
 @dataclass(slots=True, frozen=True, order=True)

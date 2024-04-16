@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from media_dl import extractor
+from media_dl.extractor import raw
 from media_dl.helper import InfoDict
 
 
@@ -15,7 +15,7 @@ class ExtractID(ABC):
 
     @classmethod
     def from_url(cls, url: str):
-        info = extractor.from_url(url)
+        info = raw.from_url(url)
         return cls._from_info(info)
 
     @classmethod
