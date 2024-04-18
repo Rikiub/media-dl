@@ -1,21 +1,20 @@
 from typing import Literal, Callable
 import concurrent.futures as cf
 from pathlib import Path
+from os import PathLike
 import logging
 import shutil
 import time
 
-from media_dl.helper import SupportedExtensions
+from media_dl.exceptions import MediaError
+from media_dl.ydl import SupportedExtensions, run_postproces
+from media_dl.models import ExtractResult, Stream, Playlist
+from media_dl.models.format import Format, FormatList
+
+from media_dl.download.config import FormatConfig, FILE_REQUEST
 from media_dl.download.worker import FormatWorker
 from media_dl.download.progress import ProgressHandler
-from media_dl.download.config import (
-    FILE_REQUEST,
-    FormatConfig,
-    StrPath,
-)
-from media_dl.models.format import Format, FormatList
-from media_dl.models import ExtractResult, Stream, Playlist
-from media_dl.exceptions import MediaError
+
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +24,8 @@ PROGRESS_STATUS = Literal[
     "finished",
 ]
 ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
+
+StrPath = str | PathLike[str]
 
 
 class Downloader:
@@ -38,6 +39,7 @@ class Downloader:
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it will try get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
+        remux: If format extension is not specified, will convert to most compatible extension when necessary. (FFmpeg)
 
     Raises:
         FileNotFoundError: `ffmpeg` path not is a FFmpeg executable.
@@ -50,15 +52,17 @@ class Downloader:
         output: StrPath = Path.cwd(),
         ffmpeg: StrPath | None = None,
         metadata: bool = True,
+        remux: bool = True,
         threads: int = 4,
         quiet: bool = False,
     ):
         self.config = FormatConfig(
             format=format,
             quality=quality,
-            output=output,
-            ffmpeg=ffmpeg,
+            output=Path(output),
+            ffmpeg=Path(ffmpeg) if ffmpeg else None,
             metadata=metadata,
+            remux=remux,
         )
         self.quiet = quiet
         self.threads = threads
@@ -136,11 +140,9 @@ class Downloader:
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
         )
-        config = self.config
 
-        # Create output directory
-        output = Path(config.output)
-        output.mkdir(parents=True, exist_ok=True)
+        config = self.config
+        config.output.mkdir(parents=True, exist_ok=True)
 
         try:
             # Resolve stream
@@ -150,7 +152,7 @@ class Downloader:
 
             filename = stream.display_name
 
-            # If is duplicated will stop.
+            # Stop if duplicate.
             if path := self._check_file_duplicate(filename):
                 self._progress.update(
                     task_id, status="Skipped", completed=100, total=100
@@ -231,12 +233,12 @@ class Downloader:
             log.debug('Postprocessing "%s"', stream.display_name)
 
             # Run postprocessing
-            filepath = config._run_postproces(filepath, stream._extra_info)
+            filepath = run_postproces(filepath, stream._extra_info, config._gen_opts())
             filename = filename + filepath.suffix
 
             # Move file
             filepath = filepath.rename(filepath.parent / filename)
-            filepath = shutil.move(filepath, output / filename)
+            filepath = shutil.move(filepath, config.output / filename)
 
             # STATUS: Finish
             self._progress.update(task_id, status="Finished")

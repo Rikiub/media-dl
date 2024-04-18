@@ -12,12 +12,6 @@ from yt_dlp import YoutubeDL
 from yt_dlp.utils import MEDIA_EXTENSIONS
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
-# Constans
-FORMAT_TYPE = Literal["video", "audio"]
-
-# Directories
-APPNAME = "media-dl"
-DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
 
 # YTDLP Base
 _supress_logger = logging.getLogger("YoutubeDL")
@@ -64,6 +58,7 @@ OPTS_METAPARSER = {
     ],
 }
 
+FORMAT_TYPE = Literal["video", "audio"]
 InfoDict = NewType("InfoDict", dict[str, Any])
 YTDLP = YoutubeDL(
     OPTS_BASE
@@ -84,6 +79,12 @@ class SupportedExtensions(set[str], Enum):
 
 
 # Helpers
+def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
+    with YoutubeDL(OPTS_BASE | params) as ydl:
+        info = ydl.post_process(filename=str(file), info=info)
+        return Path(info["filepath"])
+
+
 def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
     name = YTDLP.prepare_outtmpl(template, info)
     return cast(str, name)
@@ -136,7 +137,10 @@ def format_except_msg(exception: Exception) -> str:
     return msg
 
 
-# Cleaner
+# Directories
+DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
+
+
 def clean_tempdir():
     shutil.rmtree(DIR_TEMP)
 

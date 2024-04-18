@@ -3,7 +3,7 @@
 from typing import cast
 
 from media_dl.models import Playlist, Stream
-from media_dl.helper import InfoDict, YTDLP
+from media_dl.ydl import InfoDict, YTDLP
 
 
 def info_to_dataclass(info: InfoDict) -> Stream | Playlist:
@@ -47,16 +47,19 @@ def sanitize_info(info: InfoDict) -> InfoDict:
 
 def info_is_playlist(info: InfoDict) -> bool:
     """Check if info is a playlist."""
+
     return True if info.get("_type") == "playlist" or info.get("entries") else False
 
 
 def info_is_stream(info: InfoDict) -> bool:
     """Check if info is a single Stream."""
+
     return True if info.get("formats") else False
 
 
 def info_extract_thumbnail(info: InfoDict) -> str:
     """Extract thumbnail from a stream info dict."""
+
     if t := info.get("thumbnail"):
         return t
     elif t := info.get("thumbnails"):

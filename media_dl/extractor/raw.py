@@ -7,7 +7,7 @@ from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
 from media_dl.exceptions import ExtractError
-from media_dl.helper import InfoDict, YTDLP, format_except_msg
+from media_dl.ydl import InfoDict, YTDLP, format_except_msg
 
 log = logging.getLogger(__name__)
 
@@ -56,14 +56,14 @@ def _fetch_query(query: str) -> InfoDict | None:
     except (DownloadError, RequestError) as err:
         msg = format_except_msg(err)
         raise ExtractError(msg)
-    else:
-        info = cast(InfoDict, info)
 
-    if not info:
+    if info:
+        info = cast(InfoDict, info)
+    else:
         return None
 
-    # Some extractors need redirect to "real URL" (Pinterest)
-    # For this extractors we need do another request.
+    # Some extractors need redirect to "real URL" (Example: Pinterest)
+    # In this case, we need do another request.
     if info["extractor_key"] == "Generic" and info["url"] != query:
         log.debug("Re-fetching %s", query)
         return _fetch_query(info["url"])
@@ -72,7 +72,7 @@ def _fetch_query(query: str) -> InfoDict | None:
     if entries := info.get("entries"):
         for index, item in enumerate(entries):
             # If item has not the 2 required fields, will be deleted.
-            if not (item.get("ie_key") and item.get("id")):
+            if not (item.get("ie_key") or item.get("extractor_key") and item.get("id")):
                 del entries[index]
 
         if not entries:

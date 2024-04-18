@@ -17,8 +17,8 @@ For helpers:
 >>> extractor.serializer.info_is_playlist(info)
 """
 
-from media_dl.extractor.raw import SEARCH_PROVIDER
 from media_dl.extractor import serializer, raw
+from media_dl.extractor.raw import SEARCH_PROVIDER
 from media_dl.models import Stream, Playlist
 
 

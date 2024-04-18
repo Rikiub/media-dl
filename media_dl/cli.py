@@ -8,21 +8,21 @@ from strenum import StrEnum
 import media_dl
 from media_dl.exceptions import MediaError
 
-from media_dl.helper import APPNAME
-from media_dl.extractor import SEARCH_PROVIDER
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
+from media_dl.extractor import SEARCH_PROVIDER
 from media_dl.logging import init_logging
 
 log = logging.getLogger(__name__)
 
 app = Typer()
 
+APPNAME = "media-dl"
 Format = StrEnum("Format", get_args(FILE_REQUEST))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
 
 class HelpPanel(StrEnum):
-    formatting = "Format"
+    file = "File"
     advanced = "Advanced"
     view = "View"
 
@@ -32,6 +32,7 @@ def show_version(show: bool):
         from importlib.metadata import version
 
         print(version(Path(__file__).parent.name))
+
         raise SystemExit()
 
 
@@ -106,7 +107,7 @@ What format you want request?
 """,
             prompt_required=False,
             show_default=False,
-            rich_help_panel=HelpPanel.formatting,
+            rich_help_panel=HelpPanel.file,
         ),
     ] = Format["video"],
     quality: Annotated[
@@ -115,7 +116,7 @@ What format you want request?
             "--quality",
             "-q",
             help="Prefered video/audio quality to try filter.",
-            rich_help_panel=HelpPanel.formatting,
+            rich_help_panel=HelpPanel.file,
             autocompletion=complete_resolution,
             show_default=False,
         ),
@@ -126,7 +127,7 @@ What format you want request?
             "--output",
             "-o",
             help="Directory where to save downloads.",
-            rich_help_panel=HelpPanel.formatting,
+            rich_help_panel=HelpPanel.file,
             show_default=False,
             file_okay=False,
         ),
@@ -224,7 +225,7 @@ What format you want request?
 
 
 def run():
-    app(prog_name=APPNAME.lower())
+    app(prog_name=APPNAME)
 
 
 if __name__ == "__main__":

@@ -11,12 +11,9 @@ from rich.progress import (
 )
 
 
-class CounterProgress(Group):
+class _CounterProgress(Group):
     def __init__(self, total: int = 1, disable: bool = False) -> None:
         self.disable = disable
-
-        self._completed = 0
-        self._total = total
 
         self._progress = Progress(
             TextColumn("Total:"),
@@ -25,34 +22,23 @@ class CounterProgress(Group):
             transient=True,
         )
         self._task_id = self._progress.add_task(
-            "", start=False, completed=self._completed, total=self._total
+            "", start=False, completed=0, total=total
         )
 
         super().__init__(self._progress)
 
     def advance(self, advance: int = 1):
-        self._completed += advance
-        self._update()
+        self._progress.advance(self._task_id, advance)
 
     def reset(self, total: int = 1):
-        self._completed = 0
-        self._total = total
-        self._update()
-
-    def _update(self):
-        if not self.disable:
-            self._progress.update(
-                self._task_id,
-                total=self._total,
-                completed=self._completed,
-            )
+        self._progress.reset(self._task_id, total=total)
 
 
 class ProgressHandler(Progress):
     """Start and render progress bar."""
 
     def __init__(self, count_total: int = 1, disable: bool = False) -> None:
-        self.counter = CounterProgress(total=count_total, disable=disable)
+        self.counter = _CounterProgress(total=count_total, disable=disable)
         super().__init__(
             TextColumn(
                 "{task.description}",

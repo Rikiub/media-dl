@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Literal, Any, overload
+from typing import Any, overload
 from dataclasses import dataclass, field
 from collections.abc import Sequence
 import bisect
 
-from media_dl.helper import FORMAT_TYPE
+from media_dl.ydl import FORMAT_TYPE, SupportedExtensions
 from media_dl.models.base import InfoDict
 
 
@@ -26,6 +26,13 @@ class Format:
     codec: str | None = None
     filesize: int | None = None
     _downloader_options: dict = field(default_factory=dict, repr=False)
+
+    def __post_init__(self):
+        if not (
+            self.extension in SupportedExtensions.video
+            or self.extension in SupportedExtensions.audio
+        ):
+            raise TypeError(self.extension, "not is a valid extension.")
 
     @property
     def display_quality(self) -> str:
@@ -76,7 +83,7 @@ class Format:
                 quality = format.get("abr")
                 codec = format.get("acodec")
 
-        return cls(
+        cls = cls(
             url=format["url"],
             id=format["format_id"],
             type=type,
@@ -86,12 +93,8 @@ class Format:
             filesize=format.get("filesize") or None,
             _downloader_options=format.get("downloader_options") or {},
         )
-
-    def __eq__(self, value) -> bool:
-        if isinstance(value, Format):
-            return self.id == value.id
-        else:
-            return False
+        cls.__post_init__()
+        return cls
 
 
 class FormatList(Sequence[Format]):
@@ -100,7 +103,7 @@ class FormatList(Sequence[Format]):
     def __init__(self, formats: list[Format]) -> None:
         self._formats = formats
 
-    def type(self) -> Literal[FORMAT_TYPE, "incomplete"]:
+    def type(self) -> FORMAT_TYPE:
         """
         Determine main format type.
         It will check if is 'video' or 'audio'.
@@ -111,7 +114,7 @@ class FormatList(Sequence[Format]):
         elif self.filter(type="audio"):
             return "audio"
         else:
-            return "incomplete"
+            return "video"
 
     def filter(
         self,
@@ -120,7 +123,7 @@ class FormatList(Sequence[Format]):
         quality: int | None = None,
         codec: str | None = None,
     ) -> FormatList:
-        """Get filtered format list by provided options."""
+        """Get filtered format list by options."""
 
         formats = self._formats
 
@@ -169,7 +172,7 @@ class FormatList(Sequence[Format]):
         return formats[0]
 
     def get_closest_quality(self, quality: int) -> Format:
-        """Get `Format` with closest quality provided."""
+        """Get `Format` with closest quality."""
 
         self = self.sort_by("quality")
 
@@ -191,12 +194,15 @@ class FormatList(Sequence[Format]):
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> FormatList:
-        new_list = [
-            Format._from_format_entry(format)
-            for format in info.get("formats") or {}
-            if format["ext"] != "mhtml"
-        ]
-        return FormatList(new_list)
+        formats = []
+
+        for format in info.get("formats") or {}:
+            try:
+                formats.append(Format._from_format_entry(format))
+            except TypeError:
+                continue
+
+        return FormatList(formats)
 
     def __rich_repr__(self):
         yield self._formats
@@ -209,8 +215,12 @@ class FormatList(Sequence[Format]):
             yield f
 
     def __contains__(self, other) -> bool:
-        if isinstance(other, Format) and self.get_by_id(other.id):
-            return True
+        if isinstance(other, Format):
+            try:
+                self.get_by_id(other.id)
+                return True
+            except IndexError:
+                return False
         else:
             return False
 

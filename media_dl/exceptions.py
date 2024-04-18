@@ -3,8 +3,8 @@ class MediaError(Exception):
 
 
 class DownloadError(MediaError):
-    pass
+    """Error related to download."""
 
 
 class ExtractError(MediaError):
-    pass
+    """Error related to info extraction."""

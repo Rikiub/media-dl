@@ -1,16 +1,16 @@
+from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 
 from media_dl.extractor import raw
-from media_dl.helper import InfoDict
+from media_dl.ydl import InfoDict
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, order=True)
 class ExtractID(ABC):
     """Base identifier for media objects."""
 
     extractor: str
-    id: str
+    id: str = field(hash=True, compare=True)
     url: str
 
     @classmethod
@@ -22,6 +22,3 @@ class ExtractID(ABC):
     @abstractmethod
     def _from_info(cls, info: InfoDict):
         raise NotImplementedError()
-
-    def __eq__(self, value) -> bool:
-        return self.id == value.id
