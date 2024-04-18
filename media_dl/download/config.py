@@ -165,7 +165,7 @@ class FormatConfig:
                 raise TypeError(self.format, "missmatch.")
 
         if self.ffmpeg:
-            if self.remux:
+            if not self.convert and self.remux:
                 postprocessors.append(
                     {
                         "key": "FFmpegVideoRemuxer",
