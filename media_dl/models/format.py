@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from collections.abc import Sequence
 import bisect
 
-from media_dl.ydl import FORMAT_TYPE, SupportedExtensions
+from media_dl._ydl import FORMAT_TYPE, SupportedExtensions
 from media_dl.models.base import InfoDict
 
 

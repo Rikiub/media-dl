@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import os
 
-from media_dl.ydl import OPTS_METAPARSER, FORMAT_TYPE
+from media_dl._ydl import OPTS_METAPARSER, FORMAT_TYPE
 
 
 EXT_VIDEO = Literal["mp4", "mkv"]

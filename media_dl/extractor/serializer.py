@@ -2,8 +2,8 @@
 
 from typing import cast
 
+from media_dl._ydl import InfoDict, YTDLP
 from media_dl.models import Playlist, Stream
-from media_dl.ydl import InfoDict, YTDLP
 
 
 def info_to_dataclass(info: InfoDict) -> Stream | Playlist:

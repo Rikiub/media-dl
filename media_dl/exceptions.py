@@ -1,10 +1,13 @@
+"""Media-DL exceptions."""
+
+
 class MediaError(Exception):
     """Base exception."""
 
 
 class DownloadError(MediaError):
-    """Error related to download."""
+    """Download error."""
 
 
 class ExtractError(MediaError):
-    """Error related to info extraction."""
+    """Info extraction error."""

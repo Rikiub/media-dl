@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 
 from media_dl.extractor import raw
-from media_dl.ydl import InfoDict
+from media_dl._ydl import InfoDict
 
 
 @dataclass(slots=True, frozen=True, order=True)

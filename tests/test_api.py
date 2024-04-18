@@ -13,7 +13,7 @@ def test_api_syntax():
 
     with TEMPDIR:
         # If is a stream, filter by best quality and download.
-        if isinstance(result, media_dl.Stream):
+        if isinstance(result, media_dl.models.Stream):
             format = result.formats.filter(type="audio").get_best_quality()
             path = downloader.download(result, format, lambda *args: print(*args))
 

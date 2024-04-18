@@ -10,7 +10,7 @@ from media_dl.exceptions import MediaError
 
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
 from media_dl.extractor import SEARCH_PROVIDER
-from media_dl.logging import init_logging
+from media_dl.extras.logging import init_logging
 
 log = logging.getLogger(__name__)
 

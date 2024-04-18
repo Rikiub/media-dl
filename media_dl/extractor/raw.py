@@ -7,7 +7,7 @@ from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
 from media_dl.exceptions import ExtractError
-from media_dl.ydl import InfoDict, YTDLP, format_except_msg
+from media_dl._ydl import InfoDict, YTDLP, format_except_msg
 
 log = logging.getLogger(__name__)
 
