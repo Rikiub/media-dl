@@ -60,6 +60,7 @@ OPTS_METAPARSER = {
 
 FORMAT_TYPE = Literal["video", "audio"]
 InfoDict = NewType("InfoDict", dict[str, Any])
+
 YTDLP = YoutubeDL(
     OPTS_BASE
     | {
@@ -71,26 +72,32 @@ YTDLP = YoutubeDL(
 """Base YT-DLP instance. Can extract info but not download."""
 
 
-class SupportedExtensions(set[str], Enum):
-    """File extensions supported by YT-DLP"""
+class SupportedExtensions(frozenset[str], Enum):
+    """Sets of file extensions supported by YT-DLP."""
 
-    video = set(MEDIA_EXTENSIONS.video)
-    audio = set(MEDIA_EXTENSIONS.audio)
+    video = frozenset(MEDIA_EXTENSIONS.video)
+    audio = frozenset(MEDIA_EXTENSIONS.audio)
 
 
 # Helpers
 def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
+    """Postprocess file by params."""
+
     with YoutubeDL(OPTS_BASE | params) as ydl:
         info = ydl.post_process(filename=str(file), info=info)
         return Path(info["filepath"])
 
 
 def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
+    """Get a custom filename by output template."""
+
     name = YTDLP.prepare_outtmpl(template, info)
     return cast(str, name)
 
 
 def format_except_msg(exception: Exception) -> str:
+    """Get a user friendly message of a YT-DLP message exception."""
+
     msg = str(exception)
 
     # No connection

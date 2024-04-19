@@ -12,7 +12,7 @@ from media_dl.models import ExtractResult, Stream, Playlist
 from media_dl.models.format import Format, FormatList
 
 from media_dl.download.config import FormatConfig, FILE_REQUEST
-from media_dl.download.worker import FormatWorker
+from media_dl.download.worker import DownloadFormat
 from media_dl.download.progress import ProgressHandler
 
 
@@ -29,7 +29,7 @@ StrPath = str | PathLike[str]
 
 
 class Downloader:
-    """Multi-thread result downloader.
+    """Multi-thread stream downloader.
 
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
@@ -215,7 +215,7 @@ class Downloader:
             )
 
             # Run download
-            worker = FormatWorker(format=format, callbacks=callbacks)
+            worker = DownloadFormat(format=format, callbacks=callbacks)
             filepath = worker.start()
 
             # STATUS: Postprocessing
@@ -304,17 +304,23 @@ class Downloader:
             return final[-1]
 
     def _check_file_duplicate(self, filename: str) -> Path | None:
-        output = Path(self.config.output)
-        matches = list(output.glob(filename + ".*"))
+        """Check if file is duplicated in output directory.
+
+        Returns:
+            Path to duplicated file, if not exist, return None.
+        """
+
+        matches = list(self.config.output.glob(filename + ".*"))
 
         if extension := self.config.convert:
-            path = [path for path in matches if path.suffix[1:] == extension]
+            paths = [path for path in matches if path.suffix[1:] == extension]
         else:
-            path = [
+            paths = [
                 path
                 for path in matches
                 if path.stem == filename
-                and path.suffix[1:] in SupportedExtensions.audio
+                and path.suffix[1:] in SupportedExtensions.video
+                or path.suffix[1:] in SupportedExtensions.audio
             ]
 
-        return path[0] if path else None
+        return paths[0] if paths else None

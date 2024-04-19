@@ -6,7 +6,7 @@ from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
 import media_dl
-from media_dl.exceptions import MediaError
+from media_dl import MediaError
 
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
 from media_dl.extractor import SEARCH_PROVIDER

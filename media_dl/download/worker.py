@@ -16,7 +16,17 @@ log = logging.getLogger(__name__)
 DownloadCallback = Callable[[int, int], None]
 
 
-class FormatWorker:
+class DownloadFormat:
+    """Internal downloader.
+
+    Args:
+        format: Remote file to download.
+        callbacks: List of functions to get download progress information.
+
+    Raises:
+        DownloadError: Download failed.
+    """
+
     def __init__(
         self,
         format: Format,

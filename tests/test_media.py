@@ -6,6 +6,7 @@ import media_dl
 from media_dl.models import Stream, Playlist
 from media_dl.exceptions import ExtractError
 
+
 TEMPDIR = TemporaryDirectory()
 
 
