@@ -6,7 +6,7 @@ from typer import Typer, Argument, Option, BadParameter
 from strenum import StrEnum
 
 import media_dl
-from media_dl import MediaError
+from media_dl import MediaError, Playlist
 
 from media_dl.download.config import FILE_REQUEST, VIDEO_RES
 from media_dl.extractor import SEARCH_PROVIDER
@@ -208,15 +208,17 @@ What format you want request?
     for target, entry in parse_input(query):
         try:
             if target.value == "url":
-                log.info('🔎 Extracting "%s".', entry)
+                log.info('🔎 Extract URL: "%s".', entry)
                 result = media_dl.extract_url(entry)
+
+                if isinstance(result, Playlist):
+                    log.info('🔎 Playlist Name: "%s".', result.title)
             else:
-                log.info('🔎 Searching "%s" from "%s".', entry, target.value)
-                result = media_dl.extract_search(entry, target.value)
-                result = result[0]
+                log.info('🔎 Search from %s: "%s".', target.value, entry)
+                result = media_dl.extract_search(entry, target.value)[0]
 
             downloader.download_all(result)
-            log.info('✅ Done "%s".', entry)
+            log.info("✅ Download Finished.")
         except MediaError as err:
             log.error("❌ %s", str(err))
             continue

@@ -25,3 +25,8 @@
 - ⚡️ **Multi-thread** to go fast.
 - 🌀 Pretty and fancy **CLI** interface.
 - 🌀 Easy and simple **Python API**.
+
+## TODO
+
+- [ ] Fix thumbnail embed.
+- [ ] Refactorize downloader Progress.

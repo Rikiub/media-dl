@@ -21,12 +21,12 @@ OPTS_BASE = {
     "logger": _supress_logger,
     "ignoreerrors": False,
     "no_warnings": True,
-    "noprogress": True,
     "quiet": True,
+    "noprogress": True,
     "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 
-OPTS_METAPARSER = {
+POST_METAPARSER = {
     "key": "MetadataParser",
     "when": "pre_process",
     "actions": [
@@ -66,7 +66,7 @@ YTDLP = YoutubeDL(
     | {
         "skip_download": True,
         "extract_flat": "in_playlist",
-        "postprocessors": [OPTS_METAPARSER],
+        "postprocessors": [POST_METAPARSER],
     }
 )
 """Base YT-DLP instance. Can extract info but not download."""

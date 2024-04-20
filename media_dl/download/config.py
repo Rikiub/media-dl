@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import os
 
-from media_dl._ydl import OPTS_METAPARSER, FORMAT_TYPE
+from media_dl._ydl import FORMAT_TYPE
 
 
 EXT_VIDEO = Literal["mp4", "mkv"]
@@ -101,30 +101,29 @@ class FormatConfig:
 
     def _gen_opts(self) -> dict[str, Any]:
         opts = {"overwrites": False, "retries": 3}
-
-        post = OPTS_METAPARSER
-        post["when"] = "post_process"
-        postprocessors = [OPTS_METAPARSER]
+        postprocessors = []
 
         if self.ffmpeg:
             opts |= {"ffmpeg_location": str(self.ffmpeg)}
 
-        match self.type:
-            case "video":
-                opts |= {
-                    "subtitleslangs": "all",
-                    "writesubtitles": True,
-                }
+            if self.type == "video" and self.convert:
+                opts |= {"final_ext": self.format}
+                postprocessors.append(
+                    {
+                        "key": "FFmpegVideoConvertor",
+                        "preferedformat": self.format,
+                    }
+                )
+            elif self.type == "audio":
+                postprocessors.append(
+                    {
+                        "key": "FFmpegExtractAudio",
+                        "nopostoverwrites": True,
+                        "preferredcodec": self.convert,
+                        "preferredquality": None,
+                    }
+                )
 
-                if self.ffmpeg and self.convert:
-                    opts |= {"final_ext": self.format}
-                    postprocessors.append(
-                        {
-                            "key": "FFmpegVideoConvertor",
-                            "preferedformat": self.format,
-                        }
-                    )
-            case "audio":
                 # Square thumbnail
                 opts |= {
                     "postprocessor_args": {
@@ -137,34 +136,23 @@ class FormatConfig:
                     },
                 }
 
-                if self.ffmpeg:
-                    postprocessors.append(
+                if self.convert:
+                    opts |= {"final_ext": self.format}
+
+                    """
+                    # Audio Lyrics support. Would be a new feature, see:
+                    # https://github.com/yt-dlp/yt-dlp/pull/8869
+                    opts["postprocessors"].append(
                         {
-                            "key": "FFmpegExtractAudio",
-                            "nopostoverwrites": True,
-                            "preferredcodec": self.convert,
-                            "preferredquality": None,
+                            "key": "FFmpegSubtitlesConvertor",
+                            "format": "lrc",
+                            "when": "before_dl",
                         }
                     )
-
-                    if self.convert:
-                        opts |= {"final_ext": self.format}
-
-                        """
-                        # Audio Lyrics support. Would be a new feature, see:
-                        # https://github.com/yt-dlp/yt-dlp/pull/8869
-                        opts["postprocessors"].append(
-                            {
-                                "key": "FFmpegSubtitlesConvertor",
-                                "format": "lrc",
-                                "when": "before_dl",
-                            }
-                        )
-                        """
-            case _:
+                    """
+            else:
                 raise TypeError(self.format, "missmatch.")
 
-        if self.ffmpeg:
             if not self.convert and self.remux:
                 postprocessors.append(
                     {
@@ -173,6 +161,12 @@ class FormatConfig:
                     },
                 )
             if self.metadata:
+                opts |= {
+                    "writethumbnail": True,
+                    "writesubtitles": True,
+                    "subtitleslangs": "all",
+                }
+
                 postprocessors.extend(
                     [
                         {

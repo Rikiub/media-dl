@@ -262,21 +262,14 @@ class Downloader:
     def _media_to_list(self, media: ExtractResult) -> list[Stream]:
         match media:
             case Stream():
-                type = "Stream"
-                query = media.display_name
                 streams = [media]
             case Playlist():
-                type = "Playlist"
-                query = media.title
                 streams = media.streams
             case list():
-                type = "Stream List"
-                query = ""
                 streams = media
             case _:
                 raise TypeError(media)
 
-        log.info('🔎 Founded %s: "%s".', type, query)
         return streams
 
     def _extract_best_format(

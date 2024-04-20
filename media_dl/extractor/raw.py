@@ -17,7 +17,7 @@ SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
 def from_url(url: str) -> InfoDict:
     """Extract info from URL."""
 
-    log.debug("Extracting: %s", url)
+    log.debug("Extract URL: %s", url)
 
     if info := _fetch_query(url):
         return info
@@ -40,7 +40,7 @@ def from_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
         case _:
             raise ValueError(provider, "is invalid. Must be:", SEARCH_PROVIDER)
 
-    log.debug('Searching "%s" from "%s".', query, provider)
+    log.debug('Search from "%s": "%s".', provider, query)
 
     if info := _fetch_query(prov + query):
         return info
