@@ -10,7 +10,7 @@ class ExtractID(ABC):
     """Base identifier for media objects."""
 
     extractor: str
-    id: str = field(hash=True, compare=True)
+    id: str
     url: str
 
     @classmethod

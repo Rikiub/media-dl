@@ -13,7 +13,7 @@ from media_dl.models.format import Format, FormatList
 
 from media_dl.download.config import FormatConfig, FILE_REQUEST
 from media_dl.download.worker import DownloadFormat
-from media_dl.download.progress import ProgressHandler
+from media_dl.download.progress import DownloadProgress
 
 
 log = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class Downloader:
         metadata: bool = True,
         remux: bool = True,
         threads: int = 4,
-        quiet: bool = False,
+        render_progress: bool = False,
     ):
         self.config = FormatConfig(
             format=format,
@@ -64,10 +64,23 @@ class Downloader:
             metadata=metadata,
             remux=remux,
         )
-        self.quiet = quiet
+        self.render_progress = render_progress
         self.threads = threads
 
-        self._progress = ProgressHandler(disable=self.quiet)
+        self._progress = DownloadProgress(disable=self.render_progress)
+
+    def __enter__(self):
+        self.start_progress()
+        return self
+
+    def __exit__(self, a, b, c):
+        self.stop_progress()
+
+    def start_progress(self):
+        self._progress.start()
+
+    def stop_progress(self):
+        self._progress.stop()
 
     def download_all(self, media: ExtractResult) -> list[Path]:
         """Download any result.
@@ -86,33 +99,29 @@ class Downloader:
         final_paths: list[Path] = []
 
         log.debug("Founded %s entries.", total_streams)
+        self._progress.counter.reset(total_streams)
 
-        with self._progress as progress:
-            progress.counter.reset(total_streams)
+        with cf.ThreadPoolExecutor(self.threads) as executor:
+            futures = [executor.submit(self.download, task) for task in streams]
 
-            with cf.ThreadPoolExecutor(self.threads) as executor:
-                futures = [executor.submit(self.download, task) for task in streams]
+            success = 0
+            errors = 0
 
-                success = 0
-                errors = 0
+            try:
+                for ft in cf.as_completed(futures):
+                    try:
+                        final_paths.append(ft.result())
+                        success += 1
+                    except (cf.CancelledError, MediaError):
+                        errors += 1
+                        log.debug("%s Errors catched.", errors)
+            except KeyboardInterrupt:
+                log.warning("❗ Canceling downloads... (press Ctrl+C again to force)")
+                raise
+            finally:
+                executor.shutdown(wait=False, cancel_futures=True)
 
-                try:
-                    for ft in cf.as_completed(futures):
-                        try:
-                            final_paths.append(ft.result())
-                            success += 1
-                        except (cf.CancelledError, MediaError):
-                            errors += 1
-                            log.debug("%s Errors catched.", errors)
-                except KeyboardInterrupt:
-                    log.warning(
-                        "❗ Canceling downloads... (press Ctrl+C again to force)"
-                    )
-                    raise
-                finally:
-                    executor.shutdown(wait=False, cancel_futures=True)
-
-                    log.debug(f"{success} of {total_streams} streams downloaded.")
+                log.debug(f"{success} of {total_streams} streams downloaded.")
 
         return final_paths
 
@@ -157,6 +166,8 @@ class Downloader:
                 self._progress.update(
                     task_id, status="Skipped", completed=100, total=100
                 )
+                if on_progress:
+                    on_progress("finished", 0, 0)
 
                 log.info(
                     'Skipped: "%s" (File already exists as "%s").',
@@ -173,11 +184,7 @@ class Downloader:
                 if not config.convert:
                     config.format = format.type
             else:
-                if (
-                    not config.convert
-                    and config.format == "video"
-                    and stream._is_music_site()
-                ):
+                if not config.convert and stream._is_music_site():
                     log.debug(
                         'Detected music site in "%s". Config changed to "audio".',
                         stream.display_name,
@@ -204,15 +211,12 @@ class Downloader:
                     task_id, completed=completed, total=total
                 )
             ]
-            (
+            if on_progress:
                 callbacks.append(
                     lambda completed, total: on_progress(
                         "downloading", completed, total
                     )
                 )
-                if on_progress
-                else None
-            )
 
             # Run download
             worker = DownloadFormat(format=format, callbacks=callbacks)
@@ -224,13 +228,10 @@ class Downloader:
             else:
                 status = "Processing"
 
-            self._progress.update(task_id, status=status)
-            (
-                on_progress("processing", worker._downloaded, worker._total_filesize)
-                if on_progress
-                else None
-            )
             log.debug('Postprocessing "%s"', stream.display_name)
+            self._progress.update(task_id, status=status)
+            if on_progress:
+                on_progress("processing", worker._downloaded, worker._total_filesize)
 
             # Run postprocessing
             filepath = run_postproces(filepath, stream._extra_info, config._gen_opts())
@@ -241,18 +242,15 @@ class Downloader:
             filepath = shutil.move(filepath, config.output / filename)
 
             # STATUS: Finish
-            self._progress.update(task_id, status="Finished")
-            (
-                on_progress("finished", worker._downloaded, worker._total_filesize)
-                if on_progress
-                else None
-            )
             log.info('Finished: "%s".', stream.display_name)
+            self._progress.update(task_id, status="Finished")
+            if on_progress:
+                on_progress("finished", worker._downloaded, worker._total_filesize)
 
             return filepath
         except MediaError as err:
-            self._progress.update(task_id, status="Error")
             log.error('Failed to download "%s": %s', stream.display_name, str(err))
+            self._progress.update(task_id, status="Error")
             raise
         finally:
             self._progress.counter.advance()

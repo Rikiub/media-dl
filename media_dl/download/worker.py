@@ -62,28 +62,27 @@ class DownloadFormat:
         else:
             progress = {}
 
-        try:
-            format_id = {"format": self.format.id}
-            params = (
-                OPTS_BASE
-                | format_id
-                | progress
-                | {"outtmpl": tempfile.mktemp(dir=DIR_TEMP) + ".%(ext)s"}
-            )
+        params = (
+            OPTS_BASE
+            | progress
+            | {"format": self.format.id}
+            | {"outtmpl": tempfile.mktemp(dir=DIR_TEMP) + ".%(ext)s"}
+        )
 
+        try:
             # Download with complete stream info-dict.
             with YoutubeDL(params) as ydl:
                 info = ydl.process_ie_result(
                     self.format._simple_format_dict(), download=True
                 )
-
-            # Extract final file path
-            path = info["requested_downloads"][0]["filepath"]
-
-            return Path(path)
         except YTDLPDownloadError as err:
             msg = format_except_msg(err)
             raise DownloadError(msg)
+
+        # Extract final path
+        path = info["requested_downloads"][0]["filepath"]
+
+        return Path(path)
 
     def _progress_wraper(
         self,

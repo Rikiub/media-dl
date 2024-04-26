@@ -11,21 +11,20 @@ from rich.progress import (
 )
 
 
-class _CounterProgress(Group):
+class _CounterProgress:
     def __init__(self, total: int = 1, disable: bool = False) -> None:
         self.disable = disable
 
         self._progress = Progress(
             TextColumn("Total:"),
             MofNCompleteColumn(),
-            disable=self.disable,
             transient=True,
+            expand=False,
+            disable=self.disable,
         )
         self._task_id = self._progress.add_task(
             "", start=False, completed=0, total=total
         )
-
-        super().__init__(self._progress)
 
     def advance(self, advance: int = 1):
         self._progress.advance(self._task_id, advance)
@@ -33,8 +32,11 @@ class _CounterProgress(Group):
     def reset(self, total: int = 1):
         self._progress.reset(self._task_id, total=total)
 
+    def __rich__(self) -> RenderableType:
+        return self._progress.get_renderable()
 
-class ProgressHandler(Progress):
+
+class DownloadProgress(Progress):
     """Start and render progress bar."""
 
     def __init__(self, count_total: int = 1, disable: bool = False) -> None:
@@ -65,7 +67,7 @@ class ProgressHandler(Progress):
             disable=disable,
         )
 
-    def __enter__(self) -> ProgressHandler:
+    def __enter__(self) -> DownloadProgress:
         super().__enter__()
         return self
 

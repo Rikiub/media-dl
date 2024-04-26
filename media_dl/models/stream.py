@@ -5,9 +5,10 @@ from dataclasses import dataclass, field
 from media_dl.extractor import serializer
 from media_dl.models.base import ExtractID, InfoDict
 from media_dl.models.format import FormatList
+from media_dl._ydl import MUSIC_SITES
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, order=True)
 class Stream(ExtractID):
     """Single `Stream` information.
 
@@ -17,16 +18,12 @@ class Stream(ExtractID):
         >>> stream = stream.update()
     """
 
-    _extra_info: InfoDict = field(repr=False)
-    title: str
+    title: str = ""
     uploader: str = ""
     thumbnail: str = ""
     duration: int = 0
-    formats: FormatList = FormatList([])
-
-    def update(self) -> Stream:
-        """Get updated version of the `Stream` doing another request."""
-        return self.from_url(self.url)
+    formats: FormatList = FormatList()
+    _extra_info: InfoDict = field(default_factory=lambda: InfoDict({}), repr=False)
 
     @property
     def display_name(self) -> str:
@@ -39,11 +36,14 @@ class Stream(ExtractID):
         else:
             return "?"
 
-    def _is_music_site(self) -> bool:
-        track = self._extra_info.get("track")
-        artist = self._extra_info.get("artist")
+    def update(self) -> Stream:
+        """Get updated version of the `Stream` doing another request."""
+        return self.from_url(self.url)
 
-        if track and artist or self.url in ("soundcloud.com"):
+    def _is_music_site(self) -> bool:
+        d = self._extra_info
+
+        if self.url in MUSIC_SITES or (d.get("track") and d.get("artist")):
             return True
         else:
             return False
@@ -59,8 +59,57 @@ class Stream(ExtractID):
             *serializer.info_extract_meta(info),
             _extra_info=serializer.sanitize_info(info),
             title=info.get("title") or "",
-            uploader=info.get("uploader") or "",
+            uploader=info["uploader"].split(",")[0] if info.get("uploader") else "",
             thumbnail=serializer.info_extract_thumbnail(info),
             duration=info.get("duration") or 0,
             formats=FormatList._from_info(info),
         )
+
+
+"""
+from collections.abc import Sequence
+from typing import overload
+from media_dl.extractor import extract_url
+
+class StreamList(Sequence[Stream]):
+    def __init__(self, streams: list[Stream]):
+        self._list = streams
+
+    @overload
+    def __getitem__(self, index: int) -> Stream: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> StreamList: ...
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            return StreamList(self._list[index])
+        elif isinstance(index, int):
+            stream = self._list[index]
+
+            if not stream.formats:
+                stream = extract_url(stream.url)
+
+                if isinstance(stream, Stream):
+                    self._list[index] = stream
+
+            return stream
+        else:
+            raise TypeError(index)
+
+    def __rich_repr__(self):
+        yield self._list
+
+    def __repr__(self) -> str:
+        return self._list.__repr__()
+
+    def __bool__(self):
+        return True if self._list else False
+
+    def __iter__(self):
+        for f in self._list:
+            yield f
+
+    def __len__(self) -> int:
+        return len(self._list)
+"""

@@ -195,7 +195,7 @@ What format you want request?
             output=output,
             ffmpeg=ffmpeg,
             threads=threads,
-            quiet=quiet,
+            render_progress=quiet,
         )
     except FileNotFoundError as err:
         raise BadParameter(str(err))
@@ -210,14 +210,16 @@ What format you want request?
             if target.value == "url":
                 log.info('🔎 Extract URL: "%s".', entry)
                 result = media_dl.extract_url(entry)
-
-                if isinstance(result, Playlist):
-                    log.info('🔎 Playlist Name: "%s".', result.title)
             else:
                 log.info('🔎 Search from %s: "%s".', target.value, entry)
                 result = media_dl.extract_search(entry, target.value)[0]
 
-            downloader.download_all(result)
+            if isinstance(result, Playlist):
+                log.info('🔎 Playlist Name: "%s".', result.title)
+
+            with downloader as d:
+                d.download_all(result)
+
             log.info("✅ Download Finished.")
         except MediaError as err:
             log.error("❌ %s", str(err))

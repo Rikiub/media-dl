@@ -13,7 +13,6 @@ class Playlist(ExtractID):
 
     thumbnail: str
     title: str
-    lenght: int
     streams: list[Stream]
 
     @classmethod
@@ -21,16 +20,12 @@ class Playlist(ExtractID):
         if not serializer.info_is_playlist(info):
             raise TypeError("Unable to serialize dict. Not is a playlist.")
 
-        streams = [Stream._from_info(entry) for entry in info["entries"]]
-        lenght = len(streams)
-
         return cls(
             *serializer.info_extract_meta(info),
             thumbnail=serializer.info_extract_thumbnail(info),
             title=info.get("title") or "",
-            lenght=lenght,
-            streams=streams,
+            streams=[Stream._from_info(entry) for entry in info["entries"]],
         )
 
     def __len__(self):
-        return self.lenght
+        return len(self.streams)

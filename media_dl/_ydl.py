@@ -59,6 +59,7 @@ POST_METAPARSER = {
 }
 
 FORMAT_TYPE = Literal["video", "audio"]
+MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 InfoDict = NewType("InfoDict", dict[str, Any])
 
 YTDLP = YoutubeDL(
@@ -85,7 +86,8 @@ def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
 
     with YoutubeDL(OPTS_BASE | params) as ydl:
         info = ydl.post_process(filename=str(file), info=info)
-        return Path(info["filepath"])
+
+    return Path(info["filepath"])
 
 
 def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
@@ -149,6 +151,8 @@ DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
 
 
 def clean_tempdir():
+    """Delete global temporary directory."""
+
     shutil.rmtree(DIR_TEMP)
 
 

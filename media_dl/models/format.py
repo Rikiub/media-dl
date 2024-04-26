@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, overload
 from dataclasses import dataclass, field
 from collections.abc import Sequence
+from typing import Any, overload
 import bisect
 
 from media_dl._ydl import FORMAT_TYPE, SupportedExtensions
@@ -19,7 +19,7 @@ class Format:
     """
 
     url: str
-    id: str = field(hash=True, compare=True)
+    id: str
     type: FORMAT_TYPE
     extension: str
     quality: int = 0
@@ -70,28 +70,28 @@ class Format:
         return InfoDict(d)
 
     @classmethod
-    def _from_format_entry(cls, format: dict[str, Any]) -> Format:
+    def _from_format_entry(cls, entry: dict[str, Any]) -> Format:
         type: FORMAT_TYPE = (
-            "audio" if format.get("resolution", "") == "audio only" else "video"
+            "audio" if entry.get("resolution", "") == "audio only" else "video"
         )
 
         match type:
             case "video":
-                quality = format.get("height")
-                codec = format.get("vcodec")
+                quality = entry.get("height")
+                codec = entry.get("vcodec")
             case "audio":
-                quality = format.get("abr")
-                codec = format.get("acodec")
+                quality = entry.get("abr")
+                codec = entry.get("acodec")
 
         cls = cls(
-            url=format["url"],
-            id=format["format_id"],
+            url=entry["url"],
+            id=entry["format_id"],
             type=type,
-            extension=format["ext"],
+            extension=entry["ext"],
             quality=quality or 0,
             codec=codec,
-            filesize=format.get("filesize") or None,
-            _downloader_options=format.get("downloader_options") or {},
+            filesize=entry.get("filesize") or None,
+            _downloader_options=entry.get("downloader_options") or {},
         )
         cls.__post_init__()
         return cls
@@ -100,8 +100,8 @@ class Format:
 class FormatList(Sequence[Format]):
     """List of formats which can be filtered."""
 
-    def __init__(self, formats: list[Format]) -> None:
-        self._formats = formats
+    def __init__(self, formats: list[Format] = []) -> None:
+        self._list = formats
 
     def type(self) -> FORMAT_TYPE:
         """
@@ -125,7 +125,7 @@ class FormatList(Sequence[Format]):
     ) -> FormatList:
         """Get filtered format list by options."""
 
-        formats = self._formats
+        formats = self._list
 
         if type:
             formats = [f for f in formats if f.type == type]
@@ -141,7 +141,7 @@ class FormatList(Sequence[Format]):
     def sort_by(self, attribute: str, reverse: bool = False) -> FormatList:
         """Sort list by `Format` attribute."""
 
-        has_attribute = [f for f in self._formats if getattr(f, attribute) is not None]
+        has_attribute = [f for f in self._list if getattr(f, attribute) is not None]
         sorted_list = sorted(
             has_attribute, key=lambda f: getattr(f, attribute), reverse=reverse
         )
@@ -205,13 +205,16 @@ class FormatList(Sequence[Format]):
         return FormatList(formats)
 
     def __rich_repr__(self):
-        yield self._formats
+        yield self._list
+
+    def __repr__(self) -> str:
+        return self._list.__repr__()
 
     def __bool__(self):
-        return True if self._formats else False
+        return True if self._list else False
 
     def __iter__(self):
-        for f in self._formats:
+        for f in self._list:
             yield f
 
     def __contains__(self, other) -> bool:
@@ -225,7 +228,7 @@ class FormatList(Sequence[Format]):
             return False
 
     def __len__(self) -> int:
-        return len(self._formats)
+        return len(self._list)
 
     @overload
     def __getitem__(self, index: int) -> Format: ...
@@ -235,6 +238,8 @@ class FormatList(Sequence[Format]):
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            return FormatList(self._formats[index])
+            return FormatList(self._list[index])
+        elif isinstance(index, int):
+            return self._list[index]
         else:
-            return self._formats[index]
+            raise TypeError(index)

@@ -100,7 +100,7 @@ class FormatConfig:
             return False
 
     def _gen_opts(self) -> dict[str, Any]:
-        opts = {"overwrites": False, "retries": 3}
+        opts = {"overwrites": False, "retries": 3, "fragment_retries": 3}
         postprocessors = []
 
         if self.ffmpeg:
@@ -142,6 +142,7 @@ class FormatConfig:
                     """
                     # Audio Lyrics support. Would be a new feature, see:
                     # https://github.com/yt-dlp/yt-dlp/pull/8869
+                    
                     opts["postprocessors"].append(
                         {
                             "key": "FFmpegSubtitlesConvertor",
