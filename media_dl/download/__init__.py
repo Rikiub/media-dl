@@ -7,7 +7,12 @@ import shutil
 import time
 
 from media_dl.exceptions import MediaError
-from media_dl._ydl import SupportedExtensions, run_postproces
+from media_dl._ydl import (
+    SupportedExtensions,
+    run_postproces,
+    download_thumbnail,
+    download_subtitle,
+)
 from media_dl.models import ExtractResult, Stream, Playlist
 from media_dl.models.format import Format, FormatList
 
@@ -39,7 +44,6 @@ class Downloader:
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it will try get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
-        remux: If format extension is not specified, will convert to most compatible extension when necessary. (FFmpeg)
 
     Raises:
         FileNotFoundError: `ffmpeg` path not is a FFmpeg executable.
@@ -52,7 +56,6 @@ class Downloader:
         output: StrPath = Path.cwd(),
         ffmpeg: StrPath | None = None,
         metadata: bool = True,
-        remux: bool = True,
         threads: int = 4,
         render_progress: bool = False,
     ):
@@ -62,7 +65,6 @@ class Downloader:
             output=Path(output),
             ffmpeg=Path(ffmpeg) if ffmpeg else None,
             metadata=metadata,
-            remux=remux,
         )
         self.render_progress = render_progress
         self.threads = threads
@@ -232,6 +234,10 @@ class Downloader:
             self._progress.update(task_id, status=status)
             if on_progress:
                 on_progress("processing", worker._downloaded, worker._total_filesize)
+
+            # Download resources
+            download_thumbnail(filename, stream._extra_info)
+            download_subtitle(filename, stream._extra_info)
 
             # Run postprocessing
             filepath = run_postproces(filepath, stream._extra_info, config._gen_opts())

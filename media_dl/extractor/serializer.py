@@ -1,4 +1,4 @@
-"""Helpers to serializer info dicts."""
+"""Helpers to serialize info dicts."""
 
 from typing import cast
 
@@ -34,9 +34,8 @@ def sanitize_info(info: InfoDict) -> InfoDict:
         "requested_subtitles",
         "requested_formats",
         "formats",
-        "heatmap",
-        "_type",
         "_version",
+        "_type",
     }
 
     for key in keys_to_remove:

@@ -8,7 +8,7 @@ from media_dl._ydl import FORMAT_TYPE
 
 
 EXT_VIDEO = Literal["mp4", "mkv"]
-EXT_AUDIO = Literal["m4a", "mp3", "ogg"]
+EXT_AUDIO = Literal["m4a", "mp3", "opus"]
 EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
 """Common lossy compression containers formats with thumbnail and metadata support."""
 
@@ -28,7 +28,6 @@ class FormatConfig:
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it'll try get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
-        remux: If format extension is not specified, will convert to most compatible extension when necessary. (FFmpeg)
     """
 
     format: FILE_REQUEST
@@ -36,7 +35,6 @@ class FormatConfig:
     output: Path = Path.cwd()
     ffmpeg: Path | None = None
     metadata: bool = True
-    remux: bool = True
 
     def __post_init__(self):
         # Check if ffmpeg is installed and handle custom path.
@@ -101,19 +99,20 @@ class FormatConfig:
 
     def _gen_opts(self) -> dict[str, Any]:
         opts = {"overwrites": False, "retries": 3, "fragment_retries": 3}
-        postprocessors = []
+        postprocessors: list[dict] = []
 
         if self.ffmpeg:
             opts |= {"ffmpeg_location": str(self.ffmpeg)}
 
-            if self.type == "video" and self.convert:
-                opts |= {"final_ext": self.format}
-                postprocessors.append(
-                    {
-                        "key": "FFmpegVideoConvertor",
-                        "preferedformat": self.format,
-                    }
-                )
+            if self.type == "video":
+                if self.convert:
+                    opts |= {"final_ext": self.format}
+                    postprocessors.append(
+                        {
+                            "key": "FFmpegVideoConvertor",
+                            "preferedformat": self.format,
+                        }
+                    )
             elif self.type == "audio":
                 postprocessors.append(
                     {
@@ -152,22 +151,16 @@ class FormatConfig:
                     )
                     """
             else:
-                raise TypeError(self.format, "missmatch.")
+                raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
 
-            if not self.convert and self.remux:
+            if not self.convert:
                 postprocessors.append(
                     {
                         "key": "FFmpegVideoRemuxer",
-                        "preferedformat": "opus>ogg/aac>m4a/alac>m4a/mov>mp4/webm>mkv",
+                        "preferedformat": "aac>m4a/alac>m4a/mov>mp4/webm>mkv",
                     },
                 )
             if self.metadata:
-                opts |= {
-                    "writethumbnail": True,
-                    "writesubtitles": True,
-                    "subtitleslangs": "all",
-                }
-
                 postprocessors.extend(
                     [
                         {

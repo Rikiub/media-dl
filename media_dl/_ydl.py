@@ -13,6 +13,19 @@ from yt_dlp.utils import MEDIA_EXTENSIONS
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
 
+# Directories
+DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
+
+
+def clean_tempdir():
+    """Delete global temporary directory."""
+
+    shutil.rmtree(DIR_TEMP)
+
+
+atexit.register(clean_tempdir)
+
+
 # YTDLP Base
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
@@ -21,8 +34,8 @@ OPTS_BASE = {
     "logger": _supress_logger,
     "ignoreerrors": False,
     "no_warnings": True,
-    "quiet": True,
     "noprogress": True,
+    "quiet": True,
     "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 
@@ -97,6 +110,33 @@ def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> 
     return cast(str, name)
 
 
+def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
+    with YoutubeDL(OPTS_BASE | {"writethumbnail": True}) as ydl:
+        final = ydl._write_thumbnails(
+            label=filename, info_dict=info, filename=str(DIR_TEMP / filename)
+        )
+
+    if final:
+        return Path(final[0][0])
+    else:
+        return None
+
+
+def download_subtitle(filename: str, info: InfoDict) -> Path | None:
+    with YoutubeDL(OPTS_BASE | {"writesubtitles": True, "allsubtitles": True}) as ydl:
+        subs = ydl.process_subtitles(
+            "subtitle", info.get("subtitles"), info.get("automatic_captions")
+        )
+        info |= {"requested_subtitles": subs}
+
+        final = ydl._write_subtitles(info_dict=info, filename=str(DIR_TEMP / filename))
+
+    if final:
+        return Path(final[0][0])
+    else:
+        return None
+
+
 def format_except_msg(exception: Exception) -> str:
     """Get a user friendly message of a YT-DLP message exception."""
 
@@ -144,16 +184,3 @@ def format_except_msg(exception: Exception) -> str:
         msg = msg.strip("ERROR: ")
 
     return msg
-
-
-# Directories
-DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
-
-
-def clean_tempdir():
-    """Delete global temporary directory."""
-
-    shutil.rmtree(DIR_TEMP)
-
-
-atexit.register(clean_tempdir)

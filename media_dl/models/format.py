@@ -49,6 +49,7 @@ class Format:
         d = {
             "extractor": "generic",
             "extractor_key": "Generic",
+            "title": self.id,
             "id": self.id,
             "format_id": self.id,
             "url": self.url,
