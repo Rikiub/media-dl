@@ -42,7 +42,7 @@ class Downloader:
         format: File format to search or convert if is a extension.
         quality: Quality to filter.
         output: Directory where to save files.
-        ffmpeg: Path to FFmpeg executable. By default, it will try get the global installed FFmpeg.
+        ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
 
     Raises:
@@ -159,9 +159,9 @@ class Downloader:
             # Resolve stream
             if not stream.formats:
                 stream = stream.update()
-                self._progress.update(task_id, description=stream.display_name)
 
             filename = stream.display_name
+            self._progress.update(task_id, description=stream.display_name)
 
             # Stop if duplicate.
             if path := self._check_file_duplicate(filename):
@@ -188,7 +188,7 @@ class Downloader:
             else:
                 if not config.convert and stream._is_music_site():
                     log.debug(
-                        'Detected music site in "%s". Config changed to "audio".',
+                        '"%s" is from a music site. Change config to "audio".',
                         stream.display_name,
                     )
                     config.format = "audio"
@@ -197,7 +197,7 @@ class Downloader:
 
                 if not config.convert and config.type != format.type:
                     log.debug(
-                        'Format "%s" and config "%s" missmatch in "%s". Config changed to "%s".',
+                        'Format "%s" and config "%s" missmatch in "%s". Change config to "%s".',
                         format.type,
                         config.type,
                         stream.display_name,
@@ -221,19 +221,25 @@ class Downloader:
                 )
 
             # Run download
+            log.debug(
+                'Downloading "%s" with format: %s (%s %s) (%s)',
+                stream.display_name,
+                format.id,
+                format.extension,
+                format.display_quality,
+                format.type,
+            )
+
             worker = DownloadFormat(format=format, callbacks=callbacks)
             filepath = worker.start()
 
             # STATUS: Postprocessing
-            if config.convert:
-                status = "Converting"
-            else:
-                status = "Processing"
-
             log.debug('Postprocessing "%s"', stream.display_name)
-            self._progress.update(task_id, status=status)
+            self._progress.update(task_id, status="Processing")
             if on_progress:
-                on_progress("processing", worker._downloaded, worker._total_filesize)
+                on_progress(
+                    "processing", worker._total_filesize, worker._total_filesize
+                )
 
             # Download resources
             download_thumbnail(filename, stream._extra_info)
@@ -251,7 +257,7 @@ class Downloader:
             log.info('Finished: "%s".', stream.display_name)
             self._progress.update(task_id, status="Finished")
             if on_progress:
-                on_progress("finished", worker._downloaded, worker._total_filesize)
+                on_progress("finished", worker._total_filesize, worker._total_filesize)
 
             return filepath
         except MediaError as err:
@@ -277,20 +283,20 @@ class Downloader:
         return streams
 
     def _extract_best_format(
-        self, format_list: FormatList, custom_config: FormatConfig | None = None
+        self, formats: FormatList, custom_config: FormatConfig | None = None
     ) -> Format:
         """Extract best format in stream formats."""
 
         config = custom_config if custom_config else self.config
 
         # Filter by extension
-        if f := config.convert and format_list.filter(extension=config.convert):
+        if f := config.convert and formats.filter(extension=config.convert):
             final = f
         # Filter by type
-        elif f := format_list.filter(type=config.type):
+        elif f := formats.filter(type=config.type):
             final = f
         # Filter fallback to available type.
-        elif f := format_list.filter(type="video") or format_list.filter(type="audio"):
+        elif f := formats.filter(type="video") or formats.filter(type="audio"):
             final = f
         else:
             raise TypeError("Not matches founded in format list.")

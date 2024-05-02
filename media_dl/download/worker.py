@@ -1,7 +1,6 @@
 from typing import Callable
 from pathlib import Path
 import tempfile
-import logging
 
 from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as YTDLPDownloadError
@@ -10,8 +9,6 @@ from media_dl._ydl import OPTS_BASE, DIR_TEMP, format_except_msg
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
 
-
-log = logging.getLogger(__name__)
 
 DownloadCallback = Callable[[int, int], None]
 
@@ -40,14 +37,6 @@ class DownloadFormat:
 
     def start(self) -> Path:
         """Start download."""
-
-        log.debug(
-            "Downloading format %s (%s %s) (%s)",
-            self.format.id,
-            self.format.extension,
-            self.format.display_quality,
-            self.format.type,
-        )
 
         # Reset progress
         self._downloaded = 0
@@ -79,6 +68,12 @@ class DownloadFormat:
             msg = format_except_msg(err)
             raise DownloadError(msg)
 
+        if self._callbacks:
+            [
+                callback(self._total_filesize, self._total_filesize)
+                for callback in self._callbacks
+            ]
+
         # Extract final path
         path = info["requested_downloads"][0]["filepath"]
 
@@ -91,7 +86,6 @@ class DownloadFormat:
     ) -> None:
         """`YT-DLP` progress hook, but stable and without issues."""
 
-        status = d.get("status")
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
@@ -100,7 +94,4 @@ class DownloadFormat:
         if completed > self._downloaded:
             self._downloaded = completed
 
-            callback(
-                self._downloaded if status != "finished" else self._total_filesize,
-                self._total_filesize,
-            )
+            callback(self._downloaded, self._total_filesize)

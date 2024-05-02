@@ -26,7 +26,7 @@ class FormatConfig:
         format: Target file format to search or convert if is a extension.
         quality: Target quality to try filter.
         output: Directory where to save files.
-        ffmpeg: Path to FFmpeg executable. By default, it'll try get the global installed FFmpeg.
+        ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
     """
 
@@ -38,9 +38,8 @@ class FormatConfig:
 
     def __post_init__(self):
         # Check if ffmpeg is installed and handle custom path.
-        if p := self.ffmpeg:
-            if not self._executable_exists(p):
-                raise FileNotFoundError(f"'{p.name}' is not a FFmpeg executable.")
+        if self.ffmpeg and not self._executable_exists(self.ffmpeg):
+            raise FileNotFoundError(f"'{self.ffmpeg.name}' is not a FFmpeg executable.")
         else:
             self.ffmpeg = self._get_global_ffmpeg() or None
 
@@ -99,14 +98,37 @@ class FormatConfig:
 
     def _gen_opts(self) -> dict[str, Any]:
         opts = {"overwrites": False, "retries": 3, "fragment_retries": 3}
-        postprocessors: list[dict] = []
+        postprocessors: list[dict] = [
+            {
+                "key": "SponsorBlock",
+                "when": "after_filter",
+                "categories": {
+                    "sponsor",
+                    "selfpromo",
+                    "intro",
+                    "outro",
+                    "music_offtopic",
+                },
+                "api": "https://sponsor.ajay.app",
+            },
+            {
+                "key": "ModifyChapters",
+                "force_keyframes": False,
+                "remove_chapters_patterns": [],
+                "remove_ranges": [],
+                "remove_sponsor_segments": set(),
+                "sponsorblock_chapter_title": "[SponsorBlock]: " "%(category_names)l",
+            },
+        ]
+
+        if self.convert:
+            opts |= {"final_ext": self.format}
 
         if self.ffmpeg:
             opts |= {"ffmpeg_location": str(self.ffmpeg)}
 
             if self.type == "video":
                 if self.convert:
-                    opts |= {"final_ext": self.format}
                     postprocessors.append(
                         {
                             "key": "FFmpegVideoConvertor",
@@ -134,22 +156,6 @@ class FormatConfig:
                         ]
                     },
                 }
-
-                if self.convert:
-                    opts |= {"final_ext": self.format}
-
-                    """
-                    # Audio Lyrics support. Would be a new feature, see:
-                    # https://github.com/yt-dlp/yt-dlp/pull/8869
-                    
-                    opts["postprocessors"].append(
-                        {
-                            "key": "FFmpegSubtitlesConvertor",
-                            "format": "lrc",
-                            "when": "before_dl",
-                        }
-                    )
-                    """
             else:
                 raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
 
@@ -160,6 +166,7 @@ class FormatConfig:
                         "preferedformat": "aac>m4a/alac>m4a/mov>mp4/webm>mkv",
                     },
                 )
+
             if self.metadata:
                 postprocessors.extend(
                     [
@@ -170,9 +177,12 @@ class FormatConfig:
                             "add_infojson": None,
                         },
                         {"key": "FFmpegEmbedSubtitle", "already_have_subtitle": False},
-                        {"key": "EmbedThumbnail", "already_have_thumbnail": False},
                     ]
                 )
+
+        postprocessors.append(
+            {"key": "EmbedThumbnail", "already_have_thumbnail": False}
+        )
 
         opts |= {"postprocessors": postprocessors}
         return opts

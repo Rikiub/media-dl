@@ -22,12 +22,15 @@ class Format:
     id: str
     type: FORMAT_TYPE
     extension: str
+    codec: str
     quality: int = 0
-    codec: str | None = None
-    filesize: int | None = None
+    filesize: int = 0
     _downloader_options: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self):
+        if not self.codec:
+            raise TypeError("Must have a codec.")
+
         if not (
             self.extension in SupportedExtensions.video
             or self.extension in SupportedExtensions.audio
@@ -65,7 +68,7 @@ class Format:
                 d |= {"abr": self.quality}
                 d |= {"acodec": self.codec}
 
-        if self.filesize:
+        if self.filesize != 0:
             d |= {"filesize": self.filesize}
 
         return InfoDict(d)
@@ -89,9 +92,9 @@ class Format:
             id=entry["format_id"],
             type=type,
             extension=entry["ext"],
+            codec=codec or "",
             quality=quality or 0,
-            codec=codec,
-            filesize=entry.get("filesize") or None,
+            filesize=entry.get("filesize") or 0,
             _downloader_options=entry.get("downloader_options") or {},
         )
         cls.__post_init__()

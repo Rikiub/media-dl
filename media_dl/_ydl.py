@@ -85,6 +85,10 @@ YTDLP = YoutubeDL(
 )
 """Base YT-DLP instance. Can extract info but not download."""
 
+THUMBNAIL_EXT = frozenset(
+    {"mp3", "mkv", "mka", "ogg", "opus", "flac", "m4a", "mp4", "m4v", "mov"}
+)
+
 
 class SupportedExtensions(frozenset[str], Enum):
     """Sets of file extensions supported by YT-DLP."""
@@ -149,14 +153,12 @@ def format_except_msg(exception: Exception) -> str:
     elif "Read timed out" in msg:
         msg = "Download timeout."
 
-    elif "[Errno -3]" in msg or "Failed to extract any player response" in msg:
+    elif any(msg in s for s in ("[Errno -3]", "Failed to extract any player response")):
         msg = "No internet connection."
 
     # Invalid URL
-    elif (
-        "Unable to download webpage" in msg
-        and "[Errno -2]" in msg
-        or "[Errno -5]" in msg
+    elif "Unable to download webpage" in msg and any(
+        msg in s for s in ("[Errno -2]", "[Errno -5]")
     ):
         msg = "Invalid URL."
 
@@ -176,8 +178,11 @@ def format_except_msg(exception: Exception) -> str:
         msg = "Postprocessing failed. FFmpeg executable not founded."
 
     # General
-    elif "Unable to download" in msg or "Got error" in msg:
+    elif any(msg in s for s in ("Unable to download", "Got error")):
         msg = "Unable to download."
+
+    elif "is only available for registered users" in msg:
+        msg = "Unable to download. Only available for registered users."
 
     # Last parse
     if msg.startswith("ERROR: "):

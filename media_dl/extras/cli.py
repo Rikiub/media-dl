@@ -115,7 +115,7 @@ What format you want request?
         Option(
             "--quality",
             "-q",
-            help="Prefered video/audio quality to try filter.",
+            help="Prefered video/audio quality to filter.",
             rich_help_panel=HelpPanel.file,
             autocompletion=complete_resolution,
             show_default=False,
