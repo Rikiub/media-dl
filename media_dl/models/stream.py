@@ -29,7 +29,7 @@ class Stream(ExtractID):
     def display_name(self) -> str:
         """Get pretty representation of the `Stream` name."""
 
-        if self.uploader and self.title:
+        if self._is_music_site() and self.uploader and self.title:
             return self.uploader + " - " + self.title
         elif self.title:
             return self.title
@@ -41,12 +41,15 @@ class Stream(ExtractID):
         return self.from_url(self.url)
 
     def _is_music_site(self) -> bool:
-        d = self._extra_info
+        for site in MUSIC_SITES:
+            if site in self.url:
+                return True
 
-        if self.url in MUSIC_SITES or (d.get("track") and d.get("artist")):
+        d = self._extra_info
+        if d.get("track") and d.get("artist"):
             return True
-        else:
-            return False
+
+        return False
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Stream:

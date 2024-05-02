@@ -129,11 +129,12 @@ class FormatConfig:
 
             if self.type == "video":
                 if self.convert:
+                    opts |= {"merge_output_format": self.convert}
                     postprocessors.append(
                         {
-                            "key": "FFmpegVideoConvertor",
-                            "preferedformat": self.format,
-                        }
+                            "key": "FFmpegVideoRemuxer",
+                            "preferedformat": self.convert,
+                        },
                     )
             elif self.type == "audio":
                 postprocessors.append(

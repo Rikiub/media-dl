@@ -11,7 +11,7 @@ from rich.progress import (
 )
 
 
-class _CounterProgress:
+class CounterProgress:
     def __init__(self, total: int = 1, disable: bool = False) -> None:
         self.disable = disable
 
@@ -40,7 +40,7 @@ class DownloadProgress(Progress):
     """Start and render progress bar."""
 
     def __init__(self, count_total: int = 1, disable: bool = False) -> None:
-        self.counter = _CounterProgress(total=count_total, disable=disable)
+        self.counter = CounterProgress(total=count_total, disable=disable)
         super().__init__(
             TextColumn(
                 "{task.description}",

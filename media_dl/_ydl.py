@@ -26,6 +26,11 @@ def clean_tempdir():
 atexit.register(clean_tempdir)
 
 
+# YTDLP Types
+InfoDict = NewType("InfoDict", dict[str, Any])
+FORMAT_TYPE = Literal["video", "audio"]
+MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
+
 # YTDLP Base
 _supress_logger = logging.getLogger("YoutubeDL")
 _supress_logger.disabled = True
@@ -39,7 +44,7 @@ OPTS_BASE = {
     "color": {"stderr": "no_color", "stdout": "no_color"},
 }
 
-POST_METAPARSER = {
+POST_MUSIC = {
     "key": "MetadataParser",
     "when": "pre_process",
     "actions": [
@@ -71,23 +76,15 @@ POST_METAPARSER = {
     ],
 }
 
-FORMAT_TYPE = Literal["video", "audio"]
-MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
-InfoDict = NewType("InfoDict", dict[str, Any])
-
 YTDLP = YoutubeDL(
     OPTS_BASE
     | {
         "skip_download": True,
         "extract_flat": "in_playlist",
-        "postprocessors": [POST_METAPARSER],
+        "postprocessors": [POST_MUSIC],
     }
 )
 """Base YT-DLP instance. Can extract info but not download."""
-
-THUMBNAIL_EXT = frozenset(
-    {"mp3", "mkv", "mka", "ogg", "opus", "flac", "m4a", "mp4", "m4v", "mov"}
-)
 
 
 class SupportedExtensions(frozenset[str], Enum):
@@ -95,6 +92,9 @@ class SupportedExtensions(frozenset[str], Enum):
 
     video = frozenset(MEDIA_EXTENSIONS.video)
     audio = frozenset(MEDIA_EXTENSIONS.audio)
+    thumbnail = frozenset(
+        {"mp3", "mkv", "mka", "ogg", "opus", "flac", "m4a", "mp4", "m4v", "mov"}
+    )
 
 
 # Helpers
@@ -151,7 +151,7 @@ def format_except_msg(exception: Exception) -> str:
         pass
 
     elif "Read timed out" in msg:
-        msg = "Download timeout."
+        msg = "Read timed out."
 
     elif any(msg in s for s in ("[Errno -3]", "Failed to extract any player response")):
         msg = "No internet connection."
@@ -182,7 +182,7 @@ def format_except_msg(exception: Exception) -> str:
         msg = "Unable to download."
 
     elif "is only available for registered users" in msg:
-        msg = "Unable to download. Only available for registered users."
+        msg = "Only available for registered users."
 
     # Last parse
     if msg.startswith("ERROR: "):

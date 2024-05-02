@@ -1,22 +1,3 @@
-"""
-Info extractor and serializer of queries.
-
-To use, should be imported as module.
->>> from media_dl import extractor
-
-And then, you can perform various actions:
-
-For URLs:
->>> url = "https://www.youtube.com/watch?v=BaW_jenozKc"
->>> extractor.extract_url(url)
-
-For searching:
->>> extractor.extract_search("Sub Urban - Cradles", provider="ytmusic")
-
-For helpers:
->>> extractor.serializer.info_is_playlist(info)
-"""
-
 from media_dl.extractor import serializer, raw
 from media_dl.extractor.raw import SEARCH_PROVIDER
 from media_dl.models import Stream, Playlist
