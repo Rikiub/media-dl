@@ -25,8 +25,3 @@
 - ⚡️ **Multi-thread** to go fast.
 - 🌀 Pretty and fancy **CLI** interface.
 - 🌀 Easy and simple **Python API**.
-
-## Roadmap
-
-- [ ] SponsorBlock support
-- [ ] Authentication-Login
