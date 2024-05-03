@@ -51,19 +51,21 @@ class DownloadFormat:
         else:
             progress = {}
 
-        params = (
-            OPTS_BASE
-            | progress
-            | {"format": self.format.id}
-            | {"outtmpl": tempfile.mktemp(dir=DIR_TEMP) + ".%(ext)s"}
-        )
+        tempname = Path(tempfile.mktemp(dir=DIR_TEMP))
+        params = OPTS_BASE | progress | {"outtmpl": str(tempname) + ".%(ext)s"}
+
+        info_dict = {
+            "extractor": "generic",
+            "extractor_key": "Generic",
+            "title": tempname.stem,
+            "id": tempname.stem,
+            "formats": [self.format._format_dict()],
+            "format_id": self.format.id,
+        }
 
         try:
-            # Download with complete stream info-dict.
             with YoutubeDL(params) as ydl:
-                info = ydl.process_ie_result(
-                    self.format._simple_format_dict(), download=True
-                )
+                info = ydl.process_ie_result(info_dict, download=True)
         except YTDLPDownloadError as err:
             msg = format_except_msg(err)
             raise DownloadError(msg)

@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 from media_dl.extractor import raw
 from media_dl._ydl import InfoDict

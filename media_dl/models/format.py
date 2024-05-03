@@ -5,8 +5,8 @@ from collections.abc import Sequence
 from typing import Any, overload
 import bisect
 
-from media_dl._ydl import FORMAT_TYPE, SupportedExtensions
 from media_dl.models.base import InfoDict
+from media_dl._ydl import FORMAT_TYPE, SupportedExtensions
 
 
 @dataclass(slots=True, frozen=True, order=True)
@@ -48,12 +48,8 @@ class Format:
         else:
             return "?"
 
-    def _simple_format_dict(self) -> InfoDict:
+    def _format_dict(self) -> InfoDict:
         d = {
-            "extractor": "generic",
-            "extractor_key": "Generic",
-            "title": self.id,
-            "id": self.id,
             "format_id": self.id,
             "url": self.url,
             "ext": self.extension,
@@ -67,6 +63,8 @@ class Format:
             case "audio":
                 d |= {"abr": self.quality}
                 d |= {"acodec": self.codec}
+            case _:
+                raise TypeError(self.type)
 
         if self.filesize != 0:
             d |= {"filesize": self.filesize}
@@ -86,6 +84,8 @@ class Format:
             case "audio":
                 quality = entry.get("abr")
                 codec = entry.get("acodec")
+            case _:
+                raise TypeError(type)
 
         cls = cls(
             url=entry["url"],

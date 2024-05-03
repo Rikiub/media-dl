@@ -8,7 +8,7 @@ from strenum import StrEnum
 import media_dl
 from media_dl import MediaError, Playlist
 
-from media_dl.download.config import FILE_REQUEST, VIDEO_RES
+from media_dl.download.config import FILE_FORMAT, VIDEO_RES
 from media_dl.extractor.extr import SEARCH_PROVIDER
 from media_dl.extras.logging import init_logging
 
@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 app = Typer()
 
 APPNAME = "media-dl"
-Format = StrEnum("Format", get_args(FILE_REQUEST))
+Format = StrEnum("Format", get_args(FILE_FORMAT))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
 

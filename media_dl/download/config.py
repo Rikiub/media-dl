@@ -12,7 +12,7 @@ EXT_AUDIO = Literal["m4a", "mp3", "opus"]
 EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
 """Common lossy compression containers formats with thumbnail and metadata support."""
 
-FILE_REQUEST = Literal[FORMAT_TYPE, EXTENSION]
+FILE_FORMAT = Literal[FORMAT_TYPE, EXTENSION]
 VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
 
 
@@ -30,7 +30,7 @@ class FormatConfig:
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
     """
 
-    format: FILE_REQUEST
+    format: FILE_FORMAT
     quality: int | None = None
     output: Path = Path.cwd()
     ffmpeg: Path | None = None
@@ -56,7 +56,7 @@ class FormatConfig:
             return "audio"
 
         else:
-            raise TypeError(self.format, "is invalid. Should be:", FILE_REQUEST)
+            raise TypeError(self.format, "is invalid. Should be:", FILE_FORMAT)
 
     @property
     def convert(self) -> EXTENSION | None:

@@ -16,7 +16,7 @@ from media_dl._ydl import (
 from media_dl.models import ExtractResult, Stream, Playlist
 from media_dl.models.format import Format, FormatList
 
-from media_dl.download.config import FormatConfig, FILE_REQUEST
+from media_dl.download.config import FormatConfig, FILE_FORMAT
 from media_dl.download.worker import DownloadFormat
 from media_dl.download.progress import DownloadProgress
 
@@ -51,7 +51,7 @@ class Downloader:
 
     def __init__(
         self,
-        format: FILE_REQUEST = "video",
+        format: FILE_FORMAT = "video",
         quality: int | None = None,
         output: StrPath = Path.cwd(),
         ffmpeg: StrPath | None = None,
@@ -147,11 +147,6 @@ class Downloader:
             ValueError: Provided `Format` wasn't founded in `Stream`.
         """
 
-        # On progress callback helper
-        send_callback: Callable[[PROGRESS_STATUS, int], None] = lambda status, total: (
-            on_progress(status or "downloading", total, total) if on_progress else None
-        )
-
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
         )
@@ -169,20 +164,22 @@ class Downloader:
 
             # Final filename
             output_name = f"{stream.uploader + " - " if stream.uploader else ""}{stream.title}"
+            duplicate_temp = Path(config.output / f"{output_name}.{config.convert}")
 
             # SKIP MODE
-            if path := self._check_file_duplicate(output_name):
+            if duplicate_temp.exists():
                 self._progress.update(
                     task_id, status="Skipped", completed=100, total=100
                 )
-                send_callback("finished", 0)
+                if on_progress:
+                    on_progress("finished", 0, 0)
 
                 log.info(
-                    'Skipped: "%s" (File already exists as "%s").',
+                    'Skipped: "%s" (Exists as "%s").',
                     stream.display_name,
-                    path.suffix[1:],
+                    duplicate_temp.suffix[1:],
                 )
-                return path
+                return duplicate_temp
 
             # DOWNLOAD MODE
             else:
@@ -246,7 +243,8 @@ class Downloader:
                 # STATUS: Postprocessing
                 self._progress.update(task_id, status="Processing")
                 log.debug('Postprocess "%s".', stream.id)
-                send_callback("processing", total_filesize)
+                if on_progress:
+                    on_progress("processing", total_filesize, total_filesize)
 
                 # Download resources
                 download_thumbnail(output_name, stream._extra_info)
@@ -258,6 +256,14 @@ class Downloader:
                 )
                 output_name = output_name + filepath.suffix
 
+                if self.config.convert and format.extension != filepath.suffix[1:]:
+                    log.debug(
+                        'Converted "%s" from "%s" to "%s"',
+                        stream.id,
+                        format.extension,
+                        filepath.suffix[1:],
+                    )
+
                 # Move file
                 filepath = filepath.rename(filepath.parent / output_name)
                 filepath = shutil.move(filepath, config.output / output_name)
@@ -265,7 +271,8 @@ class Downloader:
                 # STATUS: Finish
                 self._progress.update(task_id, status="Finished")
                 log.info('Finished: "%s".', stream.display_name)
-                send_callback("finished", total_filesize)
+                if on_progress:
+                    on_progress("finished", total_filesize, total_filesize)
 
                 return filepath
         except MediaError as err:
@@ -313,25 +320,3 @@ class Downloader:
             return f.get_closest_quality(config.quality)
         else:
             return final[-1]
-
-    def _check_file_duplicate(self, filename: str) -> Path | None:
-        """Check if file is duplicated in output directory.
-
-        Returns:
-            Path to duplicated file, if not exist, return None.
-        """
-
-        matches = list(self.config.output.glob(filename + ".*"))
-
-        if extension := self.config.convert:
-            paths = [path for path in matches if path.suffix[1:] == extension]
-        else:
-            paths = [
-                path
-                for path in matches
-                if path.stem == filename
-                and path.suffix[1:] in SupportedExtensions.video
-                or path.suffix[1:] in SupportedExtensions.audio
-            ]
-
-        return paths[0] if paths else None

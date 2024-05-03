@@ -3,29 +3,9 @@
 from typing import cast
 
 from media_dl._ydl import InfoDict, YTDLP
-from media_dl.models import Playlist, Stream
 
 
-def info_to_dataclass(info: InfoDict) -> Stream | Playlist:
-    """Serialize information from a info dict.
-
-    Returns:
-        - Single `Stream`.
-        - `Playlist` with multiple `Streams`.
-
-    Raises:
-        TypeError: Not is a valid info dict.
-    """
-
-    if info_is_playlist(info):
-        return Playlist._from_info(info)
-    elif info_is_stream(info):
-        return Stream._from_info(info)
-    else:
-        raise TypeError(info, "not is a valid info dict.")
-
-
-def sanitize_info(info: InfoDict) -> InfoDict:
+def sanitize(info: InfoDict) -> InfoDict:
     """Remove unnecesary and risky information from info dict."""
 
     info = cast(InfoDict, YTDLP.sanitize_info(info))
@@ -44,19 +24,19 @@ def sanitize_info(info: InfoDict) -> InfoDict:
     return info
 
 
-def info_is_playlist(info: InfoDict) -> bool:
+def is_playlist(info: InfoDict) -> bool:
     """Check if info is a playlist."""
 
     return True if info.get("_type") == "playlist" or info.get("entries") else False
 
 
-def info_is_stream(info: InfoDict) -> bool:
+def is_stream(info: InfoDict) -> bool:
     """Check if info is a single Stream."""
 
     return True if info.get("formats") else False
 
 
-def info_extract_thumbnail(info: InfoDict) -> str:
+def extract_thumbnail(info: InfoDict) -> str:
     """Extract thumbnail from a stream info dict."""
 
     if t := info.get("thumbnail"):
@@ -67,7 +47,7 @@ def info_extract_thumbnail(info: InfoDict) -> str:
         return ""
 
 
-def info_extract_meta(info: InfoDict) -> tuple[str, str, str]:
+def extract_meta(info: InfoDict) -> tuple[str, str, str]:
     """Helper for extract essential information from info dict.
 
     Returns:
