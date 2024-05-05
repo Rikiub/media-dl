@@ -45,7 +45,11 @@ class FormatConfig:
 
     @property
     def type(self) -> FORMAT_TYPE:
-        """Config generic type."""
+        """Determine general type.
+
+        Returns:
+            "video" or "audio".
+        """
 
         if self.format in get_args(FORMAT_TYPE):
             return cast(FORMAT_TYPE, self.format)
@@ -63,7 +67,7 @@ class FormatConfig:
         """Check if config would convert the files.
 
         Returns:
-            If could convert, will return a file extension string. Else return `None`.
+            If could convert, returns a file extension. Else return `None`.
         """
 
         return (

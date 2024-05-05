@@ -1,16 +1,19 @@
+try:
+    from typer import Typer, Argument, Option, BadParameter
+    from strenum import StrEnum
+except:
+    raise ImportError("Typer is required to use CLI features.")
+
 from typing import Annotated, Generator, Literal, get_args, Optional
 from pathlib import Path
 import logging
-
-from typer import Typer, Argument, Option, BadParameter
-from strenum import StrEnum
 
 import media_dl
 from media_dl import MediaError, Playlist
 
 from media_dl.download.config import FILE_FORMAT, VIDEO_RES
 from media_dl.extractor.extr import SEARCH_PROVIDER
-from media_dl.extras.logging import init_logging
+from media_dl.logging import init_logging
 
 log = logging.getLogger(__name__)
 
@@ -195,7 +198,7 @@ What format you want request?
             output=output,
             ffmpeg=ffmpeg,
             threads=threads,
-            render_progress=quiet,
+            show_progress=not quiet,
         )
     except FileNotFoundError as err:
         raise BadParameter(str(err))
@@ -217,8 +220,7 @@ What format you want request?
             if isinstance(result, Playlist):
                 log.info('🔎 Playlist Name: "%s".', result.title)
 
-            with downloader as d:
-                d.download_all(result)
+            downloader.download_all(result)
 
             log.info("✅ Download Finished.")
         except MediaError as err:

@@ -5,8 +5,8 @@ from collections.abc import Sequence
 from typing import Any, overload
 import bisect
 
-from media_dl.models.base import InfoDict
-from media_dl._ydl import FORMAT_TYPE, SupportedExtensions
+from media_dl.models.base import GenericList
+from media_dl._ydl import InfoDict, FORMAT_TYPE, SupportedExtensions
 
 
 @dataclass(slots=True, frozen=True, order=True)
@@ -72,7 +72,7 @@ class Format:
         return InfoDict(d)
 
     @classmethod
-    def _from_format_entry(cls, entry: dict[str, Any]) -> Format:
+    def _from_info(cls, entry: dict[str, Any]) -> Format:
         type: FORMAT_TYPE = (
             "audio" if entry.get("resolution", "") == "audio only" else "video"
         )
@@ -101,11 +101,8 @@ class Format:
         return cls
 
 
-class FormatList(Sequence[Format]):
+class FormatList(GenericList):
     """List of formats which can be filtered."""
-
-    def __init__(self, formats: list[Format] = []) -> None:
-        self._list = formats
 
     def type(self) -> FORMAT_TYPE:
         """
@@ -202,24 +199,11 @@ class FormatList(Sequence[Format]):
 
         for format in info.get("formats") or {}:
             try:
-                formats.append(Format._from_format_entry(format))
+                formats.append(Format._from_info(format))
             except TypeError:
                 continue
 
         return FormatList(formats)
-
-    def __rich_repr__(self):
-        yield self._list
-
-    def __repr__(self) -> str:
-        return self._list.__repr__()
-
-    def __bool__(self):
-        return True if self._list else False
-
-    def __iter__(self):
-        for f in self._list:
-            yield f
 
     def __contains__(self, other) -> bool:
         if isinstance(other, Format):
@@ -231,9 +215,6 @@ class FormatList(Sequence[Format]):
         else:
             return False
 
-    def __len__(self) -> int:
-        return len(self._list)
-
     @overload
     def __getitem__(self, index: int) -> Format: ...
 
@@ -241,9 +222,9 @@ class FormatList(Sequence[Format]):
     def __getitem__(self, index: slice) -> FormatList: ...
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            return FormatList(self._list[index])
-        elif isinstance(index, int):
+        if isinstance(index, int):
             return self._list[index]
+        elif isinstance(index, slice):
+            return FormatList(self._list[index])
         else:
             raise TypeError(index)

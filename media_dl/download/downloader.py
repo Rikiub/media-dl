@@ -7,13 +7,10 @@ import shutil
 import time
 
 from media_dl.exceptions import MediaError
-from media_dl._ydl import (
-    SupportedExtensions,
-    run_postproces,
-    download_thumbnail,
-    download_subtitle,
-)
-from media_dl.models import ExtractResult, Stream, Playlist
+from media_dl._ydl import run_postproces, download_thumbnail, download_subtitle
+
+from media_dl.models import ExtractResult, Playlist, LazyStreams
+from media_dl.models.stream import Stream, update_stream
 from media_dl.models.format import Format, FormatList
 
 from media_dl.download.config import FormatConfig, FILE_FORMAT
@@ -44,6 +41,8 @@ class Downloader:
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
         metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
+        threads: Maximum processes to execute.
+        show_progress: Choice if render download progress.
 
     Raises:
         FileNotFoundError: `ffmpeg` path not is a FFmpeg executable.
@@ -57,7 +56,7 @@ class Downloader:
         ffmpeg: StrPath | None = None,
         metadata: bool = True,
         threads: int = 4,
-        render_progress: bool = False,
+        show_progress: bool = True,
     ):
         self.config = FormatConfig(
             format=format,
@@ -66,23 +65,8 @@ class Downloader:
             ffmpeg=Path(ffmpeg) if ffmpeg else None,
             metadata=metadata,
         )
-        self.render_progress = render_progress
-        self.threads = threads
-
-        self._progress = DownloadProgress(disable=self.render_progress)
-
-    def __enter__(self):
-        self.start_progress()
-        return self
-
-    def __exit__(self, a, b, c):
-        self.stop_progress()
-
-    def start_progress(self):
-        self._progress.start()
-
-    def stop_progress(self):
-        self._progress.stop()
+        self._threads = threads
+        self._progress = DownloadProgress(disable=not show_progress)
 
     def download_all(self, media: ExtractResult) -> list[Path]:
         """Download any result.
@@ -102,35 +86,39 @@ class Downloader:
         log.debug("Founded %s entries.", len(streams))
         self._progress.counter.reset(len(streams))
 
-        with cf.ThreadPoolExecutor(self.threads) as executor:
-            futures = [executor.submit(self.download, task) for task in streams]
+        with self._progress:
+            with cf.ThreadPoolExecutor(self._threads) as executor:
+                futures = [executor.submit(self._download_work, task) for task in streams]
 
-            success = 0
-            errors = 0
+                success = 0
+                errors = 0
 
-            try:
-                for ft in cf.as_completed(futures):
-                    try:
-                        paths.append(ft.result())
-                        success += 1
-                    except MediaError:
-                        errors += 1
-            except (cf.CancelledError, KeyboardInterrupt):
-                log.warning("❗ Canceling downloads... (press Ctrl+C again to force)")
-                raise KeyboardInterrupt()
-            finally:
-                executor.shutdown(wait=True, cancel_futures=True)
+                try:
+                    for ft in cf.as_completed(futures):
+                        try:
+                            paths.append(ft.result())
+                            success += 1
+                        except MediaError:
+                            errors += 1
+                except (cf.CancelledError, KeyboardInterrupt):
+                    log.warning("❗ Canceling downloads... (press Ctrl+C again to force)")
+                    raise KeyboardInterrupt()
+                finally:
+                    executor.shutdown(wait=True, cancel_futures=True)
 
-                log.debug("%s of %s streams completed.", success, len(streams))
-                log.debug("%s errors catched.", errors)
-
+                    log.debug(
+                        "%s of %s streams completed. %s errors.",
+                        success,
+                        len(streams),
+                        errors,
+                    )
         return paths
 
     def download(
         self,
         stream: Stream,
         format: Format | None = None,
-        on_progress: ProgressCallback | None = None,
+        on_progress: ProgressCallback | None = None
     ) -> Path:
         """Download a single `Stream` result.
 
@@ -147,134 +135,104 @@ class Downloader:
             ValueError: Provided `Format` wasn't founded in `Stream`.
         """
 
+        with self._progress:
+            self._progress.counter.reset(total=1)
+            return self._download_work(stream, format, on_progress)
+
+    def _download_work(
+        self,
+        stream: Stream,
+        format: Format | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> Path:
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
         )
 
-        config = self.config
-        config.output.mkdir(parents=True, exist_ok=True)
-
         try:
             # Resolve stream
-            if not stream.formats:
-                stream = stream.update()
+            if not stream._is_complete():
+                stream = update_stream(stream)
                 self._progress.update(task_id, description=stream.display_name)
 
-            log.debug('Stream with ID: "%s".', stream.id)
+            log.debug('"%s": Processing Stream.', stream.id)
+
+            format, download_config = self._resolve_format(stream, format)
+            self.config.output.mkdir(parents=True, exist_ok=True)
+
+            # STATUS: Download
+            self._progress.update(task_id, status="Downloading")
+            log.debug(
+                '"%s": Download format "%s" (%s %s) (%s).',
+                stream.id,
+                format.id,
+                format.extension,
+                format.display_quality,
+                format.type,
+            )
+
+            callbacks = [
+                lambda completed, total: self._progress.update(
+                    task_id, completed=completed, total=total
+                )
+            ]
+            if on_progress:
+                callbacks.append(
+                    lambda completed, total: on_progress(
+                        "downloading", completed, total
+                    )
+                )
+
+            # Run download
+            worker = DownloadFormat(format=format, callbacks=callbacks)
+            filepath = worker.start()
+            total_filesize = worker._total_filesize
+
+            # STATUS: Postprocess
+            if on_progress:
+                on_progress("processing", total_filesize, total_filesize)
+            self._progress.update(task_id, status="Processing")
+            log.debug('"%s": Postprocessing downloaded file.', stream.id)
 
             # Final filename
             output_name = f"{stream.uploader + " - " if stream.uploader else ""}{stream.title}"
-            duplicate_temp = Path(config.output / f"{output_name}.{config.convert}")
 
-            # SKIP MODE
-            if duplicate_temp.exists():
-                self._progress.update(
-                    task_id, status="Skipped", completed=100, total=100
-                )
-                if on_progress:
-                    on_progress("finished", 0, 0)
+            # Download resources
+            if download_thumbnail(output_name, stream._extra_info):
+                log.debug('"%s": Thumbnail founded.', stream.id)
+            if download_subtitle(output_name, stream._extra_info):
+                log.debug('"%s": Subtitles founded.', stream.id)
 
-                log.info(
-                    'Skipped: "%s" (Exists as "%s").',
-                    stream.display_name,
-                    duplicate_temp.suffix[1:],
-                )
-                return duplicate_temp
+            # Run postprocessing
+            filepath = run_postproces(
+                filepath, stream._extra_info, download_config._gen_opts()
+            )
+            log.debug(
+                '"%s": Postprocessing finished, saved as "%s".',
+                stream.id,
+                filepath.suffix[1:],
+            )
 
-            # DOWNLOAD MODE
+            # Final filename with suffix
+            output_name = output_name + filepath.suffix
+
+            # STATUS: Finish
+            # Check if file is duplicate
+            if (final_path := Path(self.config.output, output_name)) and final_path.exists():
+                self._progress.update(task_id, status="Skipped")
+                log.info('Skipped: "%s" (Exists as "%s").', stream.display_name, filepath.suffix[1:])
+            # Move file
             else:
-                if format:
-                    if not format in stream.formats:
-                        raise ValueError(
-                            f"'{format.id}' format ID not founded in Stream."
-                        )
+                final_path = filepath.rename(filepath.parent / output_name)
+                final_path = shutil.move(final_path, self.config.output / output_name)
 
-                    if not config.convert:
-                        config.format = format.type
-                else:
-                    if not config.convert and stream._is_music_site():
-                        log.debug(
-                            'Music site in "%s". Change config to "audio".',
-                            stream.id,
-                        )
-                        config.format = "audio"
-
-                    format = self._extract_best_format(stream.formats, config)
-
-                    if not config.convert and config.type != format.type:
-                        log.debug(
-                            'Format "%s" and config "%s" missmatch in "%s". Change config to "%s".',
-                            format.type,
-                            config.type,
-                            stream.id,
-                            format.type,
-                        )
-                        config.format = format.type
-
-                # STATUS: Download
-                self._progress.update(task_id, status="Downloading")
-
-                # Run download
-                log.debug(
-                    'Download "%s" with format: %s (%s %s) (%s)',
-                    stream.id,
-                    format.id,
-                    format.extension,
-                    format.display_quality,
-                    format.type,
-                )
-
-                callbacks = [
-                    lambda completed, total: self._progress.update(
-                        task_id, completed=completed, total=total
-                    )
-                ]
-                if on_progress:
-                    callbacks.append(
-                        lambda completed, total: on_progress(
-                            "downloading", completed, total
-                        )
-                    )
-
-                worker = DownloadFormat(format=format, callbacks=callbacks)
-                filepath = worker.start()
-                total_filesize = worker._total_filesize
-
-                # STATUS: Postprocessing
-                self._progress.update(task_id, status="Processing")
-                log.debug('Postprocess "%s".', stream.id)
-                if on_progress:
-                    on_progress("processing", total_filesize, total_filesize)
-
-                # Download resources
-                download_thumbnail(output_name, stream._extra_info)
-                download_subtitle(output_name, stream._extra_info)
-
-                # Run postprocessing
-                filepath = run_postproces(
-                    filepath, stream._extra_info, config._gen_opts()
-                )
-                output_name = output_name + filepath.suffix
-
-                if self.config.convert and format.extension != filepath.suffix[1:]:
-                    log.debug(
-                        'Converted "%s" from "%s" to "%s"',
-                        stream.id,
-                        format.extension,
-                        filepath.suffix[1:],
-                    )
-
-                # Move file
-                filepath = filepath.rename(filepath.parent / output_name)
-                filepath = shutil.move(filepath, config.output / output_name)
-
-                # STATUS: Finish
                 self._progress.update(task_id, status="Finished")
                 log.info('Finished: "%s".', stream.display_name)
-                if on_progress:
-                    on_progress("finished", total_filesize, total_filesize)
 
-                return filepath
+            if on_progress:
+                on_progress("finished", total_filesize, total_filesize)
+
+            return filepath
         except MediaError as err:
             log.error('Failed to download "%s": %s', stream.display_name, str(err))
             self._progress.update(task_id, status="Error")
@@ -288,14 +246,47 @@ class Downloader:
         match media:
             case Stream():
                 streams = [media]
+            case LazyStreams():
+                streams = media._list
             case Playlist():
-                streams = media.streams
-            case list():
-                streams = media
+                streams = media.streams._list
             case _:
                 raise TypeError(media)
 
         return streams
+
+    def _resolve_format(
+        self, stream: Stream, format: Format | None = None
+    ) -> tuple[Format, FormatConfig]:
+        config = self.config
+
+        if format:
+            if not format in stream.formats:
+                raise ValueError(f"'{format.id}' format ID not founded in Stream.")
+
+            if not config.convert:
+                config.format = format.type
+        else:
+            if not config.convert and stream._is_music_site():
+                log.debug(
+                    '"%s": Detected music site, change config to "audio".',
+                    stream.id,
+                )
+                config.format = "audio"
+
+            format = self._extract_best_format(stream.formats, config)
+
+            if not config.convert and config.type != format.type:
+                log.debug(
+                    '"%s": Format "%s" and config "%s" missmatch, change config to "%s".',
+                    stream.id,
+                    format.type,
+                    config.type,
+                    format.type,
+                )
+                config.format = format.type
+
+        return format, config
 
     def _extract_best_format(
         self, formats: FormatList, custom_config: FormatConfig | None = None

@@ -1,7 +1,5 @@
 import logging
 
-from rich.logging import RichHandler
-
 
 class ColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -35,8 +33,9 @@ def init_logging(level: int | str):
     else:
         verbose = True
 
-    msg_format = "%(message)s"
+    from rich.logging import RichHandler
 
+    msg_format = "%(message)s"
     rich_handler = RichHandler(
         level=log_level,
         show_level=verbose,

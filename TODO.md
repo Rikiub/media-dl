@@ -1,2 +1,0 @@
-- [ ] SponsorBlock support
-- [ ] Authentication-Login

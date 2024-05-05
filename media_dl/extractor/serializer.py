@@ -5,6 +5,18 @@ from typing import cast
 from media_dl._ydl import InfoDict, YTDLP
 
 
+def is_playlist(info: InfoDict) -> bool:
+    """Check if info is a playlist."""
+
+    return True if info.get("_type") == "playlist" or info.get("entries") else False
+
+
+def is_stream(info: InfoDict) -> bool:
+    """Check if info is a single Stream."""
+
+    return True if info.get("formats") else False
+
+
 def sanitize(info: InfoDict) -> InfoDict:
     """Remove unnecesary and risky information from info dict."""
 
@@ -22,18 +34,6 @@ def sanitize(info: InfoDict) -> InfoDict:
         info.pop(key, None)
 
     return info
-
-
-def is_playlist(info: InfoDict) -> bool:
-    """Check if info is a playlist."""
-
-    return True if info.get("_type") == "playlist" or info.get("entries") else False
-
-
-def is_stream(info: InfoDict) -> bool:
-    """Check if info is a single Stream."""
-
-    return True if info.get("formats") else False
 
 
 def extract_thumbnail(info: InfoDict) -> str:

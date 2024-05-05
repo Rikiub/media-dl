@@ -29,11 +29,11 @@ class DownloadFormat:
         format: Format,
         callbacks: list[DownloadCallback] | None = None,
     ):
+        self.format = format
+
+        self._callbacks = callbacks
         self._downloaded = 0
         self._total_filesize = 0
-        self._callbacks = callbacks
-
-        self.format = format
 
     def start(self) -> Path:
         """Start download."""
@@ -51,14 +51,14 @@ class DownloadFormat:
         else:
             progress = {}
 
-        tempname = Path(tempfile.mktemp(dir=DIR_TEMP))
-        params = OPTS_BASE | progress | {"outtmpl": str(tempname) + ".%(ext)s"}
+        temp_path = Path(tempfile.mktemp(dir=DIR_TEMP))
+        params = OPTS_BASE | progress | {"outtmpl": str(temp_path) + ".%(ext)s"}
 
         info_dict = {
             "extractor": "generic",
             "extractor_key": "Generic",
-            "title": tempname.stem,
-            "id": tempname.stem,
+            "title": temp_path.stem,
+            "id": temp_path.stem,
             "formats": [self.format._format_dict()],
             "format_id": self.format.id,
         }

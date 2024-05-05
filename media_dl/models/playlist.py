@@ -2,30 +2,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from media_dl.extractor import info_helper
+from media_dl._ydl import InfoDict
+from media_dl.extractor import serializer
 from media_dl.models.base import ExtractID
-from media_dl.models.stream import Stream, InfoDict
+from media_dl.models.stream import LazyStreams
 
 
 @dataclass(slots=True, frozen=True)
 class Playlist(ExtractID):
-    """Stream list with basic metadata. Access them with attribute `streams`."""
+    """Stream list with basic metadata."""
 
-    thumbnail: str
-    title: str
-    streams: list[Stream]
+    streams: LazyStreams
+    title: str = ""
+    thumbnail: str = ""
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Playlist:
-        if not info_helper.is_playlist(info):
+        if not serializer.is_playlist(info):
             raise TypeError("Unable to serialize dict. Not is a playlist.")
 
         return cls(
-            *info_helper.extract_meta(info),
-            thumbnail=info_helper.extract_thumbnail(info),
+            *serializer.extract_meta(info),
+            streams=LazyStreams._from_info(info),
             title=info.get("title") or "",
-            streams=[Stream._from_info(entry) for entry in info["entries"]],
+            thumbnail=serializer.extract_thumbnail(info),
         )
-
-    def __len__(self):
-        return len(self.streams)

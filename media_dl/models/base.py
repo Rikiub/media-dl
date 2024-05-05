@@ -1,24 +1,32 @@
-from abc import ABC, abstractmethod
+from collections.abc import Sequence, Iterable
 from dataclasses import dataclass
 
-from media_dl.extractor import raw
-from media_dl._ydl import InfoDict
 
-
-@dataclass(slots=True, frozen=True, order=True)
-class ExtractID(ABC):
+@dataclass(slots=True, frozen=True)
+class ExtractID:
     """Base identifier for media objects."""
 
     extractor: str
     id: str
     url: str
 
-    @classmethod
-    def from_url(cls, url: str):
-        info = raw.from_url(url)
-        return cls._from_info(info)
 
-    @classmethod
-    @abstractmethod
-    def _from_info(cls, info: InfoDict):
-        raise NotImplementedError()
+class GenericList(Sequence):
+    def __init__(self, iterable: Iterable) -> None:
+        self._list = list(iterable)
+
+    def __iter__(self):
+        for f in self._list:
+            yield f
+
+    def __bool__(self) -> bool:
+        return True if self._list else False
+
+    def __len__(self) -> int:
+        return self._list.__len__()
+
+    def __repr__(self) -> str:
+        return self._list.__repr__()
+
+    def __rich_repr__(self):
+        yield self._list

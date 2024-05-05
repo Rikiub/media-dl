@@ -14,18 +14,14 @@ log = logging.getLogger(__name__)
 SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
 
 
-def from_url(url: str) -> InfoDict:
+def extract_url(url: str) -> InfoDict:
     """Extract info from URL."""
 
     log.debug("Extract URL: %s", url)
-
-    if info := _fetch_query(url):
-        return info
-    else:
-        raise ExtractError("Unable to extract.", url)
+    return _fetch_query(url)
 
 
-def from_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
+def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
     """Extract info from search provider."""
 
     search_limit = 20
@@ -41,14 +37,10 @@ def from_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
             raise ValueError(provider, "is invalid. Must be:", SEARCH_PROVIDER)
 
     log.debug('Search from "%s": "%s".', provider, query)
-
-    if info := _fetch_query(prov + query):
-        return info
-    else:
-        return InfoDict({})
+    return _fetch_query(prov + query)
 
 
-def _fetch_query(query: str) -> InfoDict | None:
+def _fetch_query(query: str) -> InfoDict:
     """Base info dict extractor."""
 
     try:
@@ -60,12 +52,11 @@ def _fetch_query(query: str) -> InfoDict | None:
     if info:
         info = cast(InfoDict, info)
     else:
-        return None
+        raise ExtractError('"%s" return nothing.')
 
     # Some extractors need redirect to "real URL" (Example: Pinterest)
     # In this case, we need do another request.
     if info["extractor_key"] == "Generic" and info["url"] != query:
-        log.debug("Re-fetching %s", query)
         return _fetch_query(info["url"])
 
     # Validate playlist
@@ -76,12 +67,11 @@ def _fetch_query(query: str) -> InfoDict | None:
                 del entries[index]
 
         if not entries:
-            log.debug("Not founded valid entries in %s.", query)
-            return None
+            raise ExtractError('"%s" is a invalid playlist.')
 
         info["entries"] = entries
     # Check if is single item
     elif not info.get("formats"):
-        return None
+        raise ExtractError('"%s" not have formats to download.')
 
     return info
