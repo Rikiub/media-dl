@@ -16,6 +16,7 @@ from media_dl._ydl import (
     parse_name_template,
 )
 
+from media_dl.extractor.raw import _PARAMS
 from media_dl.models import ExtractResult, Playlist, LazyStreams
 from media_dl.models.format import Format, FormatList
 from media_dl.models.stream import Stream
@@ -217,12 +218,14 @@ class Downloader:
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
+            params = download_config._gen_opts()
+            if stream._is_music_site():
+                params["postprocessors"].insert(0, POST_MUSIC)
+
             downloaded_file = run_postproces(
                 file=downloaded_file,
                 info=stream._extra_info,
-                params=download_config._gen_opts(
-                    [POST_MUSIC] if stream._is_music_site() else []
-                ),
+                params=params,
             )
             log.debug(
                 '"%s": Postprocessing finished, saved as "%s".',

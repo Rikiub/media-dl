@@ -72,7 +72,7 @@ class YTDLP(YoutubeDL):
 
 POST_MUSIC = {
     "key": "MetadataParser",
-    "when": "pre_process",
+    "when": "post_process",
     "actions": [
         (
             MetadataParserPP.interpretter,

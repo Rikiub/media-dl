@@ -101,12 +101,10 @@ class FormatConfig:
         else:
             return False
 
-    def _gen_opts(self, extra_posts: list[dict] = []) -> dict[str, Any]:
+    def _gen_opts(self) -> dict[str, Any]:
         overwrite = False
         opts = {"overwrites": overwrite, "retries": 1, "fragment_retries": 1}
-
         postprocessors = []
-        postprocessors.extend(extra_posts)
 
         if self.convert:
             opts |= {"final_ext": self.format}
