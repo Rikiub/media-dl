@@ -4,8 +4,7 @@ from dataclasses import dataclass, field
 from typing import overload
 
 from media_dl._ydl import MUSIC_SITES, InfoDict
-from media_dl.extractor import serializer, raw
-
+from media_dl.extractor import raw, serializer
 from media_dl.models.base import ExtractID, GenericList
 from media_dl.models.format import FormatList
 

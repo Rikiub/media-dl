@@ -1,4 +1,4 @@
-from collections.abc import Sequence, Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 

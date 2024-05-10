@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import bisect
 from dataclasses import dataclass, field
 from typing import Any, overload
-import bisect
 
+from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
 from media_dl.models.base import GenericList
-from media_dl._ydl import InfoDict, FORMAT_TYPE, SupportedExtensions
 
 
 @dataclass(slots=True, frozen=True, order=True)

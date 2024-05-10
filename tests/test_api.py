@@ -2,7 +2,6 @@ from tempfile import TemporaryDirectory
 
 import media_dl
 
-
 TEMPDIR = TemporaryDirectory()
 
 

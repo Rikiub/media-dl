@@ -1,17 +1,16 @@
 """yt-dlp parameters, functions and constans used around the project."""
 
-from typing import NewType, Any, Literal, cast
-from tempfile import mkdtemp
-from pathlib import Path
-from enum import Enum
-import logging
 import atexit
+import logging
 import shutil
+from enum import Enum
+from pathlib import Path
+from tempfile import mkdtemp
+from typing import Any, Literal, NewType, cast
 
 from yt_dlp import YoutubeDL
-from yt_dlp.utils import MEDIA_EXTENSIONS
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
-
+from yt_dlp.utils import MEDIA_EXTENSIONS
 
 # Directories
 DIR_TEMP = Path(mkdtemp(prefix="ydl-"))

@@ -1,12 +1,12 @@
 """Raw info extractor."""
 
-from typing import cast, Literal
 import logging
+from typing import Literal, cast
 
 from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
-from media_dl._ydl import InfoDict, YTDLP, format_except_message
+from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import ExtractError
 from media_dl.extractor import serializer
 

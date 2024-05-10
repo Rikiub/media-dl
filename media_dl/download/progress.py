@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from rich.console import Group, RenderableType
-from rich.table import Column
 from rich.progress import (
-    MofNCompleteColumn,
-    DownloadColumn,
-    TextColumn,
     BarColumn,
+    DownloadColumn,
+    MofNCompleteColumn,
     Progress,
+    TextColumn,
 )
+from rich.table import Column
 
 
 class CounterProgress:

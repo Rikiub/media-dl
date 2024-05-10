@@ -1,11 +1,10 @@
-from typing import Literal, Any, cast, get_args
-from dataclasses import dataclass, asdict
-from pathlib import Path
-import shutil
 import os
+import shutil
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Literal, cast, get_args
 
 from media_dl._ydl import FORMAT_TYPE, POST_MUSIC
-
 
 EXT_VIDEO = Literal["mp4", "mkv"]
 EXT_AUDIO = Literal["m4a", "mp3", "opus"]

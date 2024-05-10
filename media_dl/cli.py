@@ -1,17 +1,16 @@
 try:
-    from typer import Typer, Argument, Option, BadParameter
-    from strenum import StrEnum
     from rich.status import Status
+    from strenum import StrEnum
+    from typer import Argument, BadParameter, Option, Typer
 except:
     raise ImportError("Typer is required to use CLI features.")
 
-from typing import Annotated, Generator, Literal, get_args, Optional
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import Annotated, Generator, Literal, Optional, get_args
 
 import media_dl
 from media_dl import MediaError, Playlist
-
 from media_dl.download.config import FILE_FORMAT, VIDEO_RES
 from media_dl.extractor.extr import SEARCH_PROVIDER
 from media_dl.logging import init_logging

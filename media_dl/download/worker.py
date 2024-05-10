@@ -1,13 +1,12 @@
-from typing import Callable, cast
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from typing import Callable, cast
 
 from yt_dlp import DownloadError as YTDLP_DownloadError
 
-from media_dl._ydl import YTDLP, DIR_TEMP, format_except_message, InfoDict
+from media_dl._ydl import DIR_TEMP, YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
-
 
 DownloadCallback = Callable[[int, int], None]
 

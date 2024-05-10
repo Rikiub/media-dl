@@ -3,9 +3,8 @@ from tempfile import TemporaryDirectory
 import pytest
 
 import media_dl
-from media_dl.models import Stream, Playlist
 from media_dl.exceptions import ExtractError
-
+from media_dl.models import Playlist, Stream
 
 TEMPDIR = TemporaryDirectory()
 

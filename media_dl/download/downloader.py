@@ -1,28 +1,24 @@
-from typing import Literal, Callable
 import concurrent.futures as cf
-from pathlib import Path
-from os import PathLike
 import logging
 import shutil
 import time
+from os import PathLike
+from pathlib import Path
+from typing import Callable, Literal
 
-
-from media_dl.exceptions import MediaError
 from media_dl._ydl import (
-    run_postproces,
-    download_thumbnail,
     download_subtitles,
+    download_thumbnail,
     parse_name_template,
+    run_postproces,
 )
-
-from media_dl.models import ExtractResult, Playlist, LazyStreams
-from media_dl.models.format import Format, FormatList
-from media_dl.models.stream import Stream
-
+from media_dl.download.config import FILE_FORMAT, FormatConfig
 from media_dl.download.progress import DownloadProgress
 from media_dl.download.worker import DownloadFormat
-from media_dl.download.config import FormatConfig, FILE_FORMAT
-
+from media_dl.exceptions import MediaError
+from media_dl.models import ExtractResult, LazyStreams, Playlist
+from media_dl.models.format import Format, FormatList
+from media_dl.models.stream import Stream
 
 log = logging.getLogger(__name__)
 
