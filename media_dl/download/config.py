@@ -126,17 +126,6 @@ class FormatConfig:
                         "preferedformat": self.convert or "mov>mp4/webm>mkv",
                     },
                 )
-                postprocessors.append(
-                    {
-                        "key": "ModifyChapters",
-                        "force_keyframes": False,
-                        "remove_chapters_patterns": [],
-                        "remove_ranges": [],
-                        "remove_sponsor_segments": {"music_offtopic"},
-                        "sponsorblock_chapter_title": "[SponsorBlock]: "
-                        "%(category_names)l",
-                    }
-                )
             elif self.type == "audio":
                 postprocessors.append(
                     {

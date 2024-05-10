@@ -63,23 +63,6 @@ class YTDLP(YoutubeDL):
             "color": {"stderr": "no_color", "stdout": "no_color"},
             "postprocessors": [
                 {
-                    "key": "SponsorBlock",
-                    "when": "pre_process",
-                    "api": "https://sponsor.ajay.app",
-                    "categories": {
-                        "chapter",
-                        "filler",
-                        "interaction",
-                        "intro",
-                        "music_offtopic",
-                        "outro",
-                        "poi_highlight",
-                        "preview",
-                        "selfpromo",
-                        "sponsor",
-                    },
-                },
-                {
                     "key": "MetadataParser",
                     "when": "pre_process",
                     "actions": [
@@ -140,7 +123,6 @@ def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
     """Postprocess file by params."""
 
     info = YTDLP(params).post_process(filename=str(file), info=info)
-
     return Path(info["filepath"])
 
 
