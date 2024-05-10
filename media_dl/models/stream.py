@@ -39,7 +39,7 @@ class Stream(ExtractID):
             return "?"
 
     def has_missing_info(self) -> bool:
-        if self.formats:
+        if not (self.title and self.duration and self.formats):
             return True
         else:
             return False
@@ -115,7 +115,7 @@ class LazyStreams(GenericList):
     def _resolve_stream(self, index: int) -> Stream:
         stream = self._list[index]
 
-        if not stream._is_complete():
+        if stream.has_missing_info():
             self._list[index] = stream = stream.get_updated()
 
         return stream

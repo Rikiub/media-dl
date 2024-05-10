@@ -6,20 +6,17 @@ import logging
 from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
-from media_dl._ydl import InfoDict, YTDLP, format_except_msg
+from media_dl._ydl import InfoDict, YTDLP, format_except_message
 from media_dl.exceptions import ExtractError
 from media_dl.extractor import serializer
 
 log = logging.getLogger(__name__)
 
 SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
-
-
-def extract_url(url: str) -> InfoDict:
-    """Extract info from URL."""
-
-    log.debug("Extract URL: %s", url)
-    return _fetch_query(url)
+_PARAMS = {
+    "skip_download": True,
+    "extract_flat": "in_playlist",
+}
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
@@ -41,14 +38,21 @@ def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
     return _fetch_query(prov + query)
 
 
+def extract_url(url: str) -> InfoDict:
+    """Extract info from URL."""
+
+    log.debug("Extract URL: %s", url)
+    return _fetch_query(url)
+
+
 def _fetch_query(query: str) -> InfoDict:
     """Base info dict extractor."""
 
     try:
-        info = YTDLP.extract_info(query, download=False)
+        info = YTDLP(_PARAMS).extract_info(query, download=False)
         info = cast(InfoDict, info)
     except (DownloadError, RequestError) as err:
-        msg = format_except_msg(err)
+        msg = format_except_message(err)
         raise ExtractError(msg)
 
     # Some extractors need redirect to "real URL" (Example: Pinterest)

@@ -26,23 +26,49 @@ def clean_tempdir():
 atexit.register(clean_tempdir)
 
 
-# YTDLP Types
-InfoDict = NewType("InfoDict", dict[str, Any])
+# Types
 FORMAT_TYPE = Literal["video", "audio"]
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 
-# YTDLP Base
-_supress_logger = logging.getLogger("YoutubeDL")
-_supress_logger.disabled = True
 
-OPTS_BASE = {
-    "logger": _supress_logger,
-    "ignoreerrors": False,
-    "no_warnings": True,
-    "noprogress": True,
-    "quiet": True,
-    "color": {"stderr": "no_color", "stdout": "no_color"},
-}
+# Base
+InfoDict = NewType("InfoDict", dict[str, Any])
+
+
+class SupportedExtensions(frozenset[str], Enum):
+    """Sets of file extensions supported by YT-DLP."""
+
+    video = frozenset(MEDIA_EXTENSIONS.video)
+    audio = frozenset(MEDIA_EXTENSIONS.audio)
+    thumbnail = frozenset(
+        {"mp3", "mkv", "mka", "ogg", "opus", "flac", "m4a", "mp4", "m4v", "mov"}
+    )
+
+
+class YTDLP(YoutubeDL):
+    """Custom `YoutubeDL` which supress output."""
+
+    _SUPRESS_LOGGER = logging.getLogger("YoutubeDL")
+    _SUPRESS_LOGGER.disabled = True
+
+    def __init__(self, params: dict | None = None):
+        # Default parameters
+        opts = {
+            "logger": self._SUPRESS_LOGGER,
+            "ignoreerrors": False,
+            "consoletitle": False,
+            "no_warnings": True,
+            "noprogress": True,
+            "quiet": True,
+            "color": {"stderr": "no_color", "stdout": "no_color"},
+        }
+
+        # Custom parameters
+        opts |= params or {}
+
+        # Init
+        super().__init__(opts)
+
 
 POST_MUSIC = {
     "key": "MetadataParser",
@@ -76,47 +102,33 @@ POST_MUSIC = {
     ],
 }
 
-YTDLP = YoutubeDL(
-    OPTS_BASE
-    | {
-        "skip_download": True,
-        "extract_flat": "in_playlist",
-    }
-)
-"""Base YT-DLP instance. Can extract info but not download."""
-
-
-class SupportedExtensions(frozenset[str], Enum):
-    """Sets of file extensions supported by YT-DLP."""
-
-    video = frozenset(MEDIA_EXTENSIONS.video)
-    audio = frozenset(MEDIA_EXTENSIONS.audio)
-    thumbnail = frozenset(
-        {"mp3", "mkv", "mka", "ogg", "opus", "flac", "m4a", "mp4", "m4v", "mov"}
-    )
-
 
 # Helpers
 def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
     """Postprocess file by params."""
 
-    with YoutubeDL(OPTS_BASE | params) as ydl:
-        info = ydl.post_process(filename=str(file), info=info)
+    info = YTDLP(params).post_process(filename=str(file), info=info)
 
     return Path(info["filepath"])
 
 
-def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
+def parse_name_template(info: InfoDict, template: str) -> str:
     """Get a custom filename by output template."""
 
-    return YTDLP.prepare_filename(info, outtmpl=template)
+    return YTDLP().prepare_filename(info, outtmpl=template)
+
+
+def sanitize_info(info: InfoDict) -> InfoDict:
+    info = cast(InfoDict, YTDLP().sanitize_info(info))
+    return info
 
 
 def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
-    with YoutubeDL(OPTS_BASE | {"writethumbnail": True}) as ydl:
-        final = ydl._write_thumbnails(
-            label=filename, info_dict=info, filename=str(DIR_TEMP / filename)
-        )
+    ydl = YTDLP({"writethumbnail": True})
+
+    final = ydl._write_thumbnails(
+        label=filename, info_dict=info, filename=str(DIR_TEMP / filename)
+    )
 
     if final:
         return Path(final[0][0])
@@ -124,14 +136,15 @@ def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
         return None
 
 
-def download_subtitle(filename: str, info: InfoDict) -> Path | None:
-    with YoutubeDL(OPTS_BASE | {"writesubtitles": True, "allsubtitles": True}) as ydl:
-        subs = ydl.process_subtitles(
-            filename, info.get("subtitles"), info.get("automatic_captions")
-        )
-        info |= {"requested_subtitles": subs}
+def download_subtitles(filename: str, info: InfoDict) -> Path | None:
+    ydl = YTDLP({"writesubtitles": True, "allsubtitles": True})
 
-        final = ydl._write_subtitles(info_dict=info, filename=str(DIR_TEMP / filename))
+    subs = ydl.process_subtitles(
+        filename, info.get("subtitles"), info.get("automatic_captions")
+    )
+    info |= {"requested_subtitles": subs}
+
+    final = ydl._write_subtitles(info_dict=info, filename=str(DIR_TEMP / filename))
 
     if final:
         return Path(final[0][0])
@@ -139,7 +152,7 @@ def download_subtitle(filename: str, info: InfoDict) -> Path | None:
         return None
 
 
-def format_except_msg(exception: Exception) -> str:
+def format_except_message(exception: Exception) -> str:
     """Get a user friendly message of a YT-DLP message exception."""
 
     message = str(exception)

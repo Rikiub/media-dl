@@ -2,10 +2,9 @@ from typing import Callable, cast
 from pathlib import Path
 import tempfile
 
-from yt_dlp import YoutubeDL
-from yt_dlp import DownloadError as YTDLPDownloadError
+from yt_dlp import DownloadError as YTDLP_DownloadError
 
-from media_dl._ydl import OPTS_BASE, DIR_TEMP, format_except_msg, InfoDict
+from media_dl._ydl import YTDLP, DIR_TEMP, format_except_message, InfoDict
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
 
@@ -56,7 +55,7 @@ class DownloadFormat:
 
         temp_path = Path(tempfile.mktemp(dir=DIR_TEMP))
 
-        params = OPTS_BASE | progress | {"outtmpl": str(temp_path) + ".%(ext)s"}
+        params = progress | {"outtmpl": str(temp_path) + ".%(ext)s"}
         info_dict = {
             "extractor": "generic",
             "extractor_key": "Generic",
@@ -83,11 +82,10 @@ class DownloadFormat:
 
     def _download(self, info, params) -> InfoDict:
         try:
-            with YoutubeDL(params) as ydl:
-                info = ydl.process_ie_result(info, download=True)
-                return cast(InfoDict, info)
-        except YTDLPDownloadError as err:
-            msg = format_except_msg(err)
+            info = YTDLP(params).process_ie_result(info, download=True)
+            return cast(InfoDict, info)
+        except YTDLP_DownloadError as err:
+            msg = format_except_message(err)
             raise DownloadError(msg)
 
     def _progress_wraper(

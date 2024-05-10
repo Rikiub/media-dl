@@ -12,7 +12,7 @@ from media_dl._ydl import (
     POST_MUSIC,
     run_postproces,
     download_thumbnail,
-    download_subtitle,
+    download_subtitles,
     parse_name_template,
 )
 
@@ -213,7 +213,7 @@ class Downloader:
             # Download resources
             if download_thumbnail(output_name, stream._extra_info):
                 log.debug('"%s": Thumbnail founded.', stream.id)
-            if download_subtitle(output_name, stream._extra_info):
+            if download_subtitles(output_name, stream._extra_info):
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
@@ -327,7 +327,7 @@ class Downloader:
         elif f := formats.filter(type="video") or formats.filter(type="audio"):
             format = f
         else:
-            raise TypeError("Not matches founded.")
+            raise TypeError("Not format matches founded.")
 
         if config.quality:
             return f.get_closest_quality(config.quality)

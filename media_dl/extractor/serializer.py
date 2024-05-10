@@ -1,8 +1,6 @@
 """Helpers to serialize info dicts."""
 
-from typing import cast
-
-from media_dl._ydl import InfoDict, YTDLP
+from media_dl._ydl import InfoDict, sanitize_info
 
 
 def is_playlist(info: InfoDict) -> bool:
@@ -26,7 +24,7 @@ def is_stream(info: InfoDict) -> bool:
 def sanitize(info: InfoDict) -> InfoDict:
     """Remove unnecesary and risky information from info dict."""
 
-    info = cast(InfoDict, YTDLP.sanitize_info(info))
+    info = sanitize_info(info)
 
     keys_to_remove = {
         "requested_subtitles",
