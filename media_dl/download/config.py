@@ -56,6 +56,7 @@ class FormatConfig:
 
         elif self.format in get_args(EXT_VIDEO):
             return "video"
+
         elif self.format in get_args(EXT_AUDIO):
             return "audio"
 
@@ -74,7 +75,7 @@ class FormatConfig:
             cast(EXTENSION, self.format) if self.format in get_args(EXTENSION) else None
         )
 
-    def asdict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert config to simple dict."""
 
         d = asdict(self)
@@ -100,30 +101,12 @@ class FormatConfig:
         else:
             return False
 
-    def _gen_opts(self) -> dict[str, Any]:
-        opts = {"overwrites": False, "retries": 3, "fragment_retries": 3}
-        postprocessors: list[dict] = [
-            {
-                "key": "SponsorBlock",
-                "when": "after_filter",
-                "categories": {
-                    "sponsor",
-                    "selfpromo",
-                    "intro",
-                    "outro",
-                    "music_offtopic",
-                },
-                "api": "https://sponsor.ajay.app",
-            },
-            {
-                "key": "ModifyChapters",
-                "force_keyframes": False,
-                "remove_chapters_patterns": [],
-                "remove_ranges": [],
-                "remove_sponsor_segments": set(),
-                "sponsorblock_chapter_title": "[SponsorBlock]: " "%(category_names)l",
-            },
-        ]
+    def _gen_opts(self, extra_posts: list[dict] = []) -> dict[str, Any]:
+        overwrite = False
+        opts = {"overwrites": overwrite, "retries": 1, "fragment_retries": 1}
+
+        postprocessors = []
+        postprocessors.extend(extra_posts)
 
         if self.convert:
             opts |= {"final_ext": self.format}
@@ -132,19 +115,20 @@ class FormatConfig:
             opts |= {"ffmpeg_location": str(self.ffmpeg)}
 
             if self.type == "video":
-                if self.convert:
-                    opts |= {"merge_output_format": self.convert}
-                    postprocessors.append(
-                        {
-                            "key": "FFmpegVideoRemuxer",
-                            "preferedformat": self.convert,
-                        },
-                    )
+                opts |= {
+                    "merge_output_format": self.convert or ",".join(get_args(EXT_VIDEO))
+                }
+                postprocessors.append(
+                    {
+                        "key": "FFmpegVideoRemuxer",
+                        "preferedformat": self.convert or "mov>mp4/webm>mkv",
+                    },
+                )
             elif self.type == "audio":
                 postprocessors.append(
                     {
                         "key": "FFmpegExtractAudio",
-                        "nopostoverwrites": True,
+                        "nopostoverwrites": not overwrite,
                         "preferredcodec": self.convert,
                         "preferredquality": None,
                     }
@@ -163,14 +147,6 @@ class FormatConfig:
                 }
             else:
                 raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
-
-            if not self.convert:
-                postprocessors.append(
-                    {
-                        "key": "FFmpegVideoRemuxer",
-                        "preferedformat": "aac>m4a/alac>m4a/mov>mp4/webm>mkv",
-                    },
-                )
 
             if self.metadata:
                 postprocessors.extend(

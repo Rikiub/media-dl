@@ -8,13 +8,19 @@ from media_dl._ydl import InfoDict, YTDLP
 def is_playlist(info: InfoDict) -> bool:
     """Check if info is a playlist."""
 
-    return True if info.get("_type") == "playlist" or info.get("entries") else False
+    if info.get("_type") == "playlist" or info.get("entries"):
+        return True
+    else:
+        return False
 
 
 def is_stream(info: InfoDict) -> bool:
     """Check if info is a single Stream."""
 
-    return True if info.get("formats") else False
+    if info.get("_type") == "url" or info.get("formats"):
+        return True
+    else:
+        return False
 
 
 def sanitize(info: InfoDict) -> InfoDict:
@@ -27,7 +33,6 @@ def sanitize(info: InfoDict) -> InfoDict:
         "requested_formats",
         "formats",
         "_version",
-        "_type",
     }
 
     for key in keys_to_remove:

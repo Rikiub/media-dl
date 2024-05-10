@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from collections.abc import Sequence
 from typing import Any, overload
 import bisect
 
@@ -46,7 +45,7 @@ class Format:
         elif self.type == "audio":
             return str(round(self.quality)) + "kbps"
         else:
-            return "?"
+            return ""
 
     def _format_dict(self) -> InfoDict:
         d = {
@@ -58,11 +57,9 @@ class Format:
 
         match self.type:
             case "video":
-                d |= {"height": self.quality}
-                d |= {"vcodec": self.codec}
+                d |= {"height": self.quality, "vcodec": self.codec}
             case "audio":
-                d |= {"abr": self.quality}
-                d |= {"acodec": self.codec}
+                d |= {"abr": self.quality, "acodec": self.codec}
             case _:
                 raise TypeError(self.type)
 
@@ -121,8 +118,8 @@ class FormatList(GenericList):
         self,
         type: FORMAT_TYPE | None = None,
         extension: str | None = None,
-        quality: int | None = None,
         codec: str | None = None,
+        quality: int | None = None,
     ) -> FormatList:
         """Get filtered format list by options."""
 
@@ -140,13 +137,11 @@ class FormatList(GenericList):
         return FormatList(formats)
 
     def sort_by(self, attribute: str, reverse: bool = False) -> FormatList:
-        """Sort list by `Format` attribute."""
+        """Sort by `Format` attribute."""
 
-        has_attribute = [f for f in self._list if getattr(f, attribute) is not None]
-        sorted_list = sorted(
-            has_attribute, key=lambda f: getattr(f, attribute), reverse=reverse
+        return FormatList(
+            sorted(self._list, key=lambda f: getattr(f, attribute), reverse=reverse)
         )
-        return FormatList(sorted_list)
 
     def get_by_id(self, id: str) -> Format:
         """Get `Format` by `id`.
@@ -175,10 +170,8 @@ class FormatList(GenericList):
     def get_closest_quality(self, quality: int) -> Format:
         """Get `Format` with closest quality."""
 
-        self = self.sort_by("quality")
-
-        all_qualities = [i.quality for i in self]
-        pos = bisect.bisect_left(all_qualities, quality)
+        qualities = [i.quality for i in self.sort_by("quality")]
+        pos = bisect.bisect_left(qualities, quality)
 
         if pos == 0:
             return self[0]
@@ -222,9 +215,10 @@ class FormatList(GenericList):
     def __getitem__(self, index: slice) -> FormatList: ...
 
     def __getitem__(self, index):
-        if isinstance(index, int):
-            return self._list[index]
-        elif isinstance(index, slice):
-            return FormatList(self._list[index])
-        else:
-            raise TypeError(index)
+        match index:
+            case int():
+                return self._list[index]
+            case slice():
+                return FormatList(self._list[index])
+            case _:
+                raise TypeError(index)

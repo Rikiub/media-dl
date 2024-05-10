@@ -17,9 +17,15 @@ class Stream(ExtractID):
     title: str = ""
     uploader: str = ""
     thumbnail: str = ""
+    date: str = ""
     duration: int = 0
     formats: FormatList = FormatList([])
     _extra_info: InfoDict = field(default_factory=lambda: InfoDict({}), repr=False)
+
+    def get_updated(self) -> Stream:
+        info = raw.extract_url(self.url)
+        stream = Stream._from_info(info)
+        return stream
 
     @property
     def display_name(self) -> str:
@@ -32,43 +38,37 @@ class Stream(ExtractID):
         else:
             return "?"
 
-    def _is_complete(self) -> bool:
+    def has_missing_info(self) -> bool:
         if self.formats:
             return True
         else:
             return False
 
     def _is_music_site(self) -> bool:
-        for site in MUSIC_SITES:
-            if site in self.url:
-                return True
-
-        d = self._extra_info
-        if d.get("track") and d.get("artist"):
+        if any(s in self.url for s in MUSIC_SITES):
             return True
 
-        return False
+        elif self._extra_info.get("track") and self._extra_info.get("artist"):
+            return True
+
+        else:
+            return False
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Stream:
-        if serializer.is_playlist(info):
-            raise TypeError("Unable to serialize dict. It's a playlist, not a stream.")
+        if not serializer.is_stream(info):
+            raise TypeError("Unable to serialize dict. It's not a stream.")
 
         return cls(
             *serializer.extract_meta(info),
-            _extra_info=serializer.sanitize(info),
             title=info.get("title") or "",
-            uploader=info["uploader"].split(",")[0] if info.get("uploader") else "",
+            uploader=info.get("uploader") or "",
             thumbnail=serializer.extract_thumbnail(info),
+            date=info.get("release_date") or info.get("upload_date") or "",
             duration=info.get("duration") or 0,
             formats=FormatList._from_info(info),
+            _extra_info=serializer.sanitize(info),
         )
-
-
-def update_stream(stream: Stream) -> Stream:
-    info = raw.extract_url(stream.url)
-    stream = Stream._from_info(info)
-    return stream
 
 
 class LazyStreams(GenericList):
@@ -83,15 +83,15 @@ class LazyStreams(GenericList):
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> LazyStreams:
-        return cls([Stream._from_info(entry) for entry in info["entries"]])
+        streams = []
 
-    def _resolve_stream(self, index: int) -> Stream:
-        stream = self._list[index]
+        for entry in info["entries"]:
+            try:
+                streams.append(Stream._from_info(entry))
+            except TypeError:
+                continue
 
-        if not stream._is_complete():
-            self._list[index] = stream = update_stream(stream)
-
-        return stream
+        return cls(streams)
 
     def __iter__(self):
         for index, _ in enumerate(self._list):
@@ -104,14 +104,18 @@ class LazyStreams(GenericList):
     def __getitem__(self, index: slice) -> LazyStreams: ...
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
-            return LazyStreams(
-                [
-                    self._resolve_stream(index)
-                    for index, _ in enumerate(self._list[index])
-                ]
-            )
-        elif isinstance(index, int):
-            return self._resolve_stream(index)
-        else:
-            raise TypeError(index)
+        match index:
+            case slice():
+                return LazyStreams(self._list[index])
+            case int():
+                return self._resolve_stream(index)
+            case _:
+                raise TypeError(index)
+
+    def _resolve_stream(self, index: int) -> Stream:
+        stream = self._list[index]
+
+        if not stream._is_complete():
+            self._list[index] = stream = stream.get_updated()
+
+        return stream

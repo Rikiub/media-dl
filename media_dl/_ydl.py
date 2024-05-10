@@ -51,22 +51,22 @@ POST_MUSIC = {
         (
             MetadataParserPP.interpretter,
             "%(track,title)s",
-            "%(title)s",
+            "%(meta_track)s",
         ),
         (
             MetadataParserPP.interpretter,
-            "%(artist,channel,creator,uploader|NA)s",
-            "%(uploader)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(album_artist,uploader)s",
-            "%(meta_album_artist)s",
+            "%(artist,uploader)s",
+            "%(meta_artist)s",
         ),
         (
             MetadataParserPP.interpretter,
             "%(album,title)s",
             "%(meta_album)s",
+        ),
+        (
+            MetadataParserPP.interpretter,
+            "%(album_artist,uploader)s",
+            "%(meta_album_artist)s",
         ),
         (
             MetadataParserPP.interpretter,
@@ -81,7 +81,6 @@ YTDLP = YoutubeDL(
     | {
         "skip_download": True,
         "extract_flat": "in_playlist",
-        "postprocessors": [POST_MUSIC],
     }
 )
 """Base YT-DLP instance. Can extract info but not download."""
@@ -110,8 +109,7 @@ def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
 def parse_name_template(info: InfoDict, template="%(uploader)s - %(title)s") -> str:
     """Get a custom filename by output template."""
 
-    name = YTDLP.prepare_outtmpl(template, info)
-    return cast(str, name)
+    return YTDLP.prepare_filename(info, outtmpl=template)
 
 
 def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
@@ -129,7 +127,7 @@ def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
 def download_subtitle(filename: str, info: InfoDict) -> Path | None:
     with YoutubeDL(OPTS_BASE | {"writesubtitles": True, "allsubtitles": True}) as ydl:
         subs = ydl.process_subtitles(
-            "subtitle", info.get("subtitles"), info.get("automatic_captions")
+            filename, info.get("subtitles"), info.get("automatic_captions")
         )
         info |= {"requested_subtitles": subs}
 
@@ -144,48 +142,50 @@ def download_subtitle(filename: str, info: InfoDict) -> Path | None:
 def format_except_msg(exception: Exception) -> str:
     """Get a user friendly message of a YT-DLP message exception."""
 
-    msg = str(exception)
+    message = str(exception)
 
     # No connection
-    if "HTTP Error" in msg:
+    if "HTTP Error" in message:
         pass
 
-    elif "Read timed out" in msg:
-        msg = "Read timed out."
+    elif "Read timed out" in message:
+        message = "Read timed out."
 
-    elif any(msg in s for s in ("[Errno -3]", "Failed to extract any player response")):
-        msg = "No internet connection."
+    elif any(
+        s in message for s in ("[Errno -3]", "Failed to extract any player response")
+    ):
+        message = "No internet connection."
 
     # Invalid URL
-    elif "Unable to download webpage" in msg and any(
-        msg in s for s in ("[Errno -2]", "[Errno -5]")
+    elif "Unable to download webpage" in message and any(
+        s in message for s in ("[Errno -2]", "[Errno -5]")
     ):
-        msg = "Invalid URL."
+        message = "Invalid URL."
 
-    elif "is not a valid URL" in msg:
-        splits = msg.split()
-        msg = splits[1] + " is not a valid URL."
+    elif "is not a valid URL" in message:
+        splits = message.split()
+        message = splits[1] + " is not a valid URL."
 
-    elif "Unsupported URL" in msg:
-        splits = msg.split()
-        msg = "Unsupported URL: " + splits[3]
+    elif "Unsupported URL" in message:
+        splits = message.split()
+        message = "Unsupported URL: " + splits[3]
 
     # Postprocessing
-    elif "Unable to rename file" in msg:
-        msg = "Unable to rename file."
+    elif "Unable to rename file" in message:
+        message = "Unable to rename file."
 
-    elif "ffmpeg not found" in msg:
-        msg = "Postprocessing failed. FFmpeg executable not founded."
+    elif "ffmpeg not found" in message:
+        message = "Postprocessing failed. FFmpeg executable not founded."
 
     # General
-    elif any(msg in s for s in ("Unable to download", "Got error")):
-        msg = "Unable to download."
+    elif any(s in message for s in ("Unable to download", "Got error")):
+        message = "Unable to download."
 
-    elif "is only available for registered users" in msg:
-        msg = "Only available for registered users."
+    elif "is only available for registered users" in message:
+        message = "Only available for registered users."
 
     # Last parse
-    if msg.startswith("ERROR: "):
-        msg = msg.strip("ERROR: ")
+    if message.startswith("ERROR: "):
+        message = message.strip("ERROR: ")
 
-    return msg
+    return message

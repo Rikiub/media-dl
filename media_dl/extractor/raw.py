@@ -6,8 +6,9 @@ import logging
 from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
-from media_dl.exceptions import ExtractError
 from media_dl._ydl import InfoDict, YTDLP, format_except_msg
+from media_dl.exceptions import ExtractError
+from media_dl.extractor import serializer
 
 log = logging.getLogger(__name__)
 
@@ -45,33 +46,17 @@ def _fetch_query(query: str) -> InfoDict:
 
     try:
         info = YTDLP.extract_info(query, download=False)
+        info = cast(InfoDict, info)
     except (DownloadError, RequestError) as err:
         msg = format_except_msg(err)
         raise ExtractError(msg)
-
-    if info:
-        info = cast(InfoDict, info)
-    else:
-        raise ExtractError('"%s" return nothing.')
 
     # Some extractors need redirect to "real URL" (Example: Pinterest)
     # In this case, we need do another request.
     if info["extractor_key"] == "Generic" and info["url"] != query:
         return _fetch_query(info["url"])
 
-    # Validate playlist
-    if entries := info.get("entries"):
-        for index, item in enumerate(entries):
-            # If item has not the 2 required fields, will be deleted.
-            if not (item.get("ie_key") or item.get("extractor_key") and item.get("id")):
-                del entries[index]
-
-        if not entries:
-            raise ExtractError('"%s" is a invalid playlist.')
-
-        info["entries"] = entries
-    # Check if is single item
-    elif not info.get("formats"):
-        raise ExtractError('"%s" not have formats to download.')
+    if not (serializer.is_playlist(info) or serializer.is_stream(info)):
+        raise ExtractError('"%s" return nothing.')
 
     return info

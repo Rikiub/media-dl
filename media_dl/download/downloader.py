@@ -6,16 +6,23 @@ import logging
 import shutil
 import time
 
+
 from media_dl.exceptions import MediaError
-from media_dl._ydl import run_postproces, download_thumbnail, download_subtitle
+from media_dl._ydl import (
+    POST_MUSIC,
+    run_postproces,
+    download_thumbnail,
+    download_subtitle,
+    parse_name_template,
+)
 
 from media_dl.models import ExtractResult, Playlist, LazyStreams
-from media_dl.models.stream import Stream, update_stream
 from media_dl.models.format import Format, FormatList
+from media_dl.models.stream import Stream
 
-from media_dl.download.config import FormatConfig, FILE_FORMAT
-from media_dl.download.worker import DownloadFormat
 from media_dl.download.progress import DownloadProgress
+from media_dl.download.worker import DownloadFormat
+from media_dl.download.config import FormatConfig, FILE_FORMAT
 
 
 log = logging.getLogger(__name__)
@@ -68,6 +75,8 @@ class Downloader:
         self._threads = threads
         self._progress = DownloadProgress(disable=not show_progress)
 
+        log.debug("Download config: %s", self.config.to_dict())
+
     def download_all(self, media: ExtractResult) -> list[Path]:
         """Download any result.
 
@@ -78,8 +87,6 @@ class Downloader:
             MediaError: Something bad happens when download.
         """
 
-        log.debug("Download config: %s", self.config.asdict())
-
         streams = self._media_to_list(media)
         paths: list[Path] = []
 
@@ -88,7 +95,9 @@ class Downloader:
 
         with self._progress:
             with cf.ThreadPoolExecutor(self._threads) as executor:
-                futures = [executor.submit(self._download_work, task) for task in streams]
+                futures = [
+                    executor.submit(self._download_work, task) for task in streams
+                ]
 
                 success = 0
                 errors = 0
@@ -101,7 +110,9 @@ class Downloader:
                         except MediaError:
                             errors += 1
                 except (cf.CancelledError, KeyboardInterrupt):
-                    log.warning("❗ Canceling downloads... (press Ctrl+C again to force)")
+                    log.warning(
+                        "❗ Canceling downloads... (press Ctrl+C again to force)"
+                    )
                     raise KeyboardInterrupt()
                 finally:
                     executor.shutdown(wait=True, cancel_futures=True)
@@ -118,7 +129,7 @@ class Downloader:
         self,
         stream: Stream,
         format: Format | None = None,
-        on_progress: ProgressCallback | None = None
+        on_progress: ProgressCallback | None = None,
     ) -> Path:
         """Download a single `Stream` result.
 
@@ -151,8 +162,8 @@ class Downloader:
 
         try:
             # Resolve stream
-            if not stream._is_complete():
-                stream = update_stream(stream)
+            if stream.has_missing_info():
+                stream = stream.get_updated()
                 self._progress.update(task_id, description=stream.display_name)
 
             log.debug('"%s": Processing Stream.', stream.id)
@@ -185,8 +196,8 @@ class Downloader:
 
             # Run download
             worker = DownloadFormat(format=format, callbacks=callbacks)
-            filepath = worker.start()
-            total_filesize = worker._total_filesize
+            downloaded_file = worker.run()
+            total_filesize = worker.total_filesize
 
             # STATUS: Postprocess
             if on_progress:
@@ -195,7 +206,9 @@ class Downloader:
             log.debug('"%s": Postprocessing downloaded file.', stream.id)
 
             # Final filename
-            output_name = f"{stream.uploader + " - " if stream.uploader else ""}{stream.title}"
+            output_name = parse_name_template(
+                stream._extra_info, "%(uploader)s - %(title)s"
+            )
 
             # Download resources
             if download_thumbnail(output_name, stream._extra_info):
@@ -204,27 +217,36 @@ class Downloader:
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
-            filepath = run_postproces(
-                filepath, stream._extra_info, download_config._gen_opts()
+            downloaded_file = run_postproces(
+                file=downloaded_file,
+                info=stream._extra_info,
+                params=download_config._gen_opts(
+                    [POST_MUSIC] if stream._is_music_site() else []
+                ),
             )
             log.debug(
                 '"%s": Postprocessing finished, saved as "%s".',
                 stream.id,
-                filepath.suffix[1:],
+                downloaded_file.suffix[1:],
             )
 
-            # Final filename with suffix
-            output_name = output_name + filepath.suffix
-
             # STATUS: Finish
+            final_path = Path(self.config.output, output_name + downloaded_file.suffix)
+
             # Check if file is duplicate
-            if (final_path := Path(self.config.output, output_name)) and final_path.exists():
+            if final_path.exists():
                 self._progress.update(task_id, status="Skipped")
-                log.info('Skipped: "%s" (Exists as "%s").', stream.display_name, filepath.suffix[1:])
+                log.info(
+                    'Skipped: "%s" (Exists as "%s").',
+                    stream.display_name,
+                    final_path.suffix[1:],
+                )
             # Move file
             else:
-                final_path = filepath.rename(filepath.parent / output_name)
-                final_path = shutil.move(final_path, self.config.output / output_name)
+                downloaded_file = downloaded_file.rename(
+                    downloaded_file.parent / final_path.name
+                )
+                final_path = shutil.move(downloaded_file, final_path)
 
                 self._progress.update(task_id, status="Finished")
                 log.info('Finished: "%s".', stream.display_name)
@@ -232,9 +254,9 @@ class Downloader:
             if on_progress:
                 on_progress("finished", total_filesize, total_filesize)
 
-            return filepath
+            return final_path
         except MediaError as err:
-            log.error('Failed to download "%s": %s', stream.display_name, str(err))
+            log.error('Error: "%s": %s', stream.display_name, str(err))
             self._progress.update(task_id, status="Error")
             raise
         finally:
@@ -297,17 +319,17 @@ class Downloader:
 
         # Filter by extension
         if f := config.convert and formats.filter(extension=config.convert):
-            final = f
+            format = f
         # Filter by type
         elif f := formats.filter(type=config.type):
-            final = f
+            format = f
         # Filter fallback to available type.
         elif f := formats.filter(type="video") or formats.filter(type="audio"):
-            final = f
+            format = f
         else:
-            raise TypeError("Not matches founded in format list.")
+            raise TypeError("Not matches founded.")
 
         if config.quality:
             return f.get_closest_quality(config.quality)
         else:
-            return final[-1]
+            return format[-1]

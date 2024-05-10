@@ -1,11 +1,11 @@
-from typing import Callable
+from typing import Callable, cast
 from pathlib import Path
 import tempfile
 
 from yt_dlp import YoutubeDL
 from yt_dlp import DownloadError as YTDLPDownloadError
 
-from media_dl._ydl import OPTS_BASE, DIR_TEMP, format_except_msg
+from media_dl._ydl import OPTS_BASE, DIR_TEMP, format_except_msg, InfoDict
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
 
@@ -31,29 +31,32 @@ class DownloadFormat:
     ):
         self.format = format
 
+        self.downloaded = 0
+        self.total_filesize = 0
+
         self._callbacks = callbacks
-        self._downloaded = 0
-        self._total_filesize = 0
 
-    def start(self) -> Path:
-        """Start download."""
+    def run(self) -> Path:
+        """Start format download.
 
-        # Reset progress
-        self._downloaded = 0
-        self._total_filesize = 0
+        Returns:
+            Filepath to temporary file.
+        """
+
+        self.reset_progress()
 
         if self._callbacks:
-            wrap = [
+            wrappers = [
                 lambda d: self._progress_wraper(d, callback)
                 for callback in self._callbacks
             ]
-            progress = {"progress_hooks": wrap}
+            progress = {"progress_hooks": wrappers}
         else:
             progress = {}
 
         temp_path = Path(tempfile.mktemp(dir=DIR_TEMP))
-        params = OPTS_BASE | progress | {"outtmpl": str(temp_path) + ".%(ext)s"}
 
+        params = OPTS_BASE | progress | {"outtmpl": str(temp_path) + ".%(ext)s"}
         info_dict = {
             "extractor": "generic",
             "extractor_key": "Generic",
@@ -63,23 +66,29 @@ class DownloadFormat:
             "format_id": self.format.id,
         }
 
-        try:
-            with YoutubeDL(params) as ydl:
-                info = ydl.process_ie_result(info_dict, download=True)
-        except YTDLPDownloadError as err:
-            msg = format_except_msg(err)
-            raise DownloadError(msg)
+        info = self._download(info_dict, params)
 
         if self._callbacks:
             [
-                callback(self._total_filesize, self._total_filesize)
+                callback(self.total_filesize, self.total_filesize)
                 for callback in self._callbacks
             ]
 
-        # Extract final path
         path = info["requested_downloads"][0]["filepath"]
-
         return Path(path)
+
+    def reset_progress(self):
+        self.downloaded = 0
+        self.total_filesize = 0
+
+    def _download(self, info, params) -> InfoDict:
+        try:
+            with YoutubeDL(params) as ydl:
+                info = ydl.process_ie_result(info, download=True)
+                return cast(InfoDict, info)
+        except YTDLPDownloadError as err:
+            msg = format_except_msg(err)
+            raise DownloadError(msg)
 
     def _progress_wraper(
         self,
@@ -91,9 +100,9 @@ class DownloadFormat:
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
-        if total > self._total_filesize:
-            self._total_filesize = total
-        if completed > self._downloaded:
-            self._downloaded = completed
+        if total > self.total_filesize:
+            self.total_filesize = total
+        if completed > self.downloaded:
+            self.downloaded = completed
 
-            callback(self._downloaded, self._total_filesize)
+            callback(self.downloaded, self.total_filesize)

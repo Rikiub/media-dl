@@ -8,13 +8,13 @@ from media_dl.models.base import ExtractID
 from media_dl.models.stream import LazyStreams
 
 
-@dataclass(slots=True, frozen=True)
+@dataclass(slots=True, frozen=True, kw_only=True)
 class Playlist(ExtractID):
-    """Stream list with basic metadata."""
+    """Playlist with multiple Streams."""
 
-    streams: LazyStreams
     title: str = ""
     thumbnail: str = ""
+    streams: LazyStreams
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> Playlist:
@@ -23,7 +23,7 @@ class Playlist(ExtractID):
 
         return cls(
             *serializer.extract_meta(info),
-            streams=LazyStreams._from_info(info),
             title=info.get("title") or "",
             thumbnail=serializer.extract_thumbnail(info),
+            streams=LazyStreams._from_info(info),
         )

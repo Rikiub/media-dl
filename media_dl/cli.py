@@ -1,6 +1,7 @@
 try:
     from typer import Typer, Argument, Option, BadParameter
     from strenum import StrEnum
+    from rich.status import Status
 except:
     raise ImportError("Typer is required to use CLI features.")
 
@@ -17,9 +18,10 @@ from media_dl.logging import init_logging
 
 log = logging.getLogger(__name__)
 
+APPNAME = "media-dl"
+
 app = Typer()
 
-APPNAME = "media-dl"
 Format = StrEnum("Format", get_args(FILE_FORMAT))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
@@ -60,8 +62,8 @@ def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
             results.append((SearchFrom["url"], entry))
 
         elif target in providers:
-            final = entry.split(":")[1]
-            results.append((SearchFrom[target], final))
+            entry = entry.split(":")[1]
+            results.append((SearchFrom[target], entry))
 
         else:
             completed = [i for i in complete_query(target)]
@@ -210,12 +212,13 @@ What format you want request?
 
     for target, entry in parse_input(query):
         try:
-            if target.value == "url":
-                log.info('🔎 Extract URL: "%s".', entry)
-                result = media_dl.extract_url(entry)
-            else:
-                log.info('🔎 Search from %s: "%s".', target.value, entry)
-                result = media_dl.extract_search(entry, target.value)[0]
+            with Status("Please wait"):
+                if target.value == "url":
+                    log.info('🔎 Extract URL: "%s".', entry)
+                    result = media_dl.extract_url(entry)
+                else:
+                    log.info('🔎 Search from %s: "%s".', target.value, entry)
+                    result = media_dl.extract_search(entry, target.value)[0]
 
             if isinstance(result, Playlist):
                 log.info('🔎 Playlist Name: "%s".', result.title)
