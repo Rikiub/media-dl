@@ -27,8 +27,8 @@ atexit.register(clean_tempdir)
 
 
 # Types
-FORMAT_TYPE = Literal["video", "audio"]
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
+FORMAT_TYPE = Literal["video", "audio"]
 
 
 # Base
@@ -61,6 +61,36 @@ class YTDLP(YoutubeDL):
             "noprogress": True,
             "quiet": True,
             "color": {"stderr": "no_color", "stdout": "no_color"},
+            "postprocessors": [
+                {
+                    "key": "SponsorBlock",
+                    "when": "pre_process",
+                    "api": "https://sponsor.ajay.app",
+                    "categories": {
+                        "chapter",
+                        "filler",
+                        "interaction",
+                        "intro",
+                        "music_offtopic",
+                        "outro",
+                        "poi_highlight",
+                        "preview",
+                        "selfpromo",
+                        "sponsor",
+                    },
+                },
+                {
+                    "key": "MetadataParser",
+                    "when": "pre_process",
+                    "actions": [
+                        (
+                            MetadataParserPP.interpretter,
+                            "uploader",
+                            "(?P<uploader>.+)(?: - Topic)$",
+                        )
+                    ],
+                },
+            ],
         }
 
         # Custom parameters
@@ -70,37 +100,39 @@ class YTDLP(YoutubeDL):
         super().__init__(opts)
 
 
-POST_MUSIC = {
-    "key": "MetadataParser",
-    "when": "post_process",
-    "actions": [
-        (
-            MetadataParserPP.interpretter,
-            "%(track,title)s",
-            "%(meta_track)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(artist,uploader)s",
-            "%(meta_artist)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(album,title)s",
-            "%(meta_album)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(album_artist,uploader)s",
-            "%(meta_album_artist)s",
-        ),
-        (
-            MetadataParserPP.interpretter,
-            "%(release_year,release_date>%Y,upload_date>%Y)s",
-            "%(meta_date)s",
-        ),
-    ],
-}
+POST_MUSIC = [
+    {
+        "key": "MetadataParser",
+        "when": "post_process",
+        "actions": [
+            (
+                MetadataParserPP.interpretter,
+                "%(track,title)s",
+                "%(meta_track)s",
+            ),
+            (
+                MetadataParserPP.interpretter,
+                "%(artist,uploader)s",
+                "%(meta_artist)s",
+            ),
+            (
+                MetadataParserPP.interpretter,
+                "%(album,title)s",
+                "%(meta_album)s",
+            ),
+            (
+                MetadataParserPP.interpretter,
+                "%(album_artist,uploader)s",
+                "%(meta_album_artist)s",
+            ),
+            (
+                MetadataParserPP.interpretter,
+                "%(release_year,release_date>%Y,upload_date>%Y)s",
+                "%(meta_date)s",
+            ),
+        ],
+    }
+]
 
 
 # Helpers

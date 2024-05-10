@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import os
 
-from media_dl._ydl import FORMAT_TYPE
+from media_dl._ydl import FORMAT_TYPE, POST_MUSIC
 
 
 EXT_VIDEO = Literal["mp4", "mkv"]
@@ -101,10 +101,14 @@ class FormatConfig:
         else:
             return False
 
-    def _gen_opts(self) -> dict[str, Any]:
-        overwrite = False
+    def _gen_opts(
+        self, overwrite: bool = False, music_meta: bool = False
+    ) -> dict[str, Any]:
         opts = {"overwrites": overwrite, "retries": 1, "fragment_retries": 1}
+
         postprocessors = []
+        if music_meta:
+            postprocessors.extend(POST_MUSIC)
 
         if self.convert:
             opts |= {"final_ext": self.format}
@@ -121,6 +125,17 @@ class FormatConfig:
                         "key": "FFmpegVideoRemuxer",
                         "preferedformat": self.convert or "mov>mp4/webm>mkv",
                     },
+                )
+                postprocessors.append(
+                    {
+                        "key": "ModifyChapters",
+                        "force_keyframes": False,
+                        "remove_chapters_patterns": [],
+                        "remove_ranges": [],
+                        "remove_sponsor_segments": {"music_offtopic"},
+                        "sponsorblock_chapter_title": "[SponsorBlock]: "
+                        "%(category_names)l",
+                    }
                 )
             elif self.type == "audio":
                 postprocessors.append(

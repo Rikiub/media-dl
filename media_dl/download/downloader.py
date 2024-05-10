@@ -9,14 +9,12 @@ import time
 
 from media_dl.exceptions import MediaError
 from media_dl._ydl import (
-    POST_MUSIC,
     run_postproces,
     download_thumbnail,
     download_subtitles,
     parse_name_template,
 )
 
-from media_dl.extractor.raw import _PARAMS
 from media_dl.models import ExtractResult, Playlist, LazyStreams
 from media_dl.models.format import Format, FormatList
 from media_dl.models.stream import Stream
@@ -218,9 +216,7 @@ class Downloader:
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
-            params = download_config._gen_opts()
-            if stream._is_music_site():
-                params["postprocessors"].insert(0, POST_MUSIC)
+            params = download_config._gen_opts(music_meta=stream._is_music_site())
 
             downloaded_file = run_postproces(
                 file=downloaded_file,
