@@ -87,7 +87,7 @@ class YTDLP(YoutubeDL):
                             MetadataParserPP.interpretter,
                             "uploader",
                             "(?P<uploader>.+)(?: - Topic)$",
-                        )
+                        ),
                     ],
                 },
             ],

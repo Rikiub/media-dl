@@ -22,11 +22,6 @@ class Stream(ExtractID):
     formats: FormatList = FormatList([])
     _extra_info: InfoDict = field(default_factory=lambda: InfoDict({}), repr=False)
 
-    def get_updated(self) -> Stream:
-        info = raw.extract_url(self.url)
-        stream = Stream._from_info(info)
-        return stream
-
     @property
     def display_name(self) -> str:
         """Get pretty representation of the `Stream` name."""
@@ -37,6 +32,11 @@ class Stream(ExtractID):
             return self.title
         else:
             return "?"
+
+    def get_updated(self) -> Stream:
+        info = raw.extract_url(self.url)
+        stream = Stream._from_info(info)
+        return stream
 
     def has_missing_info(self) -> bool:
         if not (self.title and self.duration and self.formats):
