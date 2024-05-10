@@ -2,7 +2,7 @@ try:
     from rich.status import Status
     from strenum import StrEnum
     from typer import Argument, BadParameter, Option, Typer
-except:
+except ImportError:
     raise ImportError("Typer is required to use CLI features.")
 
 import logging
@@ -89,7 +89,7 @@ def download(
             """,
             show_default=False,
             autocompletion=complete_query,
-            metavar=f"URL | PROVIDER",
+            metavar="URL | PROVIDER",
         ),
     ],
     format: Annotated[
@@ -101,7 +101,7 @@ def download(
             - To get BEST, select 'video' or 'audio' (Fast).\n
             - To convert, select a file EXTENSION (Slow).
             """,
-            metavar=f"TYPE | EXTENSION",
+            metavar="TYPE | EXTENSION",
             prompt="""
 What format you want request?
 

@@ -278,7 +278,7 @@ class Downloader:
         config = self.config
 
         if format:
-            if not format in stream.formats:
+            if format not in stream.formats:
                 raise ValueError(f"'{format.id}' format ID not founded in Stream.")
 
             if not config.convert:
