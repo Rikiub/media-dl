@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-project_path = Path(__file__).parent
+project_path = Path(__file__).parent.parent
 
 
 def run():
