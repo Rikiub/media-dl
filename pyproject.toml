@@ -13,12 +13,14 @@ media-dl = "media_dl.cli:run"
 python = "^3.10"
 yt-dlp = "^2024.4.9"
 rich = "^13.7.0"
-strenum = "^0.4.15"
+
+[tool.poetry.group.cli.dependencies]
 typer = "^0.12.3"
+strenum = "^0.4.15"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.1.1"
-ruff = "^0.4.4"
+pytest = "*"
+ruff = "*"
 
 [build-system]
 requires = ["poetry-core"]
