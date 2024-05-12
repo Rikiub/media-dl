@@ -17,10 +17,9 @@ from media_dl.logging import init_logging
 from media_dl.rich import Status
 
 log = logging.getLogger(__name__)
+app = Typer()
 
 APPNAME = "media-dl"
-
-app = Typer()
 
 Format = StrEnum("Format", get_args(FILE_FORMAT))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
