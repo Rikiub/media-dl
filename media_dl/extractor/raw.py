@@ -3,11 +3,12 @@
 import logging
 from typing import Literal, cast
 
+from yt_dlp import DownloadError
+from yt_dlp.networking.exceptions import RequestError
+
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import ExtractError
 from media_dl.extractor import serializer
-from yt_dlp import DownloadError
-from yt_dlp.networking.exceptions import RequestError
 
 log = logging.getLogger(__name__)
 
