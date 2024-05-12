@@ -14,6 +14,7 @@ from media_dl import MediaError, Playlist
 from media_dl.download.config import FILE_FORMAT, VIDEO_RES
 from media_dl.extractor.extr import SEARCH_PROVIDER
 from media_dl.logging import init_logging
+from media_dl.rich import Status
 
 log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class HelpPanel(StrEnum):
     view = "View"
 
 
-def show_version(show: bool):
+def show_version(show: bool) -> None:
     if show:
         from importlib.metadata import version
 
@@ -70,7 +71,7 @@ def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
             if completed:
                 msg = f"Did you mean '{completed[0]}'?"
             else:
-                msg = "Should be URL or search provider."
+                msg = "Should be URL or search PROVIDER."
 
             raise BadParameter(f"'{target}' is invalid. {msg}")
 
@@ -115,7 +116,7 @@ What format you want request?
         ),
     ] = Format["video"],
     quality: Annotated[
-        int,
+        Optional[int],
         Option(
             "--quality",
             "-q",
@@ -133,7 +134,9 @@ What format you want request?
             help="Directory where to save downloads.",
             rich_help_panel=HelpPanel.file,
             show_default=False,
+            dir_okay=True,
             file_okay=False,
+            allow_dash=True,
         ),
     ] = Path.cwd(),
     ffmpeg: Annotated[
@@ -195,7 +198,7 @@ What format you want request?
     try:
         downloader = media_dl.Downloader(
             format=format.value,
-            quality=quality if quality != 0 else None,
+            quality=quality,
             output=output,
             ffmpeg=ffmpeg,
             threads=threads,
@@ -204,6 +207,8 @@ What format you want request?
     except FileNotFoundError as err:
         raise BadParameter(str(err))
 
+    output_is_stdin = downloader.config.output == Path("-")
+
     if downloader.config.convert and not downloader.config.ffmpeg:
         log.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
@@ -211,20 +216,38 @@ What format you want request?
 
     for target, entry in parse_input(query):
         try:
-            with Status("Please wait"):
+            with Status("Please wait", disable=quiet):
                 if target.value == "url":
                     log.info('🔎 Extract URL: "%s".', entry)
                     result = media_dl.extract_url(entry)
+
+                    if isinstance(result, Playlist):
+                        log.info('🔎 Playlist Name: "%s".', result.title)
                 else:
                     log.info('🔎 Search from %s: "%s".', target.value, entry)
                     result = media_dl.extract_search(entry, target.value)[0]
 
-            if isinstance(result, Playlist):
-                log.info('🔎 Playlist Name: "%s".', result.title)
+            # Download to stdin
+            if output_is_stdin:
+                log.info("📝 Writing to stdin.")
 
-            downloader.download_all(result)
+                if isinstance(result, Playlist):
+                    raise MediaError(
+                        "Download to stdin is not allowed in playlists, try another URL."
+                    )
+                if len(query) > 1:
+                    log.warning(
+                        f'❗ Only one query can be used when downloading to stdin. "{entry}" will be used instead.'
+                    )
 
-            log.info("✅ Download Finished.")
+                downloader.download_to_stdin(result)
+                # raise SystemExit()
+
+            # Download to file
+            else:
+                downloader.download_all(result)
+                log.info("✅ Download Finished.")
+
         except MediaError as err:
             log.error("❌ %s", str(err))
             continue

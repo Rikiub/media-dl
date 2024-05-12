@@ -9,16 +9,17 @@ from typing import Callable, Literal
 from media_dl._ydl import (
     download_subtitles,
     download_thumbnail,
+    get_tempfile,
     parse_name_template,
     run_postproces,
 )
+from media_dl.download import worker
 from media_dl.download.config import FILE_FORMAT, FormatConfig
-from media_dl.download.progress import DownloadProgress
-from media_dl.download.worker import DownloadFormat
 from media_dl.exceptions import MediaError
 from media_dl.models import ExtractResult, LazyStreams, Playlist
 from media_dl.models.format import Format, FormatList
 from media_dl.models.stream import Stream
+from media_dl.rich import DownloadProgress
 
 log = logging.getLogger(__name__)
 
@@ -145,6 +146,21 @@ class Downloader:
             self._progress.counter.reset(total=1)
             return self._download_work(stream, format, on_progress)
 
+    def download_to_stdin(self, stream: Stream, format: Format | None = None) -> None:
+        """Download a single `Stream` to stdin.
+
+        Args:
+            stream: Target `Stream` to download.
+            format: Specific `Stream` format to download. By default will select BEST format.
+
+        Raises:
+            MediaError: Something bad happens when download.
+            ValueError: Provided `Format` wasn't founded in `Stream`.
+        """
+
+        format, _ = self._resolve_format(stream, format)
+        worker.download_to_stdin(format)
+
     def _download_work(
         self,
         stream: Stream,
@@ -164,7 +180,6 @@ class Downloader:
             log.debug('"%s": Processing Stream.', stream.id)
 
             format, download_config = self._resolve_format(stream, format)
-            self.config.output.mkdir(parents=True, exist_ok=True)
 
             # STATUS: Download
             self._progress.update(task_id, status="Downloading")
@@ -177,10 +192,18 @@ class Downloader:
                 format.type,
             )
 
+            # Configure callbacks
+            total_filesize: int = 0
+
+            def update_filesize(filesize: int):
+                nonlocal total_filesize
+                total_filesize = filesize
+
             callbacks = [
+                lambda _, filesize: update_filesize(filesize),
                 lambda completed, total: self._progress.update(
                     task_id, completed=completed, total=total
-                )
+                ),
             ]
             if on_progress:
                 callbacks.append(
@@ -190,9 +213,11 @@ class Downloader:
                 )
 
             # Run download
-            worker = DownloadFormat(format=format, callbacks=callbacks)
-            downloaded_file = worker.run()
-            total_filesize = worker.total_filesize
+            downloaded_file = worker.download(
+                filepath=get_tempfile(),
+                format=format,
+                callbacks=callbacks,
+            )
 
             # STATUS: Postprocess
             if on_progress:
@@ -238,6 +263,8 @@ class Downloader:
                 )
             # Move file
             else:
+                self.config.output.mkdir(parents=True, exist_ok=True)
+
                 downloaded_file = downloaded_file.rename(
                     downloaded_file.parent / final_path.name
                 )

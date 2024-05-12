@@ -1,105 +1,97 @@
-import tempfile
 from pathlib import Path
 from typing import Callable, cast
+import sys
 
-from yt_dlp import DownloadError as YTDLP_DownloadError
-
-from media_dl._ydl import DIR_TEMP, YTDLP, InfoDict, format_except_message
+from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
+from yt_dlp import DownloadError as YTDLP_DownloadError
 
 DownloadCallback = Callable[[int, int], None]
 
 
-class DownloadFormat:
-    """Internal downloader.
+def download(
+    filepath: Path,
+    format: Format,
+    callbacks: list[DownloadCallback] | None = None,
+) -> Path:
+    """Download format.
 
-    Args:
-        format: Remote file to download.
-        callbacks: List of functions to get download progress information.
+    Returns:
+        Filepath to file.
 
     Raises:
         DownloadError: Download failed.
     """
 
-    def __init__(
-        self,
-        format: Format,
-        callbacks: list[DownloadCallback] | None = None,
-    ):
-        self.format = format
+    params = {}
 
-        self.downloaded = 0
-        self.total_filesize = 0
+    if callbacks:
+        wrappers = [lambda d: _progress_wraper(d, callback) for callback in callbacks]
+        params |= {"progress_hooks": wrappers}
 
-        self._callbacks = callbacks
+    params |= {"outtmpl": f"{filepath}.%(ext)s"}
+    format_dict = _gen_generic_info(format)
 
-    def run(self) -> Path:
-        """Start format download.
+    info = _internal_download(format_dict, params)
 
-        Returns:
-            Filepath to temporary file.
-        """
+    path = info["requested_downloads"][0]["filepath"]
+    return Path(path)
 
-        self.reset_progress()
 
-        if self._callbacks:
-            wrappers = [
-                lambda d: self._progress_wraper(d, callback)
-                for callback in self._callbacks
-            ]
-            progress = {"progress_hooks": wrappers}
+def download_to_stdin(format: Format) -> None:
+    """Download format but write to stdin.
+
+    Raises:
+        DownloadError: Download failed.
+    """
+
+    params = {"logtostderr": True, "outtmpl": "-"}
+    format_dict = _gen_generic_info(format)
+
+    try:
+        _internal_download(format_dict, params)
+
+        for _ in sys.stdin:
+            pass
+    except DownloadError as err:
+        if "Broken pipe" in str(err):
+            pass
         else:
-            progress = {}
+            raise
 
-        temp_path = Path(tempfile.mktemp(dir=DIR_TEMP))
 
-        params = progress | {"outtmpl": str(temp_path) + ".%(ext)s"}
-        info_dict = {
+def _internal_download(info: InfoDict, params: dict) -> InfoDict:
+    try:
+        info = YTDLP(params).process_ie_result(info, download=True)
+        return cast(InfoDict, info)
+    except YTDLP_DownloadError as err:
+        msg = format_except_message(err)
+        raise DownloadError(msg)
+
+
+def _gen_generic_info(format: Format) -> InfoDict:
+    return InfoDict(
+        {
             "extractor": "generic",
             "extractor_key": "Generic",
-            "title": temp_path.stem,
-            "id": temp_path.stem,
-            "formats": [self.format._format_dict()],
-            "format_id": self.format.id,
+            "title": format.id,
+            "id": format.id,
+            "formats": [format._format_dict()],
+            "format_id": format.id,
         }
+    )
 
-        info = self._download(info_dict, params)
 
-        if self._callbacks:
-            [
-                callback(self.total_filesize, self.total_filesize)
-                for callback in self._callbacks
-            ]
+def _progress_wraper(d: dict, callback: DownloadCallback) -> None:
+    """`YT-DLP` progress hook, but stable and without issues."""
 
-        path = info["requested_downloads"][0]["filepath"]
-        return Path(path)
+    status: str = d.get("status") or ""
+    completed: int = d.get("downloaded_bytes") or 0
+    total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 
-    def reset_progress(self):
-        self.downloaded = 0
-        self.total_filesize = 0
-
-    def _download(self, info, params) -> InfoDict:
-        try:
-            info = YTDLP(params).process_ie_result(info, download=True)
-            return cast(InfoDict, info)
-        except YTDLP_DownloadError as err:
-            msg = format_except_message(err)
-            raise DownloadError(msg)
-
-    def _progress_wraper(
-        self,
-        d: dict,
-        callback: DownloadCallback,
-    ) -> None:
-        """`YT-DLP` progress hook, but stable and without issues."""
-
-        completed: int = d.get("downloaded_bytes") or 0
-        total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-
-        if total > self.total_filesize:
-            self.total_filesize = total
-        if completed > self.downloaded:
-            self.downloaded = completed
-
-            callback(self.downloaded, self.total_filesize)
+    match status:
+        case "downloading":
+            callback(completed, total)
+        case "finished":
+            callback(total, total)

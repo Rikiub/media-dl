@@ -1,5 +1,9 @@
 import logging
 
+from rich.logging import RichHandler
+
+from media_dl.rich import CONSOLE
+
 
 class ColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -24,16 +28,14 @@ class ColorFormatter(logging.Formatter):
 
 def init_logging(level: int | str):
     if isinstance(level, str):
-        log_level = logging.getLevelName(level)
+        log_level: int = logging.getLevelName(level)
     else:
-        log_level = level
+        log_level: int = level
 
     if log_level >= 20:
         verbose = False
     else:
         verbose = True
-
-    from rich.logging import RichHandler
 
     msg_format = "%(message)s"
     rich_handler = RichHandler(
@@ -42,6 +44,7 @@ def init_logging(level: int | str):
         show_time=verbose,
         show_path=verbose,
         markup=True,
+        console=CONSOLE,
     )
     rich_handler.setFormatter(ColorFormatter(msg_format))
 

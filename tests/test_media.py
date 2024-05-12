@@ -1,8 +1,7 @@
 from tempfile import TemporaryDirectory
 
-import pytest
-
 import media_dl
+import pytest
 from media_dl.exceptions import ExtractError
 from media_dl.models import Playlist, Stream
 

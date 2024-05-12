@@ -1,6 +1,8 @@
+"""Custom `Rich` classes."""
+
 from __future__ import annotations
 
-from rich.console import Group, RenderableType
+from rich.console import Console, Group, RenderableType
 from rich.progress import (
     BarColumn,
     DownloadColumn,
@@ -8,7 +10,24 @@ from rich.progress import (
     Progress,
     TextColumn,
 )
+from rich.status import Status as _Status
 from rich.table import Column
+
+CONSOLE = Console(stderr=True)
+
+
+class Status(_Status):
+    def __init__(self, status: RenderableType, *, disable: bool = False):
+        self.disable = disable
+        super().__init__(status, console=CONSOLE)
+
+    def start(self) -> None:
+        if not self.disable:
+            return super().start()
+
+    def stop(self) -> None:
+        if not self.disable:
+            return super().stop()
 
 
 class CounterProgress:
@@ -23,6 +42,7 @@ class CounterProgress:
             transient=True,
             expand=False,
             disable=self.disable,
+            console=CONSOLE,
         )
         self._task_id = self._progress.add_task(
             "", visible=visible, completed=0, total=total
@@ -67,6 +87,7 @@ class DownloadProgress(Progress):
             transient=True,
             expand=True,
             disable=disable,
+            console=CONSOLE,
         )
 
     def __enter__(self) -> DownloadProgress:

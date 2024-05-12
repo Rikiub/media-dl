@@ -3,9 +3,9 @@
 import atexit
 import logging
 import shutil
+import tempfile
 from enum import Enum
 from pathlib import Path
-from tempfile import mkdtemp
 from typing import Any, Literal, NewType, cast
 
 from yt_dlp import YoutubeDL
@@ -13,7 +13,11 @@ from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
 # Directories
-DIR_TEMP = Path(mkdtemp(prefix="ydl-"))
+DIR_TEMP = Path(tempfile.mkdtemp(prefix="ydl-"))
+
+
+def get_tempfile() -> Path:
+    return Path(tempfile.mktemp())
 
 
 def clean_tempdir():
@@ -59,7 +63,7 @@ class YTDLP(YoutubeDL):
             "no_warnings": True,
             "noprogress": True,
             "quiet": True,
-            "color": {"stderr": "no_color", "stdout": "no_color"},
+            "color": {"stdout": "no_color", "stderr": "no_color"},
             "postprocessors": [
                 {
                     "key": "MetadataParser",
