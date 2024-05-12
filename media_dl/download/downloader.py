@@ -146,21 +146,6 @@ class Downloader:
             self._progress.counter.reset(total=1)
             return self._download_work(stream, format, on_progress)
 
-    def download_to_stdin(self, stream: Stream, format: Format | None = None) -> None:
-        """Download a single `Stream` to stdin.
-
-        Args:
-            stream: Target `Stream` to download.
-            format: Specific `Stream` format to download. By default will select BEST format.
-
-        Raises:
-            MediaError: Something bad happens when download.
-            ValueError: Provided `Format` wasn't founded in `Stream`.
-        """
-
-        format, _ = self._resolve_format(stream, format)
-        worker.download_to_stdin(format)
-
     def _download_work(
         self,
         stream: Stream,

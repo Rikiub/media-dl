@@ -136,7 +136,7 @@ What format you want request?
             show_default=False,
             dir_okay=True,
             file_okay=False,
-            allow_dash=True,
+            allow_dash=False,
         ),
     ] = Path.cwd(),
     ffmpeg: Annotated[
@@ -207,8 +207,6 @@ What format you want request?
     except FileNotFoundError as err:
         raise BadParameter(str(err))
 
-    output_is_stdin = downloader.config.output == Path("-")
-
     if downloader.config.convert and not downloader.config.ffmpeg:
         log.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
@@ -227,27 +225,8 @@ What format you want request?
                     log.info('🔎 Search from %s: "%s".', target.value, entry)
                     result = media_dl.extract_search(entry, target.value)[0]
 
-            # Download to stdin
-            if output_is_stdin:
-                log.info("📝 Writing to stdin.")
-
-                if isinstance(result, Playlist):
-                    raise MediaError(
-                        "Download to stdin is not allowed in playlists, try another URL."
-                    )
-                if len(query) > 1:
-                    log.warning(
-                        f'❗ Only one query can be used when downloading to stdin. "{entry}" will be used instead.'
-                    )
-
-                downloader.download_to_stdin(result)
-                # raise SystemExit()
-
-            # Download to file
-            else:
-                downloader.download_all(result)
-                log.info("✅ Download Finished.")
-
+            downloader.download_all(result)
+            log.info("✅ Download Finished.")
         except MediaError as err:
             log.error("❌ %s", str(err))
             continue

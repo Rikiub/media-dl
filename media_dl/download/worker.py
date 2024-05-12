@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Callable, cast
-import sys
+
+from yt_dlp import DownloadError as YTDLP_DownloadError
 
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import DownloadError
 from media_dl.models.format import Format
-from yt_dlp import DownloadError as YTDLP_DownloadError
 
 DownloadCallback = Callable[[int, int], None]
 
@@ -37,28 +37,6 @@ def download(
 
     path = info["requested_downloads"][0]["filepath"]
     return Path(path)
-
-
-def download_to_stdin(format: Format) -> None:
-    """Download format but write to stdin.
-
-    Raises:
-        DownloadError: Download failed.
-    """
-
-    params = {"logtostderr": True, "outtmpl": "-"}
-    format_dict = _gen_generic_info(format)
-
-    try:
-        _internal_download(format_dict, params)
-
-        for _ in sys.stdin:
-            pass
-    except DownloadError as err:
-        if "Broken pipe" in str(err):
-            pass
-        else:
-            raise
 
 
 def _internal_download(info: InfoDict, params: dict) -> InfoDict:
