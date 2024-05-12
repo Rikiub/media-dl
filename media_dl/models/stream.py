@@ -30,14 +30,18 @@ class Stream(ExtractID):
         elif self.title:
             return self.title
         else:
-            return "?"
+            return ""
 
     def get_updated(self) -> Stream:
+        """Fetch a updated version of the Stream."""
+
         info = raw.extract_url(self.url)
         stream = Stream._from_info(info)
         return stream
 
     def has_missing_info(self) -> bool:
+        """Check if stream require more info."""
+
         if not (self.title and self.duration and self.formats):
             return True
         else:
