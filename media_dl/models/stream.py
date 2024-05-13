@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from dataclasses import dataclass, field
 from typing import overload
 
@@ -16,7 +17,7 @@ class Stream(ExtractID):
     title: str = ""
     uploader: str = ""
     thumbnail: str = ""
-    date: str = ""
+    date: datetime.date | None = None
     duration: int = 0
     formats: FormatList = FormatList([])
     _extra_info: InfoDict = field(default_factory=lambda: InfoDict({}), repr=False)
@@ -33,16 +34,23 @@ class Stream(ExtractID):
             return ""
 
     def get_updated(self) -> Stream:
-        """Fetch a updated version of the Stream."""
+        """Fetch the stream again.
+
+        Returns:
+            Updated version of the Stream.
+
+        Raises:
+            ExtractError: Something bad happens when extract.
+        """
 
         info = raw.extract_url(self.url)
         stream = Stream._from_info(info)
         return stream
 
     def has_missing_info(self) -> bool:
-        """Check if stream require more info."""
+        """Check if stream require more info to extract."""
 
-        if not (self.title and self.duration and self.formats):
+        if not (self.formats and self.duration and self.date and self.title):
             return True
         else:
             return False
@@ -67,11 +75,17 @@ class Stream(ExtractID):
             title=info.get("title") or "",
             uploader=info.get("uploader") or "",
             thumbnail=serializer.extract_thumbnail(info),
-            date=info.get("release_date") or info.get("upload_date") or "",
+            date=serializer.extract_date(info),
             duration=info.get("duration") or 0,
             formats=FormatList._from_info(info),
             _extra_info=serializer.sanitize(info),
         )
+
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, Stream):
+            return o.id == self.id
+        else:
+            return False
 
 
 class LazyStreams(GenericList):
@@ -83,6 +97,14 @@ class LazyStreams(GenericList):
     Raises:
         ExtractError: Failed to fetch complete stream.
     """
+
+    def _resolve_stream(self, index: int) -> Stream:
+        stream = self._list[index]
+
+        if stream.has_missing_info():
+            self._list[index] = stream = stream.get_updated()
+
+        return stream
 
     @classmethod
     def _from_info(cls, info: InfoDict) -> LazyStreams:
@@ -114,11 +136,3 @@ class LazyStreams(GenericList):
                 return self._resolve_stream(index)
             case _:
                 raise TypeError(index)
-
-    def _resolve_stream(self, index: int) -> Stream:
-        stream = self._list[index]
-
-        if stream.has_missing_info():
-            self._list[index] = stream = stream.get_updated()
-
-        return stream

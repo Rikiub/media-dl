@@ -2,23 +2,22 @@ import concurrent.futures as cf
 import logging
 import shutil
 import time
-from os import PathLike
 from pathlib import Path
 from typing import Callable, Literal
 
 from media_dl._ydl import (
     download_subtitles,
     download_thumbnail,
-    get_tempfile,
     parse_name_template,
     run_postproces,
 )
 from media_dl.download import worker
 from media_dl.download.config import FILE_FORMAT, FormatConfig
 from media_dl.exceptions import MediaError
-from media_dl.models import ExtractResult, LazyStreams, Playlist
 from media_dl.models.format import Format, FormatList
-from media_dl.models.stream import Stream
+from media_dl.models.playlist import Playlist
+from media_dl.models.stream import LazyStreams, Stream
+from media_dl.path import StrPath, get_tempfile
 from media_dl.rich import DownloadProgress
 
 log = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ PROGRESS_STATUS = Literal[
 ]
 ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
 
-StrPath = str | PathLike[str]
+ExtractResult = Playlist | LazyStreams | Stream
 
 
 class Downloader:
@@ -285,7 +284,9 @@ class Downloader:
         return streams
 
     def _resolve_format(
-        self, stream: Stream, format: Format | None = None
+        self,
+        stream: Stream,
+        format: Format | None = None,
     ) -> tuple[Format, FormatConfig]:
         config = self.config
 

@@ -28,14 +28,9 @@ theme:
         icon: material/brightness-4
         name: Switch to system preference
 
-
   font:
     text: Rubik
     code: Fira Code
-        
-  font:
-    text: Roboto
-    code: Roboto Mono
 
   features:
     - navigation.instant
@@ -43,6 +38,16 @@ theme:
     - navigation.expand
     - navigation.sections
     - navigation.tabs
+    - content.code.copy
+
+markdown-extensions:
+  - pymdownx.highlight:
+    anchor_linenums: true
+    pygmens_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
   
 plugins:
   - search

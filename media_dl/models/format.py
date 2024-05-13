@@ -140,7 +140,11 @@ class FormatList(GenericList):
         """Sort by `Format` attribute."""
 
         return FormatList(
-            sorted(self._list, key=lambda f: getattr(f, attribute), reverse=reverse)
+            sorted(
+                self._list,
+                key=lambda f: getattr(f, attribute),
+                reverse=reverse,
+            )
         )
 
     def get_by_id(self, id: str) -> Format:
@@ -201,8 +205,7 @@ class FormatList(GenericList):
     def __contains__(self, other) -> bool:
         if isinstance(other, Format):
             try:
-                self.get_by_id(other.id)
-                return True
+                return bool(self.get_by_id(other.id))
             except IndexError:
                 return False
         else:

@@ -1,5 +1,7 @@
 """Helpers to serialize info dicts."""
 
+import datetime
+
 from media_dl._ydl import InfoDict, sanitize_info
 
 
@@ -37,6 +39,19 @@ def sanitize(info: InfoDict) -> InfoDict:
         info.pop(key, None)
 
     return info
+
+
+def extract_date(info: InfoDict) -> datetime.date | None:
+    date = info.get("release_date") or info.get("upload_date") or None
+
+    if date:
+        year = int(date[0:4])
+        month = int(date[4:6])
+        day = int(date[6:9])
+
+        return datetime.date(year, month, day)
+    else:
+        return None
 
 
 def extract_thumbnail(info: InfoDict) -> str:

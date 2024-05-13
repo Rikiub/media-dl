@@ -1,7 +1,8 @@
 from media_dl.exceptions import ExtractError
 from media_dl.extractor import raw, serializer
 from media_dl.extractor.raw import SEARCH_PROVIDER
-from media_dl.models import LazyStreams, Playlist, Stream
+from media_dl.models.playlist import Playlist
+from media_dl.models.stream import LazyStreams, Stream
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER) -> LazyStreams:

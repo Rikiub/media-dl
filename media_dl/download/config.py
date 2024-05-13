@@ -37,8 +37,11 @@ class FormatConfig:
 
     def __post_init__(self):
         # Check if ffmpeg is installed and handle custom path.
-        if self.ffmpeg and not self._executable_exists(self.ffmpeg):
-            raise FileNotFoundError(f"'{self.ffmpeg.name}' is not a FFmpeg executable.")
+        if self.ffmpeg:
+            if self._executable_exists(self.ffmpeg):
+                raise FileNotFoundError(
+                    f"'{self.ffmpeg.name}' is not a FFmpeg executable."
+                )
         else:
             self.ffmpeg = self._get_global_ffmpeg() or None
 
@@ -159,12 +162,9 @@ class FormatConfig:
                             "add_infojson": None,
                         },
                         {"key": "FFmpegEmbedSubtitle", "already_have_subtitle": False},
+                        {"key": "EmbedThumbnail", "already_have_thumbnail": False},
                     ]
                 )
-
-        postprocessors.append(
-            {"key": "EmbedThumbnail", "already_have_thumbnail": False}
-        )
 
         opts |= {"postprocessors": postprocessors}
         return opts

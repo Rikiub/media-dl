@@ -40,8 +40,10 @@ def download(
 
 
 def _internal_download(info: InfoDict, params: dict) -> InfoDict:
+    retries = {"retries": 0, "fragment_retries": 0}
+
     try:
-        info = YTDLP(params).process_ie_result(info, download=True)
+        info = YTDLP(retries | params).process_ie_result(info, download=True)
         return cast(InfoDict, info)
     except YTDLP_DownloadError as err:
         msg = format_except_message(err)

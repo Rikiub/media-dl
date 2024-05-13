@@ -15,18 +15,20 @@ class GenericList(Sequence):
     def __init__(self, iterable: Iterable) -> None:
         self._list = list(iterable)
 
-    def __iter__(self):
-        for f in self._list:
-            yield f
+    def __contains__(self, value: object) -> bool:
+        return value in self._list
 
-    def __bool__(self) -> bool:
-        return True if self._list else False
+    def __iter__(self):
+        return iter(self._list)
 
     def __len__(self) -> int:
-        return self._list.__len__()
+        return len(self._list)
+
+    def __bool__(self) -> bool:
+        return bool(self._list)
 
     def __repr__(self) -> str:
-        return self._list.__repr__()
+        return repr(self._list)
 
     def __rich_repr__(self):
         yield self._list

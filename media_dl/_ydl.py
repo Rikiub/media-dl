@@ -1,9 +1,6 @@
 """yt-dlp parameters, functions and constans used around the project."""
 
-import atexit
 import logging
-import shutil
-import tempfile
 from enum import Enum
 from pathlib import Path
 from typing import Any, Literal, NewType, cast
@@ -12,22 +9,7 @@ from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
-# Directories
-DIR_TEMP = Path(tempfile.mkdtemp(prefix="ydl-"))
-
-
-def get_tempfile() -> Path:
-    return Path(tempfile.mktemp())
-
-
-def clean_tempdir():
-    """Delete global temporary directory."""
-
-    shutil.rmtree(DIR_TEMP)
-
-
-atexit.register(clean_tempdir)
-
+from media_dl.path import DIR_TEMP
 
 # Types
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
