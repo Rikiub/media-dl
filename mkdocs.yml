@@ -7,6 +7,16 @@ repo_url: https://github.com/rikiub/media-dl
 theme:
   name: material
 
+  font:
+    text: Rubik
+    code: Fira Code
+
+  features:
+    # - navigation.tabs
+    - navigation.expand
+    # - navigation.sections
+    - content.code.copy
+
   palette:
     # Palette toggle for automatic mode
     - media: "(prefers-color-scheme)"
@@ -16,7 +26,8 @@ theme:
 
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
-      scheme: default 
+      scheme: default
+      primary: amber
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
@@ -24,37 +35,16 @@ theme:
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
+      primary: amber
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
-
-  font:
-    text: Rubik
-    code: Fira Code
-
-  features:
-    - navigation.instant
-    - navigation.path
-    - navigation.expand
-    - navigation.sections
-    - navigation.tabs
-    - content.code.copy
-
-markdown-extensions:
-  - pymdownx.highlight:
-    anchor_linenums: true
-    pygmens_lang_class: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
+  
+markdown_extensions:
+  - pymdownx.highlight
   - pymdownx.superfences
 
-  
 plugins:
   - search
   - autorefs
   - mkdocstrings
-
-nav:
-  - Welcome: index.md
-  - Getting Started:
-    - Installation: installation.md

@@ -1,3 +1,10 @@
+---
+title: Welcome
+# hide:
+# - navigation
+# - toc
+---
+
 # ⏬ Media-DL
 
 > Download any **video/audio** you want from a simple **URL** ✨.

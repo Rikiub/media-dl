@@ -1,5 +1,3 @@
-## PyPi
+# Installation
 
-```shell
-pip install --user media-dl
-```
+*Coming soon...*
