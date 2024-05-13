@@ -1,0 +1,55 @@
+site_name: Media-DL
+site_description: Download any video/audio you want from a simple URL ✨
+
+repo_name: rikiub/media-dl
+repo_url: https://github.com/rikiub/media-dl
+
+theme:
+  name: material
+
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default 
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+
+  font:
+    text: Rubik
+    code: Fira Code
+        
+  font:
+    text: Roboto
+    code: Roboto Mono
+
+  features:
+    - navigation.instant
+    - navigation.path
+    - navigation.expand
+    - navigation.sections
+    - navigation.tabs
+  
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings
+
+nav:
+  - Welcome: index.md
+  - Getting Started:
+    - Installation: installation.md

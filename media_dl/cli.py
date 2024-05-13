@@ -46,23 +46,23 @@ def complete_query(incomplete: str) -> Generator[str, None, None]:
             yield name.value + ":"
 
 
-def complete_resolution() -> list[str]:
-    return [str(entry) for entry in get_args(VIDEO_RES)]
+def complete_resolution() -> Generator[str, None, None]:
+    for name in get_args(VIDEO_RES):
+        yield str(name)
 
 
-def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
+def parse_input(queries: list[str]) -> Generator[tuple[SearchFrom, str], None, None]:
     providers = [entry.name for entry in SearchFrom]
-    results = []
 
     for entry in queries:
         target = entry.split(":")[0]
 
         if entry.startswith(("http://", "https://")):
-            results.append((SearchFrom["url"], entry))
+            yield SearchFrom["url"], entry
 
         elif target in providers:
             entry = entry.split(":")[1]
-            results.append((SearchFrom[target], entry))
+            yield SearchFrom[target], entry
 
         else:
             completed = [i for i in complete_query(target)]
@@ -73,8 +73,6 @@ def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
                 msg = "Should be URL or search PROVIDER."
 
             raise BadParameter(f"'{target}' is invalid. {msg}")
-
-    return results
 
 
 @app.command(no_args_is_help=True)
