@@ -1,6 +1,4 @@
 try:
-    from rich.status import Status
-    from strenum import StrEnum
     from typer import Argument, BadParameter, Option, Typer
 except ImportError:
     raise ImportError("Typer is required to use CLI features.")
@@ -8,6 +6,8 @@ except ImportError:
 import logging
 from pathlib import Path
 from typing import Annotated, Generator, Literal, Optional, get_args
+
+from strenum import StrEnum
 
 import media_dl
 from media_dl import MediaError, Playlist
