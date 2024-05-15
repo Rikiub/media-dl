@@ -24,7 +24,7 @@ class Stream(ExtractID):
 
     @property
     def display_name(self) -> str:
-        """Get pretty representation of the `Stream` name."""
+        """Get pretty representation of the stream name."""
 
         if self._is_music_site() and self.uploader and self.title:
             return self.uploader + " - " + self.title
@@ -48,7 +48,10 @@ class Stream(ExtractID):
         return stream
 
     def has_missing_info(self) -> bool:
-        """Check if stream require more info to extract."""
+        """
+        Check if has more information to extract.
+        To get the complete information, use `get_updated` method.
+        """
 
         if not (self.formats and self.duration and self.date and self.title):
             return True

@@ -17,7 +17,7 @@ VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
 
 @dataclass(slots=True)
 class FormatConfig:
-    """Helper to create download params to `YT-DLP` and provide a simple interface for others downloaders.
+    """Configuration to shape the formats to download.
 
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
@@ -36,12 +36,8 @@ class FormatConfig:
     metadata: bool = True
 
     def __post_init__(self):
-        # Check if ffmpeg is installed and handle custom path.
-        if self.ffmpeg:
-            if self._executable_exists(self.ffmpeg):
-                raise FileNotFoundError(
-                    f"'{self.ffmpeg.name}' is not a FFmpeg executable."
-                )
+        if self.ffmpeg and not self._executable_exists(self.ffmpeg):
+            raise FileNotFoundError(f"'{self.ffmpeg.name}' is not a FFmpeg executable.")
         else:
             self.ffmpeg = self._get_global_ffmpeg() or None
 
@@ -67,10 +63,10 @@ class FormatConfig:
 
     @property
     def convert(self) -> EXTENSION | None:
-        """Check if config would convert the files.
+        """Check if would convert the files.
 
         Returns:
-            If could convert, returns a file extension. Else return `None`.
+            If could convert, returns a file `EXTENSION`, else return `None`.
         """
 
         return (
@@ -78,7 +74,7 @@ class FormatConfig:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert config to simple dict."""
+        """Convert to dict."""
 
         d = asdict(self)
 
@@ -103,54 +99,57 @@ class FormatConfig:
         else:
             return False
 
-    def _gen_opts(
+    def _gen_ydl_params(
         self, overwrite: bool = False, music_meta: bool = False
     ) -> dict[str, Any]:
-        opts = {"overwrites": overwrite, "retries": 1, "fragment_retries": 1}
+        """Generate download parameters for YT-DLP."""
+
+        params = {"overwrites": overwrite}
+        if self.convert:
+            params |= {"final_ext": self.format}
 
         postprocessors = []
         if music_meta:
             postprocessors.extend(POST_MUSIC)
 
-        if self.convert:
-            opts |= {"final_ext": self.format}
-
         if self.ffmpeg:
-            opts |= {"ffmpeg_location": str(self.ffmpeg)}
+            params |= {"ffmpeg_location": str(self.ffmpeg)}
 
-            if self.type == "video":
-                opts |= {
-                    "merge_output_format": self.convert or ",".join(get_args(EXT_VIDEO))
-                }
-                postprocessors.append(
-                    {
-                        "key": "FFmpegVideoRemuxer",
-                        "preferedformat": self.convert or "mov>mp4/webm>mkv",
-                    },
-                )
-            elif self.type == "audio":
-                postprocessors.append(
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "nopostoverwrites": not overwrite,
-                        "preferredcodec": self.convert,
-                        "preferredquality": None,
+            match self.type:
+                case "video":
+                    params |= {
+                        "merge_output_format": self.convert
+                        or ",".join(get_args(EXT_VIDEO))
                     }
-                )
+                    postprocessors.append(
+                        {
+                            "key": "FFmpegVideoRemuxer",
+                            "preferedformat": self.convert or "mov>mp4/webm>mkv",
+                        },
+                    )
+                case "audio":
+                    postprocessors.append(
+                        {
+                            "key": "FFmpegExtractAudio",
+                            "nopostoverwrites": not overwrite,
+                            "preferredcodec": self.convert,
+                            "preferredquality": None,
+                        }
+                    )
 
-                # Square thumbnail
-                opts |= {
-                    "postprocessor_args": {
-                        "thumbnailsconvertor+ffmpeg_o": [
-                            "-c:v",
-                            "png",
-                            "-vf",
-                            "crop=ih",
-                        ]
-                    },
-                }
-            else:
-                raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
+                    # Square thumbnail
+                    params |= {
+                        "postprocessor_args": {
+                            "thumbnailsconvertor+ffmpeg_o": [
+                                "-c:v",
+                                "png",
+                                "-vf",
+                                "crop=ih",
+                            ]
+                        },
+                    }
+                case _:
+                    raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
 
             if self.metadata:
                 postprocessors.extend(
@@ -166,5 +165,5 @@ class FormatConfig:
                     ]
                 )
 
-        opts |= {"postprocessors": postprocessors}
-        return opts
+        params |= {"postprocessors": postprocessors}
+        return params

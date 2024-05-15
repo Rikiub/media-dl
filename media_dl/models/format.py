@@ -205,7 +205,8 @@ class FormatList(GenericList):
     def __contains__(self, other) -> bool:
         if isinstance(other, Format):
             try:
-                return bool(self.get_by_id(other.id))
+                self.get_by_id(other.id)
+                return True
             except IndexError:
                 return False
         else:

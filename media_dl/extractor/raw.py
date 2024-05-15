@@ -13,10 +13,6 @@ from media_dl.extractor import serializer
 log = logging.getLogger(__name__)
 
 SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
-_PARAMS = {
-    "skip_download": True,
-    "extract_flat": "in_playlist",
-}
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
@@ -49,7 +45,13 @@ def _fetch_query(query: str) -> InfoDict:
     """Base info dict extractor."""
 
     try:
-        info = YTDLP(_PARAMS).extract_info(query, download=False)
+        ydl = YTDLP(
+            {
+                "skip_download": True,
+                "extract_flat": "in_playlist",
+            }
+        )
+        info = ydl.extract_info(query, download=False)
         info = cast(InfoDict, info)
     except (DownloadError, RequestError) as err:
         msg = format_except_message(err)

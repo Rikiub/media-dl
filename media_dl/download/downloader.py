@@ -89,7 +89,7 @@ class Downloader:
         self._progress.counter.reset(len(streams))
 
         with self._progress:
-            with cf.ThreadPoolExecutor(self._threads) as executor:
+            with cf.ThreadPoolExecutor(max_workers=self._threads) as executor:
                 futures = [
                     executor.submit(self._download_work, task) for task in streams
                 ]
@@ -161,7 +161,7 @@ class Downloader:
                 stream = stream.get_updated()
                 self._progress.update(task_id, description=stream.display_name)
 
-            log.debug('"%s": Processing Stream.', stream.id)
+            log.debug('"%s": Downloading stream.', stream.id)
 
             format, download_config = self._resolve_format(stream, format)
 
@@ -221,7 +221,7 @@ class Downloader:
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
-            params = download_config._gen_opts(music_meta=stream._is_music_site())
+            params = download_config._gen_ydl_params(music_meta=stream._is_music_site())
 
             downloaded_file = run_postproces(
                 file=downloaded_file,

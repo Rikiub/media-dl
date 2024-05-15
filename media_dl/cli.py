@@ -19,12 +19,15 @@ from media_dl.rich import Status
 log = logging.getLogger(__name__)
 app = Typer()
 
+
+# Typer: types
 APPNAME = "media-dl"
 
 Format = StrEnum("Format", get_args(FILE_FORMAT))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
 
+# Typer: helpers
 class HelpPanel(StrEnum):
     file = "File"
     advanced = "Advanced"
@@ -40,6 +43,7 @@ def show_version(show: bool) -> None:
         raise SystemExit()
 
 
+# Typer: completions
 def complete_query(incomplete: str) -> Generator[str, None, None]:
     for name in SearchFrom:
         if name.value.startswith(incomplete):
@@ -51,30 +55,31 @@ def complete_resolution() -> Generator[str, None, None]:
         yield str(name)
 
 
-def parse_input(queries: list[str]) -> Generator[tuple[SearchFrom, str], None, None]:
+def parse_queries(queries: list[str]) -> Generator[tuple[SearchFrom, str], None, None]:
     providers = [entry.name for entry in SearchFrom]
 
     for entry in queries:
-        target = entry.split(":")[0]
+        selection = entry.split(":")[0]
 
         if entry.startswith(("http://", "https://")):
-            yield SearchFrom["url"], entry
-
-        elif target in providers:
+            target = SearchFrom["url"]
+        elif selection in providers:
+            target = SearchFrom[selection]
             entry = entry.split(":")[1]
-            yield SearchFrom[target], entry
-
         else:
-            completed = [i for i in complete_query(target)]
+            completed = [i for i in complete_query(selection)]
 
             if completed:
                 msg = f"Did you mean '{completed[0]}'?"
             else:
                 msg = "Should be URL or search PROVIDER."
 
-            raise BadParameter(f"'{target}' is invalid. {msg}")
+            raise BadParameter(f"'{selection}' is invalid. {msg}")
+
+        yield target, entry
 
 
+# Typer: app
 @app.command(no_args_is_help=True)
 def download(
     query: Annotated[
@@ -133,7 +138,6 @@ What format you want request?
             show_default=False,
             dir_okay=True,
             file_okay=False,
-            allow_dash=False,
         ),
     ] = Path.cwd(),
     ffmpeg: Annotated[
@@ -209,7 +213,7 @@ What format you want request?
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
         )
 
-    for target, entry in parse_input(query):
+    for target, entry in parse_queries(query):
         try:
             with Status("Please wait", disable=quiet):
                 if target.value == "url":
@@ -226,7 +230,6 @@ What format you want request?
             log.info("✅ Download Finished.")
         except MediaError as err:
             log.error("❌ %s", str(err))
-            continue
         finally:
             log.info("")
 
