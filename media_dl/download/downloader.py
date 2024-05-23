@@ -8,7 +8,7 @@ from typing import Callable, Literal
 from media_dl._ydl import (
     download_subtitles,
     download_thumbnail,
-    parse_name_template,
+    parse_output_template,
     run_postproces,
 )
 from media_dl.download import worker
@@ -210,7 +210,7 @@ class Downloader:
             log.debug('"%s": Postprocessing downloaded file.', stream.id)
 
             # Final filename
-            output_name = parse_name_template(
+            output_name = parse_output_template(
                 stream._extra_info, "%(uploader)s - %(title)s"
             )
 

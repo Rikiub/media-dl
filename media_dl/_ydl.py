@@ -111,7 +111,7 @@ def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
     return Path(info["filepath"])
 
 
-def parse_name_template(info: InfoDict, template: str) -> str:
+def parse_output_template(info: InfoDict, template: str) -> str:
     """Get a custom filename by output template."""
 
     return YTDLP().prepare_filename(info, outtmpl=template)
