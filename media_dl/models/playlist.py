@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from media_dl._ydl import InfoDict
 from media_dl.extractor import serializer
 from media_dl.models.base import ExtractID
 from media_dl.models.stream import LazyStreams
 
 
-@dataclass(slots=True, frozen=True, kw_only=True)
 class Playlist(ExtractID):
     """Playlist with multiple Streams."""
 

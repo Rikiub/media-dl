@@ -1,14 +1,13 @@
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from pydantic import BaseModel, Field
 
 
-@dataclass(slots=True, frozen=True)
-class ExtractID:
+class ExtractID(BaseModel):
     """Base identifier for media objects."""
 
-    extractor: str
+    extractor: str = Field(alias="extractor_key")
     id: str
-    url: str
+    url: str = Field(alias="original_url")
 
 
 class GenericList(Sequence):

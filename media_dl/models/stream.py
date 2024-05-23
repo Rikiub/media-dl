@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import datetime
-from dataclasses import dataclass, field
-from typing import overload
+from typing import Annotated, overload
+
+from pydantic import Field
 
 from media_dl._ydl import MUSIC_SITES, InfoDict
 from media_dl.extractor import raw, serializer
@@ -10,17 +11,16 @@ from media_dl.models.base import ExtractID, GenericList
 from media_dl.models.format import FormatList
 
 
-@dataclass(slots=True, frozen=True, order=True)
 class Stream(ExtractID):
     """Online media stream representation."""
 
     title: str = ""
     uploader: str = ""
     thumbnail: str = ""
-    date: datetime.date | None = None
+    date: Annotated[datetime.date | None, Field(alias="upload_date")]
     duration: int = 0
     formats: FormatList = FormatList([])
-    _extra_info: InfoDict = field(default_factory=lambda: InfoDict({}), repr=False)
+    extra_info: InfoDict = Field(default_factory=lambda: InfoDict({}), repr=False)
 
     @property
     def display_name(self) -> str:
@@ -62,7 +62,7 @@ class Stream(ExtractID):
         if any(s in self.url for s in MUSIC_SITES):
             return True
 
-        elif self._extra_info.get("track") and self._extra_info.get("artist"):
+        elif self.extra_info.get("track") and self.extra_info.get("artist"):
             return True
 
         else:

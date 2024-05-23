@@ -1,15 +1,58 @@
 from __future__ import annotations
 
 import bisect
-from dataclasses import dataclass, field
-from typing import Any, overload
+from typing import overload, Annotated
+
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
 from media_dl.models.base import GenericList
 
 
-@dataclass(slots=True, frozen=True, order=True)
-class Format:
+class FMT(BaseModel):
+    url: str
+    id: Annotated[str, Field(alias="format_id")]
+    extension: Annotated[str, Field(alias="ext")]
+    filesize: int = 0
+    _downloader_options: Annotated[dict, Field(alias="downloader_options")]
+
+    @computed_field
+    @property
+    def display_quality(self) -> str:
+        raise NotImplementedError()
+
+    @field_validator("extension")
+    @classmethod
+    def _val_extension(cls, ext: str) -> str:
+        if not (ext in SupportedExtensions.video or ext in SupportedExtensions.audio):
+            raise ValueError("Must have a extension.")
+        return ext
+
+
+class VideoFormat(FMT):
+    video_codec: Annotated[str, Field(alias="vcodec")]
+    audio_codec: Annotated[str, Field(alias="acodec")]
+    width: int
+    height: int
+    fps: int
+
+    @computed_field
+    @property
+    def display_quality(self) -> str:
+        return str(self.height) + "p"
+
+
+class AudioFormat(FMT):
+    audio_codec: Annotated[str, Field(alias="acodec")]
+    bitrate: Annotated[int, Field(alias="abr")]
+
+    @computed_field
+    @property
+    def display_quality(self) -> str:
+        return str(self.bitrate) + "kbps"
+
+
+class Format(BaseModel):
     """Remote file representation.
 
     Their fields are determined by their `type`. For example:
@@ -18,24 +61,47 @@ class Format:
     """
 
     url: str
-    id: str
-    type: FORMAT_TYPE
-    extension: str
-    codec: str
-    quality: int = 0
+    id: Annotated[str, Field(alias="format_id")]
+    extension: Annotated[str, Field(alias="ext")]
+    vcodec: str | None = None
+    acodec: str | None = None
+    width: int | None = None
+    height: int | None = None
+    bitrate: int | None = Field(alias="abr")
     filesize: int = 0
-    _downloader_options: dict = field(default_factory=dict, repr=False)
+    _downloader_options: Annotated[dict, Field(alias="downloader_options")]
 
-    def __post_init__(self):
-        if not self.codec:
-            raise TypeError("Must have a codec.")
+    @computed_field
+    @property
+    def type(self) -> FORMAT_TYPE:
+        if self.vcodec:
+            return "video"
+        elif self.acodec:
+            return "audio"
+        else:
+            raise ValueError()
 
-        if not (
-            self.extension in SupportedExtensions.video
-            or self.extension in SupportedExtensions.audio
-        ):
-            raise TypeError(self.extension, "not is a valid extension.")
+    @computed_field
+    @property
+    def codec(self) -> str:
+        if self.vcodec:
+            return self.vcodec
+        elif self.acodec:
+            return self.acodec
+        else:
+            raise ValueError()
 
+    @computed_field
+    @property
+    def quality(self) -> int:
+        if self.height:
+            return self.height
+        elif self.bitrate:
+            return self.bitrate
+        else:
+            raise ValueError()
+
+    @computed_field
     @property
     def display_quality(self) -> str:
         """Get pretty representation of `Format` quality."""
@@ -68,34 +134,12 @@ class Format:
 
         return InfoDict(d)
 
+    @field_validator("extension")
     @classmethod
-    def _from_info(cls, entry: dict[str, Any]) -> Format:
-        type: FORMAT_TYPE = (
-            "audio" if entry.get("resolution", "") == "audio only" else "video"
-        )
-
-        match type:
-            case "video":
-                quality = entry.get("height")
-                codec = entry.get("vcodec")
-            case "audio":
-                quality = entry.get("abr")
-                codec = entry.get("acodec")
-            case _:
-                raise TypeError(type)
-
-        cls = cls(
-            url=entry["url"],
-            id=entry["format_id"],
-            type=type,
-            extension=entry["ext"],
-            codec=codec or "",
-            quality=quality or 0,
-            filesize=entry.get("filesize") or 0,
-            _downloader_options=entry.get("downloader_options") or {},
-        )
-        cls.__post_init__()
-        return cls
+    def _val_extension(cls, ext: str) -> str:
+        if not (ext in SupportedExtensions.video or ext in SupportedExtensions.audio):
+            raise ValueError("Must have a extension.")
+        return ext
 
 
 class FormatList(GenericList):
@@ -196,7 +240,7 @@ class FormatList(GenericList):
 
         for format in info.get("formats") or {}:
             try:
-                formats.append(Format._from_info(format))
+                formats.append(Format(**format))
             except TypeError:
                 continue
 

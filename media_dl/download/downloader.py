@@ -211,13 +211,13 @@ class Downloader:
 
             # Final filename
             output_name = parse_name_template(
-                stream._extra_info, "%(uploader)s - %(title)s"
+                stream.extra_info, "%(uploader)s - %(title)s"
             )
 
             # Download resources
-            if download_thumbnail(output_name, stream._extra_info):
+            if download_thumbnail(output_name, stream.extra_info):
                 log.debug('"%s": Thumbnail founded.', stream.id)
-            if download_subtitles(output_name, stream._extra_info):
+            if download_subtitles(output_name, stream.extra_info):
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
@@ -225,7 +225,7 @@ class Downloader:
 
             downloaded_file = run_postproces(
                 file=downloaded_file,
-                info=stream._extra_info,
+                info=stream.extra_info,
                 params=params,
             )
             log.debug(
