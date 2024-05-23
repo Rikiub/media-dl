@@ -83,7 +83,7 @@ def download(
             """,
             show_default=False,
             autocompletion=complete_query,
-            metavar=f"URL | PROVIDER",
+            metavar="URL | PROVIDER",
         ),
     ],
     format: Annotated[
@@ -95,7 +95,7 @@ def download(
             - To get BEST, select 'video' or 'audio' (Fast).\n
             - To convert, select a file EXTENSION (Slow).
             """,
-            metavar=f"TYPE | EXTENSION",
+            metavar="TYPE | EXTENSION",
             prompt="""
 What format you want request?
 

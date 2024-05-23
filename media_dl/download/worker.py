@@ -48,15 +48,6 @@ class DownloadWorker:
             ValueError: Provided `Format` wasn't founded in the `Stream` formats list.
         """
 
-        __slots__ = (
-            "downloaded",
-            "total_filesize",
-            "stream",
-            "format",
-            "config",
-            "_callback",
-        )
-
         if not stream.formats:
             self.stream = stream.update()
         else:
@@ -67,7 +58,7 @@ class DownloadWorker:
 
         # If we have format, should resolve config by format.
         if format:
-            if not format in self.stream.formats:
+            if format not in self.stream.formats:
                 raise ValueError(f"'{format.id}' format id not founded in Stream.")
 
             if not self.config.convert:
@@ -123,10 +114,7 @@ class DownloadWorker:
 
         if c := self._callback:
             wrapper = lambda d: self._progress_wraper(d, c)
-            progress = {
-                "progress_hooks": [wrapper],
-                "postprocessor_hooks": [wrapper],
-            }
+            progress = {"progress_hooks": [wrapper]}
         else:
             progress = {}
 
@@ -174,7 +162,6 @@ class DownloadWorker:
         """`YT-DLP` progress hook, but stable and without issues."""
 
         status: PROGRESS_STATUS = d["status"]
-        post: str = d.get("postprocessor") or ""
         completed: int = d.get("downloaded_bytes") or 0
         total: int = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
 

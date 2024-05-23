@@ -66,17 +66,6 @@ class ProgressTask:
         counter: CounterProgress,
         title: str,
     ):
-        __slots__ = (
-            "message",
-            "status",
-            "completed",
-            "total",
-            "started",
-            "progress",
-            "counter",
-            "task_id",
-        )
-
         self.message: str = title
         self.status: str = "Starting"
         self.completed: int = 0

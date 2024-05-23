@@ -8,7 +8,6 @@ from media_dl.download.config import FormatConfig
 
 from media_dl.extractor import ExtractionError
 from media_dl.models import ExtractResult, Stream, Playlist, Format
-from media_dl.models.format import Format
 
 log = logging.getLogger(__name__)
 
