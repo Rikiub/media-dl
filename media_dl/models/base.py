@@ -1,6 +1,5 @@
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Generic
 
 
 @dataclass(slots=True, frozen=True)

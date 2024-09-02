@@ -19,7 +19,7 @@ class Playlist(ExtractID):
     @classmethod
     def _from_info(cls, info: InfoDict) -> Playlist:
         if not serializer.is_playlist(info):
-            raise TypeError("Unable to serialize dict. Not is a playlist.")
+            raise ValueError("Unable to serialize dict. Not is a playlist.")
 
         return cls(
             *serializer.extract_meta(info),

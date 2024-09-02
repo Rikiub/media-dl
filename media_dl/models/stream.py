@@ -71,7 +71,7 @@ class Stream(ExtractID):
     @classmethod
     def _from_info(cls, info: InfoDict) -> Stream:
         if not serializer.is_stream(info):
-            raise TypeError("Unable to serialize dict. It's not a stream.")
+            raise ValueError("Unable to serialize dict. It's not a stream.")
 
         return cls(
             *serializer.extract_meta(info),
@@ -116,7 +116,7 @@ class LazyStreams(GenericList):
         for entry in info["entries"]:
             try:
                 streams.append(Stream._from_info(entry))
-            except TypeError:
+            except ValueError:
                 continue
 
         return cls(streams)
@@ -138,4 +138,4 @@ class LazyStreams(GenericList):
             case int():
                 return self._resolve_stream(index)
             case _:
-                raise TypeError(index)
+                raise ValueError(index)

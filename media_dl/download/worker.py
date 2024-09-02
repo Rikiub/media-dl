@@ -12,7 +12,9 @@ DownloadCallback = Callable[[int, int], None]
 
 def download(
     filepath: Path,
-    format: Format,
+    video: Format | None,
+    audio: Format | None,
+    merge_format: str | None = None,
     callbacks: list[DownloadCallback] | None = None,
 ) -> Path:
     """Download format.
@@ -24,22 +26,49 @@ def download(
         DownloadError: Download failed.
     """
 
+    if not (video or audio):
+        raise ValueError("No formats to download.")
+
+    # Params
     params = {}
+
+    if merge_format:
+        params |= {"merge_output_format": merge_format}
 
     if callbacks:
         wrappers = [lambda d: _progress_wraper(d, callback) for callback in callbacks]
         params |= {"progress_hooks": wrappers}
 
     params |= {"outtmpl": f"{filepath}.%(ext)s"}
-    format_dict = _gen_generic_info(format)
 
-    info = _internal_download(format_dict, params)
+    # InfoDict
+    format_id = f"{video.id if video else ""}+{audio.id if audio else ""}"
+
+    if format_id.startswith("+") or format_id.endswith("+"):
+        format_id.strip("+")
+
+    formats: list[InfoDict] = []
+    if video:
+        formats.append(video._format_dict())
+    if audio:
+        formats.append(audio._format_dict())
+
+    info = {
+        "extractor": "generic",
+        "extractor_key": "Generic",
+        "title": filepath.stem,
+        "id": filepath.stem,
+        "formats": formats,
+        "format_id": format_id,
+    }
+
+    info = _internal_download(info, params)
 
     path = info["requested_downloads"][0]["filepath"]
     return Path(path)
 
 
-def _internal_download(info: InfoDict, params: dict) -> InfoDict:
+def _internal_download(info: dict, params: dict) -> InfoDict:
     retries = {"retries": 0, "fragment_retries": 0}
 
     try:
@@ -48,19 +77,6 @@ def _internal_download(info: InfoDict, params: dict) -> InfoDict:
     except YTDLP_DownloadError as err:
         msg = format_except_message(err)
         raise DownloadError(msg)
-
-
-def _gen_generic_info(format: Format) -> InfoDict:
-    return InfoDict(
-        {
-            "extractor": "generic",
-            "extractor_key": "Generic",
-            "title": format.id,
-            "id": format.id,
-            "formats": [format._format_dict()],
-            "format_id": format.id,
-        }
-    )
 
 
 def _progress_wraper(d: dict, callback: DownloadCallback) -> None:

@@ -3,7 +3,7 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Callable, Literal, get_args
 
 from media_dl._ydl import (
     download_subtitles,
@@ -12,9 +12,9 @@ from media_dl._ydl import (
     run_postproces,
 )
 from media_dl.download import worker
-from media_dl.download.config import FILE_FORMAT, FormatConfig
+from media_dl.download.config import EXT_VIDEO, FILE_FORMAT, FormatConfig
 from media_dl.exceptions import MediaError
-from media_dl.models.format import Format, FormatList
+from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStreams, Stream
 from media_dl.path import StrPath, get_tempfile
@@ -123,7 +123,6 @@ class Downloader:
     def download(
         self,
         stream: Stream,
-        format: Format | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> Path:
         """Download a single `Stream` result.
@@ -143,13 +142,10 @@ class Downloader:
 
         with self._progress:
             self._progress.counter.reset(total=1)
-            return self._download_work(stream, format, on_progress)
+            return self._download_work(stream, on_progress=on_progress)
 
     def _download_work(
-        self,
-        stream: Stream,
-        format: Format | None = None,
-        on_progress: ProgressCallback | None = None,
+        self, stream: Stream, on_progress: ProgressCallback | None = None
     ) -> Path:
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
@@ -163,18 +159,16 @@ class Downloader:
 
             log.debug('"%s": Downloading stream.', stream.id)
 
-            format, download_config = self._resolve_format(stream, format)
+            # Resolve formats
+            format_video, format_audio, download_config = self._resolve_format(stream)
 
             # STATUS: Download
             self._progress.update(task_id, status="Downloading")
-            log.debug(
-                '"%s": Download format "%s" (%s %s) (%s).',
-                stream.id,
-                format.id,
-                format.extension,
-                format.display_quality,
-                format.type,
-            )
+
+            if format_video:
+                self._log_format(stream.id, format_video)
+            if format_audio:
+                self._log_format(stream.id, format_audio)
 
             # Configure callbacks
             total_filesize: int = 0
@@ -196,10 +190,17 @@ class Downloader:
                     )
                 )
 
+            if format_video and format_audio:
+                merge_format = download_config.convert or ",".join(get_args(EXT_VIDEO))
+            else:
+                merge_format = None
+
             # Run download
             downloaded_file = worker.download(
                 filepath=get_tempfile(),
-                format=format,
+                video=format_video,
+                audio=format_audio,
+                merge_format=merge_format,
                 callbacks=callbacks,
             )
 
@@ -286,44 +287,47 @@ class Downloader:
     def _resolve_format(
         self,
         stream: Stream,
-        format: Format | None = None,
-    ) -> tuple[Format, FormatConfig]:
+        video: Format | None = None,
+        audio: Format | None = None,
+    ) -> tuple[Format | None, Format | None, FormatConfig]:
         config = self.config
 
-        if format:
-            if format not in stream.formats:
-                raise ValueError(f"'{format.id}' format ID not founded in Stream.")
+        if not video:
+            config.format = "video"
+            video = self._extract_best_format(stream.formats, config)
 
-            if not config.convert:
-                config.format = format.type
-        else:
-            if not config.convert and stream._is_music_site():
+        if not audio:
+            config.format = "audio"
+            audio = self._extract_best_format(stream.formats, config)
+
+        config.format = self.config.format
+
+        if not config.convert:
+            if stream._is_music_site():
+                log.debug('"%s": Detected music site', stream.id)
+
+                if not audio:
+                    raise MediaError(
+                        "Stream is a music site but audio format wasn't founded."
+                    )
+
                 log.debug(
-                    '"%s": Detected music site, change config to "audio".',
+                    '"%s": Change config to "audio".',
                     stream.id,
                 )
+
+                config.format = "audio"
+            elif video:
+                config.format = "video"
+            elif audio:
                 config.format = "audio"
 
-            format = self._extract_best_format(stream.formats, config)
-
-            if not config.convert and config.type != format.type:
-                log.debug(
-                    '"%s": Format "%s" and config "%s" missmatch, change config to "%s".',
-                    stream.id,
-                    format.type,
-                    config.type,
-                    format.type,
-                )
-                config.format = format.type
-
-        return format, config
+        return video, audio, config
 
     def _extract_best_format(
-        self, formats: FormatList, custom_config: FormatConfig | None = None
-    ) -> Format:
+        self, formats: FormatList, config: FormatConfig
+    ) -> Format | None:
         """Extract best format in stream formats."""
-
-        config = custom_config if custom_config else self.config
 
         # Filter by extension
         if f := config.convert and formats.filter(extension=config.convert):
@@ -331,13 +335,31 @@ class Downloader:
         # Filter by type
         elif f := formats.filter(type=config.type):
             format = f
-        # Filter fallback to available type.
-        elif f := formats.filter(type="video") or formats.filter(type="audio"):
-            format = f
         else:
-            raise TypeError("Not format matches founded.")
+            return None
 
         if config.quality:
-            return f.get_closest_quality(config.quality)
+            return format.get_closest_quality(config.quality)
         else:
             return format[-1]
+
+    def _get_format_type(self, format) -> str:
+        match format:
+            case VideoFormat():
+                type = "video"
+            case AudioFormat():
+                type = "audio"
+            case _:
+                type = "unkdown"
+
+        return type
+
+    def _log_format(self, stream_id: str, format: Format) -> None:
+        log.debug(
+            '"%s": Download %s format "%s" (%s %s)',
+            stream_id,
+            self._get_format_type(format),
+            format.id,
+            format.extension,
+            format.display_quality,
+        )

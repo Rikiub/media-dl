@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import bisect
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from functools import cached_property
 from typing import Any, SupportsIndex, overload
 
@@ -10,67 +11,50 @@ from media_dl.models.base import GenericList
 
 
 @dataclass(slots=True, frozen=True, kw_only=True)
-class FMT:
+class FormatBase:
     _downloader_options: dict = field(default_factory=dict, repr=False)
     url: str
     id: str
     filesize: int
     extension: str
 
-
-@dataclass(slots=True, frozen=True)
-class VideoFormat(FMT):
-    video_codec: str
-    audio_codec: str
-    width: int
-    height: int
-
-
-@dataclass(slots=True, frozen=True)
-class AudioFormat(FMT):
-    audio_codec: str
-    bitrate: int
-
-
-@dataclass(slots=True, frozen=True, order=True)
-class Format:
-    """Remote file representation.
-
-    Their fields are determined by their `type`. For example:
-    - If is `video`, `extension` and `codec` would be mp4 and vp9.
-    - If is `audio`, `extension` and `codec` would be m4a and opus.
-    """
-
-    url: str
-    id: str
-    type: FORMAT_TYPE
-    extension: str
-    codec: str
-    quality: int = 0
-    filesize: int = 0
-    _downloader_options: dict = field(default_factory=dict, repr=False)
-
     def __post_init__(self):
-        if not self.codec:
-            raise TypeError("Must have a codec.")
-
         if not (
             self.extension in SupportedExtensions.video
             or self.extension in SupportedExtensions.audio
         ):
-            raise TypeError(self.extension, "not is a valid extension.")
+            raise ValueError(self.extension, "not is a valid extension.")
+
+    @classmethod
+    def _from_info(cls, entry: dict[str, Any]) -> FormatBase:
+        return cls(
+            _downloader_options=entry.get("downloader_options") or {},
+            url=entry["url"],
+            id=entry["format_id"],
+            filesize=entry.get("filesize") or 0,
+            extension=entry["ext"],
+        )
+
+
+class Format(ABC, FormatBase):
+    @property
+    @abstractmethod
+    def codec(self) -> str: ...
 
     @property
-    def display_quality(self) -> str:
-        """Get pretty representation of `Format` quality."""
+    @abstractmethod
+    def quality(self) -> int: ...
 
-        if self.type == "video":
-            return str(self.quality) + "p"
-        elif self.type == "audio":
-            return str(round(self.quality)) + "kbps"
-        else:
-            return ""
+    @property
+    @abstractmethod
+    def display_quality(self) -> str: ...
 
+    @classmethod
+    @abstractmethod
+    def _from_info(cls, entry: dict[str, Any]):
+        return super()._from_info(entry)
+
+    @abstractmethod
     def _format_dict(self) -> InfoDict:
         d = {
             "format_id": self.id,
@@ -79,47 +63,92 @@ class Format:
             "downloader_options": self._downloader_options,
         }
 
-        match self.type:
-            case "video":
-                d |= {"height": self.quality, "vcodec": self.codec}
-            case "audio":
-                d |= {"abr": self.quality, "acodec": self.codec}
-            case _:
-                raise TypeError(self.type)
-
         if self.filesize != 0:
             d |= {"filesize": self.filesize}
 
         return InfoDict(d)
 
+
+@dataclass(slots=True, frozen=True)
+class VideoFormat(Format):
+    video_codec: str
+    audio_codec: str
+    width: int
+    height: int
+    fps: int
+
+    @property
+    def codec(self) -> str:
+        return self.video_codec
+
+    @property
+    def quality(self) -> int:
+        return self.height
+
+    @property
+    def display_quality(self) -> str:
+        return str(self.height) + "p"
+
     @classmethod
-    def _from_info(cls, entry: dict[str, Any]) -> Format:
-        type: FORMAT_TYPE = (
-            "audio" if entry.get("resolution", "") == "audio only" else "video"
+    def _from_info(cls, entry: dict[str, Any]) -> VideoFormat:
+        meta = FormatBase._from_info(entry)
+
+        return cls(
+            **asdict(meta),
+            video_codec=entry.get("vcodec") or "",
+            audio_codec=entry.get("acodec") or "",
+            width=entry.get("width") or 0,
+            height=entry.get("height") or 0,
+            fps=entry.get("fps") or 0,
         )
 
-        match type:
-            case "video":
-                quality = entry.get("height")
-                codec = entry.get("vcodec")
-            case "audio":
-                quality = entry.get("abr")
-                codec = entry.get("acodec")
-            case _:
-                raise TypeError(type)
+    def _format_dict(self) -> InfoDict:
+        d = super()._format_dict()
+        d |= {
+            "height": self.height,
+            "vcodec": self.audio_codec,
+            "acodec": self.audio_codec,
+            "fps": self.fps,
+        }
+        return d
 
-        cls = cls(
-            url=entry["url"],
-            id=entry["format_id"],
-            type=type,
-            extension=entry["ext"],
-            codec=codec or "",
-            quality=quality or 0,
-            filesize=entry.get("filesize") or 0,
-            _downloader_options=entry.get("downloader_options") or {},
+
+@dataclass(slots=True, frozen=True)
+class AudioFormat(Format):
+    audio_codec: str
+    bitrate: int
+
+    @property
+    def codec(self) -> str:
+        return self.audio_codec
+
+    @property
+    def quality(self) -> int:
+        return self.bitrate
+
+    @property
+    def display_quality(self) -> str:
+        return str(round(self.bitrate)) + "kbps"
+
+    @classmethod
+    def _from_info(cls, entry: dict[str, Any]) -> AudioFormat:
+        meta = FormatBase._from_info(entry)
+
+        codec = entry.get("acodec") or ""
+
+        return cls(
+            **asdict(meta),
+            audio_codec=codec if codec != "none" else "",
+            bitrate=entry.get("abr") or 0,
         )
-        cls.__post_init__()
-        return cls
+
+    def _format_dict(self) -> InfoDict:
+        d = super()._format_dict()
+        d |= {
+            "acodec": self.audio_codec,
+            "abr": self.bitrate,
+        }
+        return d
 
 
 class FormatList(GenericList):
@@ -151,7 +180,13 @@ class FormatList(GenericList):
         formats = self._list
 
         if type:
-            formats = [f for f in formats if f.type == type]
+            match type:
+                case "video":
+                    selected = VideoFormat
+                case "audio":
+                    selected = AudioFormat
+
+            formats = [f for f in formats if isinstance(f, selected)]
         if extension:
             formats = [f for f in formats if f.extension == extension]
         if quality:
@@ -221,8 +256,13 @@ class FormatList(GenericList):
 
         for format in info.get("formats") or {}:
             try:
-                formats.append(Format._from_info(format))
-            except TypeError:
+                try:
+                    fmt = VideoFormat._from_info(format)
+                except ValueError:
+                    fmt = AudioFormat._from_info(format)
+
+                formats.append(fmt)
+            except ValueError:
                 continue
 
         return FormatList(formats)
@@ -250,4 +290,4 @@ class FormatList(GenericList):
             case slice():
                 return FormatList(self._list[index])
             case _:
-                raise TypeError(index)
+                raise ValueError(index)
