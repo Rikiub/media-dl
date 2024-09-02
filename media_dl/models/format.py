@@ -2,10 +2,34 @@ from __future__ import annotations
 
 import bisect
 from dataclasses import dataclass, field
-from typing import Any, overload
+from functools import cached_property
+from typing import Any, SupportsIndex, overload
 
 from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
 from media_dl.models.base import GenericList
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class FMT:
+    _downloader_options: dict = field(default_factory=dict, repr=False)
+    url: str
+    id: str
+    filesize: int
+    extension: str
+
+
+@dataclass(slots=True, frozen=True)
+class VideoFormat(FMT):
+    video_codec: str
+    audio_codec: str
+    width: int
+    height: int
+
+
+@dataclass(slots=True, frozen=True)
+class AudioFormat(FMT):
+    audio_codec: str
+    bitrate: int
 
 
 @dataclass(slots=True, frozen=True, order=True)
@@ -101,6 +125,7 @@ class Format:
 class FormatList(GenericList):
     """List of formats which can be filtered."""
 
+    @cached_property
     def type(self) -> FORMAT_TYPE:
         """
         Determine main format type.
@@ -132,7 +157,7 @@ class FormatList(GenericList):
         if quality:
             formats = [f for f in formats if f.quality == quality]
         if codec:
-            formats = [f for f in formats if f.codec and f.codec.startswith(codec)]
+            formats = [f for f in formats if f.codec.startswith(codec)]
 
         return FormatList(formats)
 
@@ -213,7 +238,7 @@ class FormatList(GenericList):
             return False
 
     @overload
-    def __getitem__(self, index: int) -> Format: ...
+    def __getitem__(self, index: SupportsIndex) -> Format: ...
 
     @overload
     def __getitem__(self, index: slice) -> FormatList: ...
