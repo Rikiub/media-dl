@@ -1,35 +1,35 @@
-[tool.poetry]
-name = "media_dl"
+[project]
+name = "media-dl"
 version = "2.0.1"
 description = "Download any video/audio you want from a simple URL ✨"
-authors = ["Rikiub <rikiub.dev@gmail.com>"]
-license = "MIT"
 readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # CLI
+    "typer>=0.12.5",
+    "rich>=13.9.2",
+    # Core
+    "yt-dlp>=2024.10.7",
+    "strenum>=0.4.15",
+    "pydantic>=2.9.2",
+]
 
-[tool.poetry.scripts]
+[project.optional-dependencies]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.5.42",
+    "mkdocstrings>=0.26.2",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.3.3",
+    "ruff>=0.7.0",
+]
+
+[project.scripts]
 media-dl = "media_dl.cli:run"
 
-[tool.poetry.dependencies]
-# Core
-python = "^3.10"
-yt-dlp = "^2024.4.9"
-rich = "^13.7.0"
-# CLI
-typer = "^0.12.3"
-strenum = "^0.4.15"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-ruff = "*"
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.docs.dependencies]
-mkdocs = "^1.6.0"
-mkdocs-material = "^9.5.22"
-mkdocstrings = {extras = ["python"], version = "^0.25.1"}
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

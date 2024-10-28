@@ -1,39 +1,37 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import bisect
-from dataclasses import dataclass, field, asdict
+from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, SupportsIndex, overload
+from typing import Annotated, Self, cast
 
 from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
 from media_dl.models.base import GenericList
 
+from pydantic import AfterValidator, BaseModel, Field
 
-@dataclass(slots=True, frozen=True, kw_only=True)
-class FormatBase:
-    _downloader_options: dict = field(default_factory=dict, repr=False)
+
+def validate_extension(value: str):
+    if not (value in SupportedExtensions.video or value in SupportedExtensions.audio):
+        raise ValueError(value, "not is a valid extension.")
+
+
+Extension = Annotated[str, AfterValidator(validate_extension)]
+
+
+class FormatBase(BaseModel):
     url: str
-    id: str
-    filesize: int
-    extension: str
+    id: Annotated[str, Field(alias="format_id")]
+    filesize: int = 0
+    extension: Annotated[Extension, Field(alias="ext")]
+    downloader_options: Annotated[
+        dict, Field(alias="downloader_options", default_factory=dict, repr=False)
+    ]
 
-    def __post_init__(self):
-        if not (
-            self.extension in SupportedExtensions.video
-            or self.extension in SupportedExtensions.audio
-        ):
-            raise ValueError(self.extension, "not is a valid extension.")
-
-    @classmethod
-    def _from_info(cls, entry: dict[str, Any]) -> FormatBase:
-        return cls(
-            _downloader_options=entry.get("downloader_options") or {},
-            url=entry["url"],
-            id=entry["format_id"],
-            filesize=entry.get("filesize") or 0,
-            extension=entry["ext"],
-        )
+    def _format_dict(self) -> InfoDict:
+        d = self.model_dump(by_alias=True)
+        d = cast(InfoDict, d)
+        return d
 
 
 class Format(ABC, FormatBase):
@@ -49,33 +47,13 @@ class Format(ABC, FormatBase):
     @abstractmethod
     def display_quality(self) -> str: ...
 
-    @classmethod
-    @abstractmethod
-    def _from_info(cls, entry: dict[str, Any]):
-        return super()._from_info(entry)
 
-    @abstractmethod
-    def _format_dict(self) -> InfoDict:
-        d = {
-            "format_id": self.id,
-            "url": self.url,
-            "ext": self.extension,
-            "downloader_options": self._downloader_options,
-        }
-
-        if self.filesize != 0:
-            d |= {"filesize": self.filesize}
-
-        return InfoDict(d)
-
-
-@dataclass(slots=True, frozen=True)
 class VideoFormat(Format):
-    video_codec: str
-    audio_codec: str
-    width: int
-    height: int
-    fps: int
+    video_codec: str = Field(alias="vcodec")
+    audio_codec: str = Field(alias="acodec")
+    width: int = 0
+    height: int = 0
+    fps: int = 0
 
     @property
     def codec(self) -> str:
@@ -89,34 +67,10 @@ class VideoFormat(Format):
     def display_quality(self) -> str:
         return str(self.height) + "p"
 
-    @classmethod
-    def _from_info(cls, entry: dict[str, Any]) -> VideoFormat:
-        meta = FormatBase._from_info(entry)
 
-        return cls(
-            **asdict(meta),
-            video_codec=entry.get("vcodec") or "",
-            audio_codec=entry.get("acodec") or "",
-            width=entry.get("width") or 0,
-            height=entry.get("height") or 0,
-            fps=entry.get("fps") or 0,
-        )
-
-    def _format_dict(self) -> InfoDict:
-        d = super()._format_dict()
-        d |= {
-            "height": self.height,
-            "vcodec": self.audio_codec,
-            "acodec": self.audio_codec,
-            "fps": self.fps,
-        }
-        return d
-
-
-@dataclass(slots=True, frozen=True)
 class AudioFormat(Format):
-    audio_codec: str
-    bitrate: int
+    audio_codec: str = Field(alias="acodec")
+    bitrate: int = Field(alias="abr")
 
     @property
     def codec(self) -> str:
@@ -130,28 +84,8 @@ class AudioFormat(Format):
     def display_quality(self) -> str:
         return str(round(self.bitrate)) + "kbps"
 
-    @classmethod
-    def _from_info(cls, entry: dict[str, Any]) -> AudioFormat:
-        meta = FormatBase._from_info(entry)
 
-        codec = entry.get("acodec") or ""
-
-        return cls(
-            **asdict(meta),
-            audio_codec=codec if codec != "none" else "",
-            bitrate=entry.get("abr") or 0,
-        )
-
-    def _format_dict(self) -> InfoDict:
-        d = super()._format_dict()
-        d |= {
-            "acodec": self.audio_codec,
-            "abr": self.bitrate,
-        }
-        return d
-
-
-class FormatList(GenericList):
+class FormatList(GenericList[AudioFormat | VideoFormat]):
     """List of formats which can be filtered."""
 
     @cached_property
@@ -177,7 +111,7 @@ class FormatList(GenericList):
     ) -> FormatList:
         """Get filtered format list by options."""
 
-        formats = self._list
+        formats = self.root
 
         if type:
             match type:
@@ -201,7 +135,7 @@ class FormatList(GenericList):
 
         return FormatList(
             sorted(
-                self._list,
+                self.root,
                 key=lambda f: getattr(f, attribute),
                 reverse=reverse,
             )
@@ -251,24 +185,24 @@ class FormatList(GenericList):
                 return before
 
     @classmethod
-    def _from_info(cls, info: InfoDict) -> FormatList:
+    def _from_info(cls, info: InfoDict) -> Self:
         formats = []
 
         for format in info.get("formats") or {}:
             try:
                 try:
-                    fmt = VideoFormat._from_info(format)
+                    fmt = VideoFormat(**format)
                 except ValueError:
-                    fmt = AudioFormat._from_info(format)
+                    fmt = AudioFormat(**format)
 
                 formats.append(fmt)
             except ValueError:
                 continue
 
-        return FormatList(formats)
+        return cls(formats)
 
     def __contains__(self, other) -> bool:
-        if isinstance(other, Format):
+        if isinstance(other, FormatList):
             try:
                 self.get_by_id(other.id)
                 return True
@@ -276,18 +210,3 @@ class FormatList(GenericList):
                 return False
         else:
             return False
-
-    @overload
-    def __getitem__(self, index: SupportsIndex) -> Format: ...
-
-    @overload
-    def __getitem__(self, index: slice) -> FormatList: ...
-
-    def __getitem__(self, index):
-        match index:
-            case int():
-                return self._list[index]
-            case slice():
-                return FormatList(self._list[index])
-            case _:
-                raise ValueError(index)

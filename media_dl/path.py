@@ -13,7 +13,7 @@ DIR_TEMP = Path(tempfile.mkdtemp(prefix="ydl-"))
 
 # Functions
 def get_tempfile() -> Path:
-    return Path(tempfile.mktemp())
+    return Path(tempfile.mktemp(dir=DIR_TEMP))
 
 
 def _clean_tempdir():

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Callable, cast
 
-from yt_dlp import DownloadError as YTDLP_DownloadError
+from yt_dlp import DownloadError as BaseDownloadError
 
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import DownloadError
@@ -45,9 +45,10 @@ def download(
     format_id = f"{video.id if video else ""}+{audio.id if audio else ""}"
 
     if format_id.startswith("+") or format_id.endswith("+"):
-        format_id.strip("+")
+        format_id = format_id.strip("+")
 
     formats: list[InfoDict] = []
+
     if video:
         formats.append(video._format_dict())
     if audio:
@@ -59,6 +60,7 @@ def download(
         "title": filepath.stem,
         "id": filepath.stem,
         "formats": formats,
+        "requested_formats": formats,
         "format_id": format_id,
     }
 
@@ -74,7 +76,7 @@ def _internal_download(info: dict, params: dict) -> InfoDict:
     try:
         info = YTDLP(retries | params).process_ie_result(info, download=True)
         return cast(InfoDict, info)
-    except YTDLP_DownloadError as err:
+    except BaseDownloadError as err:
         msg = format_except_message(err)
         raise DownloadError(msg)
 

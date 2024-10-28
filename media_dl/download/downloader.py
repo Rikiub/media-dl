@@ -195,6 +195,9 @@ class Downloader:
             else:
                 merge_format = None
 
+            if not download_config.convert and download_config.type == "audio":
+                format_video = None
+
             # Run download
             downloaded_file = worker.download(
                 filepath=get_tempfile(),

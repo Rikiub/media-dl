@@ -1,34 +1,44 @@
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from typing import Generic, TypeVar, overload
+from typing_extensions import Self
+from pydantic import AliasChoices, BaseModel, Field, RootModel
+
+T = TypeVar("T")
 
 
-@dataclass(slots=True, frozen=True)
-class ExtractID:
+class ExtractID(BaseModel):
     """Base identifier for media objects."""
 
-    extractor: str
+    extractor: str = Field(
+        alias="extractor_key", validation_alias=AliasChoices("extractor_key", "ie_key")
+    )
     id: str
     url: str
 
 
-class GenericList(Sequence):
-    def __init__(self, iterable: Iterable) -> None:
-        self._list = list(iterable)
-
+class GenericList(RootModel[list[T]], Generic[T]):
     def __contains__(self, value: object) -> bool:
-        return value in self._list
+        return value in self.root
 
-    def __iter__(self):
-        return iter(self._list)
+    def __iter__(self):  # type: ignore
+        return iter(self.root)
 
     def __len__(self) -> int:
-        return len(self._list)
+        return len(self.root)
 
     def __bool__(self) -> bool:
-        return bool(self._list)
+        return bool(self.root)
 
-    def __repr__(self) -> str:
-        return repr(self._list)
+    @overload
+    def __getitem__(self, index: int) -> T: ...
 
-    def __rich_repr__(self):
-        yield self._list
+    @overload
+    def __getitem__(self, index: slice) -> Self: ...
+
+    def __getitem__(self, index):
+        match index:
+            case slice():
+                return self.__class__(self.root[index])
+            case int():
+                return self.root[index]
+            case _:
+                raise TypeError(index)
