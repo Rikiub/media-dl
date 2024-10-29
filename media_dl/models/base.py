@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar, overload
+from typing import Generic, TypeVar, overload, Annotated
 from typing_extensions import Self
 from pydantic import AliasChoices, BaseModel, Field, RootModel
 
@@ -11,8 +11,8 @@ class ExtractID(BaseModel):
     extractor: str = Field(
         alias="extractor_key", validation_alias=AliasChoices("extractor_key", "ie_key")
     )
+    url: Annotated[str, Field(validation_alias=AliasChoices("original_url", "url"))]
     id: str
-    url: str
 
 
 class GenericList(RootModel[list[T]], Generic[T]):

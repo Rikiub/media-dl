@@ -17,7 +17,7 @@ FORMAT_TYPE = Literal["video", "audio"]
 
 
 # Base
-InfoDict = NewType("InfoDict", dict[str, Any])
+InfoDict = NewType("InfoDict", dict)
 
 
 class SupportedExtensions(frozenset[str], Enum):

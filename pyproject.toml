@@ -12,6 +12,7 @@ dependencies = [
     "yt-dlp>=2024.10.7",
     "strenum>=0.4.15",
     "pydantic>=2.9.2",
+    "typing-extensions>=4.12.2",
 ]
 
 [project.optional-dependencies]

@@ -12,7 +12,6 @@ from media_dl.models.format import FormatList
 
 
 class DeferredStream(ExtractID):
-    url: Annotated[str, Field(validation_alias=AliasChoices("original_url", "url"))]
     title: str = ""
 
     def get_updated(self) -> Stream:
@@ -84,7 +83,7 @@ class Stream(DeferredStream):
             return False
 
     def __eq__(self, o: object) -> bool:
-        if isinstance(o, Stream):
+        if isinstance(o, self.__class__):
             return o.id == self.id
         else:
             return False

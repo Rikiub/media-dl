@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from pydantic import AliasPath, Field
+from typing import Annotated
+
+from pydantic import AliasChoices, AliasPath, Field
 
 from media_dl.models.base import ExtractID
 from media_dl.models.stream import LazyStreams
@@ -9,6 +11,12 @@ from media_dl.models.stream import LazyStreams
 class Playlist(ExtractID):
     """Playlist with multiple Streams."""
 
-    title: str = Field(alias="playlist_title")
-    thumbnail: str = Field(validation_alias=AliasPath("thumbsnails", -1))
-    streams: LazyStreams = Field(alias="entries")
+    title: Annotated[
+        str,
+        Field(
+            alias="playlist_title",
+            validation_alias=AliasChoices("playlist_title", "title"),
+        ),
+    ]
+    thumbnail: Annotated[str, Field(validation_alias=AliasPath("thumbsnails", -1))] = ""
+    streams: Annotated[LazyStreams, Field(alias="entries")]

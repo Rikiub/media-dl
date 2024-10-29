@@ -32,9 +32,10 @@ def extract_url(url: str) -> Stream | Playlist:
 
     info = raw.extract_url(url)
 
-    if serializer.is_stream(info):
-        return Stream(**info)
-    elif serializer.is_playlist(info):
-        return Playlist(**info)
-    else:
+    try:
+        try:
+            return Stream(**info)
+        except ValueError:
+            return Playlist(**info)
+    except ValueError:
         raise ExtractError("Extract return a invalid result.")

@@ -299,6 +299,7 @@ dependencies = [
     { name = "rich" },
     { name = "strenum" },
     { name = "typer" },
+    { name = "typing-extensions" },
     { name = "yt-dlp" },
 ]
 
@@ -324,6 +325,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.9.2" },
     { name = "strenum", specifier = ">=0.4.15" },
     { name = "typer", specifier = ">=0.12.5" },
+    { name = "typing-extensions", specifier = ">=4.12.2" },
     { name = "yt-dlp", specifier = ">=2024.10.7" },
 ]
 

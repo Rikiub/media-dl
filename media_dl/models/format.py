@@ -3,7 +3,8 @@ from __future__ import annotations
 import bisect
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Annotated, Self, cast
+from typing import Annotated, cast
+from typing_extensions import Self
 
 from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
 from media_dl.models.base import GenericList
@@ -19,22 +20,18 @@ def validate_extension(value: str):
 Extension = Annotated[str, AfterValidator(validate_extension)]
 
 
-class FormatBase(BaseModel):
+class Format(ABC, BaseModel):
     url: str
     id: Annotated[str, Field(alias="format_id")]
     filesize: int = 0
     extension: Annotated[Extension, Field(alias="ext")]
-    downloader_options: Annotated[
-        dict, Field(alias="downloader_options", default_factory=dict, repr=False)
-    ]
+    downloader_options: Annotated[dict, Field(default_factory=dict, repr=False)]
 
     def _format_dict(self) -> InfoDict:
         d = self.model_dump(by_alias=True)
         d = cast(InfoDict, d)
         return d
 
-
-class Format(ABC, FormatBase):
     @property
     @abstractmethod
     def codec(self) -> str: ...
@@ -108,7 +105,7 @@ class FormatList(GenericList[AudioFormat | VideoFormat]):
         extension: str | None = None,
         codec: str | None = None,
         quality: int | None = None,
-    ) -> FormatList:
+    ) -> Self:
         """Get filtered format list by options."""
 
         formats = self.root
@@ -128,12 +125,12 @@ class FormatList(GenericList[AudioFormat | VideoFormat]):
         if codec:
             formats = [f for f in formats if f.codec.startswith(codec)]
 
-        return FormatList(formats)
+        return self.__class__(formats)
 
-    def sort_by(self, attribute: str, reverse: bool = False) -> FormatList:
+    def sort_by(self, attribute: str, reverse: bool = False) -> Self:
         """Sort by `Format` attribute."""
 
-        return FormatList(
+        return self.__class__(
             sorted(
                 self.root,
                 key=lambda f: getattr(f, attribute),
@@ -184,25 +181,8 @@ class FormatList(GenericList[AudioFormat | VideoFormat]):
             else:
                 return before
 
-    @classmethod
-    def _from_info(cls, info: InfoDict) -> Self:
-        formats = []
-
-        for format in info.get("formats") or {}:
-            try:
-                try:
-                    fmt = VideoFormat(**format)
-                except ValueError:
-                    fmt = AudioFormat(**format)
-
-                formats.append(fmt)
-            except ValueError:
-                continue
-
-        return cls(formats)
-
     def __contains__(self, other) -> bool:
-        if isinstance(other, FormatList):
+        if isinstance(other, Format):
             try:
                 self.get_by_id(other.id)
                 return True
