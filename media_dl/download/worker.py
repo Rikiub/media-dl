@@ -50,9 +50,9 @@ def download(
     formats: list[InfoDict] = []
 
     if video:
-        formats.append(video._format_dict())
+        formats.append(video.as_dict())
     if audio:
-        formats.append(audio._format_dict())
+        formats.append(audio.as_dict())
 
     info = {
         "extractor": "generic",

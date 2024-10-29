@@ -34,8 +34,8 @@ def extract_url(url: str) -> Stream | Playlist:
 
     try:
         try:
-            return Stream(**info)
-        except ValueError:
             return Playlist(**info)
+        except ValueError:
+            return Stream(**info)
     except ValueError:
         raise ExtractError("Extract return a invalid result.")
