@@ -153,8 +153,8 @@ class Downloader:
 
         try:
             # Resolve stream
-            if stream.has_missing_info():
-                stream = stream.get_updated()
+            if isinstance(stream, Stream):
+                stream = stream.fetch()
                 self._progress.update(task_id, description=stream.display_name)
 
             log.debug('"%s": Downloading stream.', stream.id)
@@ -218,6 +218,7 @@ class Downloader:
                 stream._extra_info, "%(uploader)s - %(title)s"
             )
 
+            """
             # Download resources
             if download_thumbnail(output_name, stream._extra_info):
                 log.debug('"%s": Thumbnail founded.', stream.id)
@@ -237,6 +238,7 @@ class Downloader:
                 stream.id,
                 downloaded_file.suffix[1:],
             )
+            """
 
             # STATUS: Finish
             final_path = Path(self.config.output, output_name + downloaded_file.suffix)
@@ -279,13 +281,13 @@ class Downloader:
             case Stream():
                 streams = [media]
             case LazyStreams():
-                streams = media._list
+                streams = media.root
             case Playlist():
-                streams = media.streams._list
+                streams = media.streams.root
             case _:
                 raise TypeError(media)
 
-        return streams
+        return streams  # type: ignore
 
     def _resolve_format(
         self,
@@ -294,6 +296,7 @@ class Downloader:
         audio: Format | None = None,
     ) -> tuple[Format | None, Format | None, FormatConfig]:
         config = self.config
+        selected_format = config.format
 
         if not video:
             config.format = "video"
@@ -303,7 +306,7 @@ class Downloader:
             config.format = "audio"
             audio = self._extract_best_format(stream.formats, config)
 
-        config.format = self.config.format
+        config.format = selected_format
 
         if not config.convert:
             if stream._is_music_site():

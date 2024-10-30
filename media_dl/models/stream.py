@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import Annotated, cast
 
-from pydantic import AliasChoices, AliasPath, Field, PrivateAttr
+from pydantic import AliasChoices, AliasPath, Field, PlainSerializer, PrivateAttr
 
 from media_dl._ydl import MUSIC_SITES, InfoDict
 from media_dl.extractor import raw
@@ -13,12 +13,15 @@ from media_dl.models.format import FormatList
 
 class DeferredStream(ExtractID):
     title: str = ""
+    uploader: Annotated[
+        str, Field(validation_alias=AliasChoices("creator", "uploader"))
+    ] = ""
 
-    def get_updated(self) -> Stream:
-        """Fetch the stream again.
+    def fetch(self) -> Stream:
+        """Fetch real stream.
 
         Returns:
-            Updated version of the Stream.
+            Updated version of self Stream.
 
         Raises:
             ExtractError: Something bad happens when extract.
@@ -29,16 +32,21 @@ class DeferredStream(ExtractID):
         return stream
 
 
+DatetimeTimestamp = Annotated[
+    datetime.datetime, PlainSerializer(lambda d: d.timestamp())
+]
+
+
 class Stream(DeferredStream):
     """Online media stream representation."""
 
-    uploader: str = ""
     thumbnail: Annotated[
-        str, Field(validation_alias=AliasPath("thumbnails", -1, "url"))
+        str,
+        Field(validation_alias=AliasChoices("thumbnail", AliasPath("thumbsnails", -1))),
     ]
     date: Annotated[
-        datetime.date | None,
-        Field(validation_alias=AliasChoices("release_date")),
+        DatetimeTimestamp | None,
+        Field(alias="timestamp", validation_alias=AliasChoices("timestamp")),
     ] = None
     duration: int = 0
     formats: FormatList
@@ -60,17 +68,6 @@ class Stream(DeferredStream):
             return self.title
         else:
             return ""
-
-    def has_missing_info(self) -> bool:
-        """
-        Check if has more information to extract.
-        To get the complete information, use `get_updated` method.
-        """
-
-        if not (self.formats and self.duration and self.date and self.title):
-            return True
-        else:
-            return False
 
     def _is_music_site(self) -> bool:
         if any(s in self.url for s in MUSIC_SITES):
@@ -103,7 +100,7 @@ class LazyStreams(GenericList[DeferredStream | Stream]):
         stream = self.root[index]
 
         if isinstance(stream, DeferredStream):
-            self.root[index] = stream = stream.get_updated()
+            self.root[index] = stream = stream.fetch()
 
         return stream
 

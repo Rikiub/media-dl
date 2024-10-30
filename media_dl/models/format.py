@@ -3,13 +3,39 @@ from __future__ import annotations
 import bisect
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Annotated, cast
+from typing import Annotated, Generic, TypeVar, cast
 from typing_extensions import Self
 
 from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
 from media_dl.models.base import GenericList
 
 from pydantic import AfterValidator, BaseModel, Field, OnErrorOmit
+
+
+def validate_extension_video(value: str):
+    if value not in SupportedExtensions.video:
+        raise ValueError(f"{value} not is a valid extension.")
+
+    return value
+
+
+def validate_extension_audio(value: str):
+    if value not in SupportedExtensions.audio:
+        raise ValueError(f"{value} not is a valid extension.")
+
+    return value
+
+
+def validate_codec(value: str):
+    if value == "none":
+        return None
+
+    return value
+
+
+ExtensionVideo = Annotated[str, AfterValidator(validate_extension_video)]
+ExtensionAudio = Annotated[str, AfterValidator(validate_extension_audio)]
+Codec = Annotated[str, AfterValidator(validate_codec)]
 
 
 class Format(ABC, BaseModel):
@@ -39,39 +65,13 @@ class Format(ABC, BaseModel):
     def display_quality(self) -> str: ...
 
 
-def validate_extension_video(value: str):
-    if value not in SupportedExtensions.video:
-        raise ValueError(f"{value} not is a valid extension.")
-
-    return value
-
-
-def validate_extension_audio(value: str):
-    if value not in SupportedExtensions.audio:
-        raise ValueError(f"{value} not is a valid extension.")
-
-    return value
-
-
-def validate_codec(value: str):
-    if value == "none":
-        raise ValueError("Codec cannot be none.")
-
-    return value
-
-
-ExtensionVideo = Annotated[str, AfterValidator(validate_extension_video)]
-ExtensionAudio = Annotated[str, AfterValidator(validate_extension_audio)]
-Codec = Annotated[str, AfterValidator(validate_codec)]
-
-
 class VideoFormat(Format):
     extension: Annotated[ExtensionVideo, Field(alias="ext")]
-    video_codec: Annotated[Codec, Field(alias="vcodec")]
-    audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
-    width: int = 0
-    height: int = 0
-    fps: float = 0
+    video_codec: Annotated[str, Field(alias="vcodec")]
+    audio_codec: Annotated[str, Field(alias="acodec")] = "none"
+    width: int
+    height: int
+    fps: float
 
     @property
     def codec(self) -> str:
@@ -88,7 +88,8 @@ class VideoFormat(Format):
 
 class AudioFormat(Format):
     extension: Annotated[ExtensionAudio, Field(alias="ext")]
-    audio_codec: Annotated[Codec, Field(alias="acodec")]
+    video_codec: Annotated[str, Field(alias="vcodec")] = "none"
+    audio_codec: Annotated[str, Field(alias="acodec")]
     bitrate: Annotated[float | None, Field(alias="abr")]
 
     @property
@@ -109,8 +110,10 @@ class AudioFormat(Format):
 
 FormatItem = OnErrorOmit[VideoFormat | AudioFormat]
 
+T = TypeVar("T")
 
-class FormatList(GenericList[FormatItem]):
+
+class FormatList(GenericList[FormatItem], Generic[T]):
     """List of formats which can be filtered."""
 
     @cached_property

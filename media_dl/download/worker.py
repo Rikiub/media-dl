@@ -5,15 +5,15 @@ from yt_dlp import DownloadError as BaseDownloadError
 
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import DownloadError
-from media_dl.models.format import Format
+from media_dl.models.format import VideoFormat, AudioFormat
 
 DownloadCallback = Callable[[int, int], None]
 
 
 def download(
     filepath: Path,
-    video: Format | None,
-    audio: Format | None,
+    video: VideoFormat | None,
+    audio: AudioFormat | None,
     merge_format: str | None = None,
     callbacks: list[DownloadCallback] | None = None,
 ) -> Path:
@@ -39,7 +39,7 @@ def download(
         wrappers = [lambda d: _progress_wraper(d, callback) for callback in callbacks]
         params |= {"progress_hooks": wrappers}
 
-    params |= {"outtmpl": f"{filepath}.%(ext)s"}
+    params |= {"outtmpl": {"default": f"{filepath}.%(ext)s"}}
 
     # InfoDict
     format_id = f"{video.id if video else ""}+{audio.id if audio else ""}"
@@ -60,7 +60,6 @@ def download(
         "title": filepath.stem,
         "id": filepath.stem,
         "formats": formats,
-        "requested_formats": formats,
         "format_id": format_id,
     }
 
