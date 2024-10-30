@@ -6,8 +6,8 @@ from typing import Any, Literal, cast, get_args
 
 from media_dl._ydl import FORMAT_TYPE, POST_MUSIC
 
-EXT_VIDEO = Literal["mp4", "mkv"]
-EXT_AUDIO = Literal["m4a", "mp3", "opus"]
+EXT_VIDEO = Literal["mp4", "mkv", "mov"]
+EXT_AUDIO = Literal["m4a", "opus", "mp3"]
 EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
 """Common lossy compression containers formats with thumbnail and metadata support."""
 
@@ -73,7 +73,7 @@ class FormatConfig:
             cast(EXTENSION, self.format) if self.format in get_args(EXTENSION) else None
         )
 
-    def to_dict(self) -> dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """Convert to dict."""
 
         d = asdict(self)
@@ -117,14 +117,10 @@ class FormatConfig:
 
             match self.type:
                 case "video":
-                    params |= {
-                        "merge_output_format": self.convert
-                        or ",".join(get_args(EXT_VIDEO))
-                    }
                     postprocessors.append(
                         {
                             "key": "FFmpegVideoRemuxer",
-                            "preferedformat": self.convert or "mov>mp4/webm>mkv",
+                            "preferedformat": self.convert or "webm>mkv",
                         },
                     )
                 case "audio":

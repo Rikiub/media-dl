@@ -190,6 +190,9 @@ def format_except_message(exception: Exception) -> str:
         message = "Postprocessing failed. FFmpeg executable not founded."
 
     # General
+    elif "No video formats found!" in message:
+        message = "No formats founded."
+
     elif any(s in message for s in ("Unable to download", "Got error")):
         message = "Unable to download."
 

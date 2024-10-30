@@ -1,19 +1,20 @@
 from pathlib import Path
-from typing import Callable, cast
+from typing import Callable, cast, get_args
 
 from yt_dlp import DownloadError as BaseDownloadError
 
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
-from media_dl.exceptions import DownloadError
-from media_dl.models.format import VideoFormat, AudioFormat
+from media_dl.download.config import EXT_VIDEO
+from media_dl.exceptions import DownloadError, PostProcessingError
+from media_dl.models.format import Format
 
 DownloadCallback = Callable[[int, int], None]
 
 
 def download(
     filepath: Path,
-    video: VideoFormat | None,
-    audio: AudioFormat | None,
+    video: Format | None,
+    audio: Format | None,
     merge_format: str | None = None,
     callbacks: list[DownloadCallback] | None = None,
 ) -> Path:
@@ -33,7 +34,7 @@ def download(
     params = {}
 
     if merge_format:
-        params |= {"merge_output_format": merge_format}
+        params |= {"merge_output_format": merge_format or "/".join(get_args(EXT_VIDEO))}
 
     if callbacks:
         wrappers = [lambda d: _progress_wraper(d, callback) for callback in callbacks]
@@ -77,7 +78,11 @@ def _internal_download(info: dict, params: dict) -> InfoDict:
         return cast(InfoDict, info)
     except BaseDownloadError as err:
         msg = format_except_message(err)
-        raise DownloadError(msg)
+
+        if "Postprocessing:" in msg:
+            raise PostProcessingError(msg)
+        else:
+            raise DownloadError(msg)
 
 
 def _progress_wraper(d: dict, callback: DownloadCallback) -> None:

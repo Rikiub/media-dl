@@ -9,10 +9,7 @@ from typing import Annotated, Generator, Literal, Optional, get_args
 
 from strenum import StrEnum
 
-import media_dl
-from media_dl import MediaError, Playlist
 from media_dl.download.config import FILE_FORMAT, VIDEO_RES
-from media_dl.extractor.extr import SEARCH_PROVIDER
 from media_dl.logging import init_logging
 from media_dl.rich import Status
 
@@ -196,8 +193,14 @@ What format you want request?
 
     init_logging(log_level)
 
+    # IMPORT
+    from media_dl.extractor.extr import extract_url, extract_search, SEARCH_PROVIDER
+    from media_dl.download.downloader import Downloader
+    from media_dl.models.playlist import Playlist
+    from media_dl.exceptions import MediaError
+
     try:
-        downloader = media_dl.Downloader(
+        downloader = Downloader(
             format=format.value,
             quality=quality,
             output=output,
@@ -218,13 +221,13 @@ What format you want request?
             with Status("Please wait", disable=quiet):
                 if target.value == "url":
                     log.info('🔎 Extract URL: "%s".', entry)
-                    result = media_dl.extract_url(entry)
+                    result = extract_url(entry)
 
                     if isinstance(result, Playlist):
                         log.info('🔎 Playlist Name: "%s".', result.title)
                 else:
                     log.info('🔎 Search from %s: "%s".', target.value, entry)
-                    result = media_dl.extract_search(entry, target.value)[0]
+                    result = extract_search(entry, target.value)[0]
 
             downloader.download_all(result)
             log.info("✅ Download Finished.")

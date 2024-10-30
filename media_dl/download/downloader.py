@@ -38,7 +38,7 @@ class Downloader:
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
     Args:
-        format: File format to search or convert if is a extension.
+        format: File format to search or convert with (ffmpeg) if is a extension.
         quality: Quality to filter.
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
@@ -70,7 +70,7 @@ class Downloader:
         self._threads = threads
         self._progress = DownloadProgress(disable=not show_progress)
 
-        log.debug("Download config: %s", self.config.to_dict())
+        log.debug("Download config: %s", self.config.as_dict())
 
     def download_all(self, media: ExtractResult) -> list[Path]:
         """Download any result.
@@ -145,7 +145,9 @@ class Downloader:
             return self._download_work(stream, on_progress=on_progress)
 
     def _download_work(
-        self, stream: Stream, on_progress: ProgressCallback | None = None
+        self,
+        stream: Stream,
+        on_progress: ProgressCallback | None = None,
     ) -> Path:
         task_id = self._progress.add_task(
             description=stream.display_name, status="Started"
@@ -190,8 +192,8 @@ class Downloader:
                     )
                 )
 
-            if format_video and format_audio:
-                merge_format = download_config.convert or ",".join(get_args(EXT_VIDEO))
+            if format_video and format_audio and download_config.convert:
+                merge_format = download_config.convert
             else:
                 merge_format = None
 
@@ -218,7 +220,6 @@ class Downloader:
                 stream._extra_info, "%(uploader)s - %(title)s"
             )
 
-            """
             # Download resources
             if download_thumbnail(output_name, stream._extra_info):
                 log.debug('"%s": Thumbnail founded.', stream.id)
@@ -238,7 +239,6 @@ class Downloader:
                 stream.id,
                 downloaded_file.suffix[1:],
             )
-            """
 
             # STATUS: Finish
             final_path = Path(self.config.output, output_name + downloaded_file.suffix)
@@ -277,6 +277,8 @@ class Downloader:
             self._progress.remove_task(task_id)
 
     def _media_to_list(self, media: ExtractResult) -> list[Stream]:
+        streams = []
+
         match media:
             case Stream():
                 streams = [media]
@@ -284,8 +286,9 @@ class Downloader:
                 streams = media.root
             case Playlist():
                 streams = media.streams.root
-            case _:
-                raise TypeError(media)
+
+        if not streams:
+            raise TypeError(media)
 
         return streams  # type: ignore
 
@@ -298,7 +301,7 @@ class Downloader:
         config = self.config
         selected_format = config.format
 
-        if not video:
+        if config.type != "audio" and not video:
             config.format = "video"
             video = self._extract_best_format(stream.formats, config)
 

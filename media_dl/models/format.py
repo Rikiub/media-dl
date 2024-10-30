@@ -26,16 +26,8 @@ def validate_extension_audio(value: str):
     return value
 
 
-def validate_codec(value: str):
-    if value == "none":
-        return None
-
-    return value
-
-
 ExtensionVideo = Annotated[str, AfterValidator(validate_extension_video)]
 ExtensionAudio = Annotated[str, AfterValidator(validate_extension_audio)]
-Codec = Annotated[str, AfterValidator(validate_codec)]
 
 
 class Format(ABC, BaseModel):
@@ -46,6 +38,8 @@ class Format(ABC, BaseModel):
     downloader_options: Annotated[dict, Field(default_factory=dict, repr=False)]
     filesize: int | None = 0
     extension: Annotated[str, Field(alias="ext")]
+    video_codec: Annotated[str, Field(alias="vcodec")]
+    audio_codec: Annotated[str, Field(alias="acodec")]
 
     def as_dict(self) -> InfoDict:
         d = self.model_dump(by_alias=True)

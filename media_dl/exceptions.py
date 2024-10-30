@@ -11,3 +11,7 @@ class DownloadError(MediaError):
 
 class ExtractError(MediaError):
     """Extraction error."""
+
+
+class PostProcessingError(MediaError):
+    """Postprocess error."""
