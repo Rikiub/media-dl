@@ -6,10 +6,10 @@ from typing import Annotated, cast
 from pydantic import AliasChoices, AliasPath, Field, PlainSerializer, PrivateAttr
 
 from media_dl._ydl import InfoDict
-from media_dl.types import MUSIC_SITES
 from media_dl.extractor import raw
 from media_dl.models.base import ExtractID, GenericList
 from media_dl.models.format import FormatList
+from media_dl.types import MUSIC_SITES
 
 
 class DeferredStream(ExtractID):

@@ -1,11 +1,10 @@
-import os
-import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast, get_args
 
 from media_dl._ydl import POST_MUSIC
-from media_dl.types import FILE_FORMAT, FORMAT_TYPE, EXT_AUDIO, EXT_VIDEO, EXTENSION
+from media_dl.path import check_executable_exists, get_global_ffmpeg
+from media_dl.types import EXT_AUDIO, EXT_VIDEO, EXTENSION, FILE_FORMAT, FORMAT_TYPE
 
 
 @dataclass(slots=True)
@@ -29,10 +28,10 @@ class FormatConfig:
     metadata: bool = True
 
     def __post_init__(self):
-        if self.ffmpeg and not self._executable_exists(self.ffmpeg):
+        if self.ffmpeg and not check_executable_exists(self.ffmpeg):
             raise FileNotFoundError(f"'{self.ffmpeg.name}' is not a FFmpeg executable.")
         else:
-            self.ffmpeg = self._get_global_ffmpeg() or None
+            self.ffmpeg = get_global_ffmpeg() or None
 
     @property
     def type(self) -> FORMAT_TYPE:
@@ -78,22 +77,10 @@ class FormatConfig:
 
         return d
 
-    @staticmethod
-    def _get_global_ffmpeg() -> Path | None:
-        if path := shutil.which("ffmpeg"):
-            return Path(path)
-        else:
-            return None
-
-    @staticmethod
-    def _executable_exists(file: Path) -> bool:
-        if file.is_file() and os.access(file, os.X_OK):
-            return True
-        else:
-            return False
-
-    def _gen_ydl_params(
-        self, overwrite: bool = False, music_meta: bool = False
+    def ydl_params(
+        self,
+        overwrite: bool = False,
+        music_meta: bool = False,
     ) -> dict[str, Any]:
         """Generate download parameters for YT-DLP."""
 

@@ -227,7 +227,7 @@ class Downloader:
                 log.debug('"%s": Subtitles founded.', stream.id)
 
             # Run postprocessing
-            params = download_config._gen_ydl_params(music_meta=stream._is_music_site())
+            params = download_config.ydl_params(music_meta=stream._is_music_site())
 
             downloaded_file = run_postproces(
                 file=downloaded_file,

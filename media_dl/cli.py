@@ -9,9 +9,9 @@ from typing import Annotated, Generator, Literal, Optional, get_args
 
 from strenum import StrEnum
 
-from media_dl.types import FILE_FORMAT, VIDEO_RES, SEARCH_PROVIDER
 from media_dl.logging import init_logging
 from media_dl.rich import Status
+from media_dl.types import FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
 log = logging.getLogger(__name__)
 app = Typer()
@@ -194,10 +194,10 @@ What format you want request?
     init_logging(log_level)
 
     # Lazy Import
-    from media_dl.extractor.extr import extract_url, extract_search
     from media_dl.download.downloader import Downloader
-    from media_dl.models.playlist import Playlist
     from media_dl.exceptions import MediaError
+    from media_dl.extractor.extr import extract_search, extract_url
+    from media_dl.models.playlist import Playlist
 
     # Init Downloader
     try:

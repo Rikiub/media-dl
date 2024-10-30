@@ -1,6 +1,7 @@
-from typing import Generic, TypeVar, overload, Annotated
-from typing_extensions import Self
+from typing import Annotated, Generic, TypeVar, overload
+
 from pydantic import AliasChoices, BaseModel, Field, RootModel
+from typing_extensions import Self
 
 T = TypeVar("T")
 

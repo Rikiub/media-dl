@@ -1,7 +1,7 @@
 """Raw info extractor."""
 
 import logging
-from typing import Literal, cast
+from typing import cast
 
 from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError

@@ -4,13 +4,13 @@ import bisect
 from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Annotated, Generic, TypeVar, cast
+
+from pydantic import AfterValidator, BaseModel, Field, OnErrorOmit
 from typing_extensions import Self
 
 from media_dl._ydl import InfoDict, SupportedExtensions
-from media_dl.types import FORMAT_TYPE
 from media_dl.models.base import GenericList
-
-from pydantic import AfterValidator, BaseModel, Field, OnErrorOmit
+from media_dl.types import FORMAT_TYPE
 
 
 def validate_extension_video(value: str):

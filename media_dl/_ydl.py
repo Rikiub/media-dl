@@ -11,7 +11,6 @@ from yt_dlp.utils import MEDIA_EXTENSIONS
 
 from media_dl.path import DIR_TEMP
 
-
 # Base
 InfoDict = NewType("InfoDict", dict)
 
