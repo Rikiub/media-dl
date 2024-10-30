@@ -6,7 +6,8 @@ from functools import cached_property
 from typing import Annotated, Generic, TypeVar, cast
 from typing_extensions import Self
 
-from media_dl._ydl import FORMAT_TYPE, InfoDict, SupportedExtensions
+from media_dl._ydl import InfoDict, SupportedExtensions
+from media_dl.types import FORMAT_TYPE
 from media_dl.models.base import GenericList
 
 from pydantic import AfterValidator, BaseModel, Field, OnErrorOmit

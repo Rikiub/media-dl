@@ -2,17 +2,10 @@ import os
 import shutil
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal, cast, get_args
+from typing import Any, cast, get_args
 
-from media_dl._ydl import FORMAT_TYPE, POST_MUSIC
-
-EXT_VIDEO = Literal["mp4", "mkv", "mov"]
-EXT_AUDIO = Literal["m4a", "opus", "mp3"]
-EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
-"""Common lossy compression containers formats with thumbnail and metadata support."""
-
-FILE_FORMAT = Literal[FORMAT_TYPE, EXTENSION]
-VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
+from media_dl._ydl import POST_MUSIC
+from media_dl.types import FILE_FORMAT, FORMAT_TYPE, EXT_AUDIO, EXT_VIDEO, EXTENSION
 
 
 @dataclass(slots=True)

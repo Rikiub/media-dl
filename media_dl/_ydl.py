@@ -3,17 +3,13 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, NewType, cast
+from typing import Any, NewType, cast
 
 from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
 from media_dl.path import DIR_TEMP
-
-# Types
-MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
-FORMAT_TYPE = Literal["video", "audio"]
 
 
 # Base

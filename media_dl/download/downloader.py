@@ -3,7 +3,7 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Callable, Literal, get_args
+from typing import Callable, Literal
 
 from media_dl._ydl import (
     download_subtitles,
@@ -12,7 +12,7 @@ from media_dl._ydl import (
     run_postproces,
 )
 from media_dl.download import worker
-from media_dl.download.config import EXT_VIDEO, FILE_FORMAT, FormatConfig
+from media_dl.download.config import FILE_FORMAT, FormatConfig
 from media_dl.exceptions import MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist

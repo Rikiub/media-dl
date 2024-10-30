@@ -9,7 +9,7 @@ from typing import Annotated, Generator, Literal, Optional, get_args
 
 from strenum import StrEnum
 
-from media_dl.download.config import FILE_FORMAT, VIDEO_RES
+from media_dl.types import FILE_FORMAT, VIDEO_RES, SEARCH_PROVIDER
 from media_dl.logging import init_logging
 from media_dl.rich import Status
 
@@ -193,12 +193,13 @@ What format you want request?
 
     init_logging(log_level)
 
-    # IMPORT
-    from media_dl.extractor.extr import extract_url, extract_search, SEARCH_PROVIDER
+    # Lazy Import
+    from media_dl.extractor.extr import extract_url, extract_search
     from media_dl.download.downloader import Downloader
     from media_dl.models.playlist import Playlist
     from media_dl.exceptions import MediaError
 
+    # Init Downloader
     try:
         downloader = Downloader(
             format=format.value,

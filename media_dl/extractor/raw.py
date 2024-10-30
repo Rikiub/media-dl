@@ -9,10 +9,9 @@ from yt_dlp.networking.exceptions import RequestError
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import ExtractError
 from media_dl.extractor import serializer
+from media_dl.types import SEARCH_PROVIDER
 
 log = logging.getLogger(__name__)
-
-SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
