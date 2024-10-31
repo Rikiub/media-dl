@@ -5,7 +5,15 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Annotated, Generic, TypeVar, cast
 
-from pydantic import AfterValidator, BaseModel, Field, OnErrorOmit
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    Field,
+    OnErrorOmit,
+    SerializationInfo,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+)
 from typing_extensions import Self
 
 from media_dl._ydl import InfoDict, SupportedExtensions
@@ -13,34 +21,42 @@ from media_dl.models.base import GenericList
 from media_dl.types import FORMAT_TYPE
 
 
-def validate_extension_video(value: str):
+def _validate_extension_video(value: str):
     if value not in SupportedExtensions.video:
         raise ValueError(f"{value} not is a valid extension.")
 
     return value
 
 
-def validate_extension_audio(value: str):
+def _validate_extension_audio(value: str):
     if value not in SupportedExtensions.audio:
         raise ValueError(f"{value} not is a valid extension.")
 
     return value
 
 
-ExtensionVideo = Annotated[str, AfterValidator(validate_extension_video)]
-ExtensionAudio = Annotated[str, AfterValidator(validate_extension_audio)]
+def _validate_codec(value: str) -> str | None:
+    if value == "none":
+        return None
+
+    return value
+
+
+VideoExtension = Annotated[str, AfterValidator(_validate_extension_video)]
+AudioExtension = Annotated[str, AfterValidator(_validate_extension_audio)]
+
+Codec = Annotated[str, AfterValidator(_validate_codec)]
 
 
 class Format(ABC, BaseModel):
     """Base Format"""
 
-    url: str
     id: Annotated[str, Field(alias="format_id")]
+    url: str
+    protocol: str
     downloader_options: Annotated[dict, Field(default_factory=dict, repr=False)]
     filesize: int | None = 0
     extension: Annotated[str, Field(alias="ext")]
-    video_codec: Annotated[str, Field(alias="vcodec")]
-    audio_codec: Annotated[str, Field(alias="acodec")]
 
     def as_dict(self) -> InfoDict:
         d = self.model_dump(by_alias=True)
@@ -61,12 +77,26 @@ class Format(ABC, BaseModel):
 
 
 class VideoFormat(Format):
-    extension: Annotated[ExtensionVideo, Field(alias="ext")]
-    video_codec: Annotated[str, Field(alias="vcodec")]
-    audio_codec: Annotated[str, Field(alias="acodec")] = "none"
+    extension: Annotated[VideoExtension, Field(alias="ext")]
+    video_codec: Annotated[Codec, Field(alias="vcodec")]
+    audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
     width: int
     height: int
     fps: float
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(
+        self,
+        handler: SerializerFunctionWrapHandler,
+        info: SerializationInfo,
+    ) -> dict:
+        data: dict = handler(self)
+
+        if not self.audio_codec:
+            key = "acodec" if info.by_alias else "audio_codec"
+            data |= {key: "none"}
+
+        return data
 
     @property
     def codec(self) -> str:
@@ -82,10 +112,15 @@ class VideoFormat(Format):
 
 
 class AudioFormat(Format):
-    extension: Annotated[ExtensionAudio, Field(alias="ext")]
-    video_codec: Annotated[str, Field(alias="vcodec")] = "none"
-    audio_codec: Annotated[str, Field(alias="acodec")]
+    extension: Annotated[AudioExtension, Field(alias="ext")]
+    audio_codec: Annotated[Codec, Field(alias="acodec")]
     bitrate: Annotated[float | None, Field(alias="abr")]
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, handler: SerializerFunctionWrapHandler):
+        result: dict = handler(self)
+        result |= {"vcodec": "none"}
+        return result
 
     @property
     def codec(self) -> str:

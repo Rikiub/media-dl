@@ -16,7 +16,7 @@ from media_dl.downloader.config import FILE_FORMAT, FormatConfig
 from media_dl.exceptions import MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
-from media_dl.models.stream import DeferredStream, LazyStreams, Stream
+from media_dl.models.stream import LazyStreams, Stream
 from media_dl.types import StrPath
 from media_dl.path import get_tempfile
 from media_dl.rich import DownloadProgress
@@ -156,7 +156,7 @@ class StreamDownloader:
 
         try:
             # Resolve stream
-            if isinstance(stream.__class__, DeferredStream):
+            if type(stream) is not Stream:
                 stream = stream.fetch()
                 self._progress.update(task_id, description=stream.display_name)
 

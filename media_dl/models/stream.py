@@ -6,7 +6,7 @@ from typing import Annotated, cast
 from pydantic import AliasChoices, Field, OnErrorOmit, PlainSerializer, PrivateAttr
 
 from media_dl._ydl import InfoDict
-from media_dl.extractor import info
+from media_dl.extractor import info as info_extractor
 from media_dl.models.base import ExtractID, GenericList
 from media_dl.models.format import FormatList
 from media_dl.models.metadata import Thumbnail
@@ -29,7 +29,7 @@ class DeferredStream(ExtractID):
             ExtractError: Something bad happens when extract.
         """
 
-        info = info.extract_url(self.url)
+        info = info_extractor.extract_url(self.url)
         stream = Stream(**info)
         return stream
 
@@ -92,7 +92,7 @@ class Stream(DeferredStream):
             return False
 
 
-class LazyStreams(GenericList[DeferredStream]):
+class LazyStreams(GenericList[DeferredStream | Stream]):
     """Unproccesed list of streams.
 
     Each time you access a stream by index, it will check if is completed.
@@ -105,11 +105,11 @@ class LazyStreams(GenericList[DeferredStream]):
     def _resolve_stream(self, index: int) -> Stream:
         stream = self.root[index]
 
-        if isinstance(stream.__class__, DeferredStream):
+        if type(stream) is DeferredStream:
             self.root[index] = stream = stream.fetch()
 
-        if not isinstance(stream, Stream):
-            raise ValueError("Unable to fetch Stream.")
+        if type(stream) is not Stream:
+            raise ValueError(f"Could not fetch Stream, got: {type(stream).__name__}")
 
         return stream
 

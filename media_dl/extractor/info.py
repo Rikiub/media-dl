@@ -63,8 +63,8 @@ def _fetch_query(query: str) -> InfoDict:
     try:
         ydl = YTDLP(
             {
-                "skip_download": True,
                 "extract_flat": "in_playlist",
+                "skip_download": True,
             }
         )
         info = ydl.extract_info(query, download=False)
