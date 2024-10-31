@@ -3,16 +3,12 @@
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Any, NewType, cast
 
 from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
-from media_dl.path import DIR_TEMP
-
-# Base
-InfoDict = NewType("InfoDict", dict)
+from media_dl.types import StrPath, InfoDict
 
 
 class SupportedExtensions(frozenset[str], Enum):
@@ -99,7 +95,7 @@ POST_MUSIC = [
 
 
 # Helpers
-def run_postproces(file: Path, info: InfoDict, params: dict[str, Any]) -> Path:
+def run_postproces(file: Path, info: InfoDict, params: dict) -> Path:
     """Postprocess file by params."""
 
     info = YTDLP(params).post_process(filename=str(file), info=info)
@@ -112,16 +108,11 @@ def parse_output_template(info: InfoDict, template: str) -> str:
     return YTDLP().prepare_filename(info, outtmpl=template)
 
 
-def sanitize_info(info: InfoDict) -> InfoDict:
-    info = cast(InfoDict, YTDLP().sanitize_info(info))
-    return info
-
-
-def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
+def download_thumbnail(filepath: StrPath, info: InfoDict) -> Path | None:
     ydl = YTDLP({"writethumbnail": True})
 
     final = ydl._write_thumbnails(
-        label=filename, info_dict=info, filename=str(DIR_TEMP / filename)
+        label=filepath, info_dict=info, filename=str(filepath)
     )
 
     if final:
@@ -130,15 +121,15 @@ def download_thumbnail(filename: str, info: InfoDict) -> Path | None:
         return None
 
 
-def download_subtitles(filename: str, info: InfoDict) -> Path | None:
+def download_subtitle(filepath: StrPath, info: InfoDict) -> Path | None:
     ydl = YTDLP({"writesubtitles": True, "allsubtitles": True})
 
     subs = ydl.process_subtitles(
-        filename, info.get("subtitles"), info.get("automatic_captions")
+        filepath, info.get("subtitles"), info.get("automatic_captions")
     )
     info |= {"requested_subtitles": subs}
 
-    final = ydl._write_subtitles(info_dict=info, filename=str(DIR_TEMP / filename))
+    final = ydl._write_subtitles(info_dict=info, filename=str(filepath))
 
     if final:
         return Path(final[0][0])

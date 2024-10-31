@@ -1,4 +1,5 @@
-from typing import Literal
+from os import PathLike
+from typing import Any, Literal
 
 # FORMAT
 EXT_VIDEO = Literal["mp4", "mkv", "mov"]
@@ -14,3 +15,7 @@ VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
 # SEARCH
 SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
+
+# Extra
+InfoDict = dict[str, Any]
+StrPath = str | PathLike[str]

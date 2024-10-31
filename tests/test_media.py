@@ -2,10 +2,10 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-import media_dl
 from media_dl.exceptions import ExtractError
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import Stream
+from media_dl import api as media_dl
 
 TEMPDIR = TemporaryDirectory()
 
@@ -36,11 +36,13 @@ class TestExtractor:
 
 
 class TestDownloads:
-    downloader = media_dl.Downloader(format="audio", quality=1, output=TEMPDIR.name)
+    downloader = media_dl.StreamDownloader(
+        format="audio", quality=1, output=TEMPDIR.name
+    )
 
     def test_exceptions(self):
         with pytest.raises(FileNotFoundError):
-            media_dl.Downloader(ffmpeg="./unkdown_path/")
+            media_dl.StreamDownloader(ffmpeg="./unkdown_path/")
 
     def test_stream(self):
         # Song: Imagine Dragons - Believer

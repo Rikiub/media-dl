@@ -2,11 +2,7 @@ import atexit
 import os
 import shutil
 import tempfile
-from os import PathLike
 from pathlib import Path
-
-# Types
-StrPath = str | PathLike[str]
 
 # Constans
 DIR_TEMP = Path(tempfile.mkdtemp(prefix="ydl-"))

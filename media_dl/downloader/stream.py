@@ -6,18 +6,19 @@ from pathlib import Path
 from typing import Callable, Literal
 
 from media_dl._ydl import (
-    download_subtitles,
-    download_thumbnail,
     parse_output_template,
     run_postproces,
+    download_thumbnail,
+    download_subtitle,
 )
-from media_dl.download import worker
-from media_dl.download.config import FILE_FORMAT, FormatConfig
+from media_dl.downloader import internal
+from media_dl.downloader.config import FILE_FORMAT, FormatConfig
 from media_dl.exceptions import MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
-from media_dl.models.stream import LazyStreams, Stream
-from media_dl.path import StrPath, get_tempfile
+from media_dl.models.stream import DeferredStream, LazyStreams, Stream
+from media_dl.types import StrPath
+from media_dl.path import get_tempfile
 from media_dl.rich import DownloadProgress
 
 log = logging.getLogger(__name__)
@@ -32,7 +33,7 @@ ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
 ExtractResult = Playlist | LazyStreams | Stream
 
 
-class Downloader:
+class StreamDownloader:
     """Multi-thread stream downloader.
 
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
@@ -150,12 +151,12 @@ class Downloader:
         on_progress: ProgressCallback | None = None,
     ) -> Path:
         task_id = self._progress.add_task(
-            description=stream.display_name, status="Started"
+            description=stream.display_name or "Fetching...", status="Started"
         )
 
         try:
             # Resolve stream
-            if isinstance(stream, Stream):
+            if isinstance(stream.__class__, DeferredStream):
                 stream = stream.fetch()
                 self._progress.update(task_id, description=stream.display_name)
 
@@ -201,7 +202,7 @@ class Downloader:
                 format_video = None
 
             # Run download
-            downloaded_file = worker.download(
+            downloaded_file = internal.download(
                 filepath=get_tempfile(),
                 video=format_video,
                 audio=format_audio,
@@ -221,10 +222,12 @@ class Downloader:
             )
 
             # Download resources
-            if download_thumbnail(output_name, stream._extra_info):
-                log.debug('"%s": Thumbnail founded.', stream.id)
-            if download_subtitles(output_name, stream._extra_info):
-                log.debug('"%s": Subtitles founded.', stream.id)
+            if d := download_thumbnail(output_name, stream._extra_info):
+                log.debug('"%s": Thumbnail downloaded: "%s"', stream.id, d)
+            if d := stream.subtitles and download_subtitle(
+                output_name, stream._extra_info
+            ):
+                log.debug('"%s": Subtitle downloaded: "%s"', stream.id, d)
 
             # Run postprocessing
             params = download_config.ydl_params(music_meta=stream._is_music_site())

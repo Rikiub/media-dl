@@ -1,6 +1,6 @@
 [project]
 name = "media-dl"
-version = "2.0.1"
+version = "2.1.0"
 description = "Download any video/audio you want from a simple URL ✨"
 readme = "README.md"
 requires-python = ">=3.12"

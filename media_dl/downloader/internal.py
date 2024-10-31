@@ -4,7 +4,7 @@ from typing import Callable, cast, get_args
 from yt_dlp import DownloadError as BaseDownloadError
 
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
-from media_dl.download.config import EXT_VIDEO
+from media_dl.downloader.config import EXT_VIDEO
 from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.format import Format
 
@@ -42,7 +42,7 @@ def download(
 
     params |= {"outtmpl": {"default": f"{filepath}.%(ext)s"}}
 
-    # InfoDict
+    # Info
     format_id = f"{video.id if video else ""}+{audio.id if audio else ""}"
 
     if format_id.startswith("+") or format_id.endswith("+"):

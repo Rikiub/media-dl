@@ -194,14 +194,15 @@ What format you want request?
     init_logging(log_level)
 
     # Lazy Import
-    from media_dl.download.downloader import Downloader
-    from media_dl.exceptions import MediaError
-    from media_dl.extractor.extr import extract_search, extract_url
-    from media_dl.models.playlist import Playlist
+    with Status("Starting...", disable=quiet):
+        from media_dl.downloader.stream import StreamDownloader
+        from media_dl.exceptions import MediaError
+        from media_dl.extractor.stream import extract_search, extract_url
+        from media_dl.models.playlist import Playlist
 
     # Init Downloader
     try:
-        downloader = Downloader(
+        downloader = StreamDownloader(
             format=format.value,
             quality=quality,
             output=output,

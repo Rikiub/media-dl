@@ -8,10 +8,27 @@ from yt_dlp.networking.exceptions import RequestError
 
 from media_dl._ydl import YTDLP, InfoDict, format_except_message
 from media_dl.exceptions import ExtractError
-from media_dl.extractor import serializer
 from media_dl.types import SEARCH_PROVIDER
 
 log = logging.getLogger(__name__)
+
+
+def is_playlist(info: InfoDict) -> bool:
+    """Check if info is a playlist."""
+
+    if info.get("_type") == "playlist" or info.get("entries"):
+        return True
+    else:
+        return False
+
+
+def is_stream(info: InfoDict) -> bool:
+    """Check if info is a single Stream."""
+
+    if info.get("_type") == "url" or info.get("formats"):
+        return True
+    else:
+        return False
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
@@ -61,7 +78,7 @@ def _fetch_query(query: str) -> InfoDict:
     if info["extractor_key"] == "Generic" and info["url"] != query:
         return _fetch_query(info["url"])
 
-    if not (serializer.is_playlist(info) or serializer.is_stream(info)):
+    if not (is_playlist(info) or is_stream(info)):
         raise ExtractError('"%s" return nothing.')
 
     return info

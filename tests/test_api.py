@@ -1,6 +1,6 @@
 from tempfile import TemporaryDirectory
 
-import media_dl
+from media_dl import api as media_dl
 
 TEMPDIR = TemporaryDirectory()
 
@@ -11,14 +11,13 @@ def test_api():
     result = media_dl.extract_url(URL)
 
     with TEMPDIR:
-        downloader = media_dl.Downloader("audio", quality=1, output=TEMPDIR.name)
+        downloader = media_dl.StreamDownloader("audio", quality=1, output=TEMPDIR.name)
 
         # If is stream, filter by best quality and download.
         if isinstance(result, media_dl.Stream):
-            format = result.formats.filter(type="audio").get_best_quality()
+            # format = result.formats.filter(type="audio").get_best_quality()
             path = downloader.download(
                 result,
-                format,
                 on_progress=lambda *args: print(*args),
             )
 
