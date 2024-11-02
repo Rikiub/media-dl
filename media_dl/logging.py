@@ -26,20 +26,15 @@ class ColorFormatter(logging.Formatter):
         return color + message
 
 
-def init_logging(level: int | str):
-    if isinstance(level, str):
-        log_level: int = logging.getLevelName(level)
-    else:
-        log_level: int = level
-
-    if log_level >= 20:
+def init_logging(level: int):
+    if level >= 20:
         verbose = False
     else:
         verbose = True
 
     msg_format = "%(message)s"
     rich_handler = RichHandler(
-        level=log_level,
+        level=level,
         show_level=verbose,
         show_time=verbose,
         show_path=verbose,
@@ -49,7 +44,7 @@ def init_logging(level: int | str):
     rich_handler.setFormatter(ColorFormatter(msg_format))
 
     logging.basicConfig(
-        level=log_level,
+        level=level,
         format=msg_format,
         datefmt="[%X]",
         handlers=[rich_handler],

@@ -3,13 +3,13 @@ from __future__ import annotations
 import datetime
 from typing import Annotated, cast
 
-from pydantic import AliasChoices, Field, OnErrorOmit, PlainSerializer, PrivateAttr
+from pydantic import AliasChoices, Field, PlainSerializer, PrivateAttr
 
 from media_dl._ydl import InfoDict
 from media_dl.extractor import info as info_extractor
 from media_dl.models.base import ExtractID, GenericList
 from media_dl.models.format import FormatList
-from media_dl.models.metadata import Thumbnail
+from media_dl.models.metadata import ThumbnailList
 from media_dl.types import MUSIC_SITES
 
 
@@ -59,13 +59,12 @@ DatetimeTimestamp = Annotated[
 class Stream(DeferredStream):
     """Online media stream representation."""
 
-    date: Annotated[
-        DatetimeTimestamp | None,
-        Field(alias="timestamp", validation_alias=AliasChoices("timestamp")),
-    ] = None
+    uploader_id: str | None = None
+    description: str = ""
+    date: Annotated[DatetimeTimestamp | None, Field(alias="timestamp")] = None
     duration: float = 0
-    formats: FormatList
-    thumbnails: list[OnErrorOmit[Thumbnail]]
+    formats: Annotated[FormatList, Field(min_length=1)]
+    thumbnails: ThumbnailList = []
     subtitles: dict[str, list[dict]] | None = None
     _extra_info: Annotated[InfoDict, PrivateAttr()]
 
@@ -78,16 +77,6 @@ class Stream(DeferredStream):
     def __eq__(self, o: object) -> bool:
         if isinstance(o, self.__class__):
             return o.id == self.id
-        else:
-            return False
-
-    def _is_music_site(self) -> bool:
-        if super()._is_music_site():
-            return True
-
-        elif self._extra_info.get("track") and self._extra_info.get("artist"):
-            return True
-
         else:
             return False
 

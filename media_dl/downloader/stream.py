@@ -12,12 +12,12 @@ from media_dl._ydl import (
     download_subtitle,
 )
 from media_dl.downloader import internal
-from media_dl.downloader.config import FILE_FORMAT, FormatConfig
+from media_dl.downloader.config import FormatConfig
 from media_dl.exceptions import MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStreams, Stream
-from media_dl.types import StrPath
+from media_dl.types import StrPath, FILE_FORMAT
 from media_dl.path import get_tempfile
 from media_dl.rich import DownloadProgress
 
@@ -198,7 +198,11 @@ class StreamDownloader:
             else:
                 merge_format = None
 
-            if not download_config.convert and download_config.type == "audio":
+            if (
+                download_config.type == "audio"
+                and format_audio
+                and not download_config.convert
+            ):
                 format_video = None
 
             # Run download
@@ -304,7 +308,7 @@ class StreamDownloader:
         config = self.config
         selected_format = config.format
 
-        if config.type != "audio" and not video:
+        if not video:
             config.format = "video"
             video = self._extract_best_format(stream.formats, config)
 

@@ -43,7 +43,7 @@ def download(
     params |= {"outtmpl": {"default": f"{filepath}.%(ext)s"}}
 
     # Info
-    format_id = f"{video.id if video else ""}+{audio.id if audio else ""}"
+    format_id = str(video.id if video else "") + "+" + str(audio.id if audio else "")
 
     if format_id.startswith("+") or format_id.endswith("+"):
         format_id = format_id.strip("+")
@@ -51,9 +51,11 @@ def download(
     formats: list[InfoDict] = []
 
     if video:
-        formats.append(video.as_dict())
+        info = video.model_dump(by_alias=True)
+        formats.append(info)
     if audio:
-        formats.append(audio.as_dict())
+        info = audio.model_dump(by_alias=True)
+        formats.append(info)
 
     info = {
         "extractor": "generic",

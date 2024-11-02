@@ -16,9 +16,20 @@ class SupportedExtensions(frozenset[str], Enum):
 
     video = frozenset(MEDIA_EXTENSIONS.video)
     audio = frozenset(MEDIA_EXTENSIONS.audio)
-    thumbnail = frozenset(
-        {"mp3", "mkv", "mka", "ogg", "opus", "flac", "m4a", "mp4", "m4v", "mov"}
-    )
+
+
+ThumbnailSupport = (
+    "mp3",
+    "mkv",
+    "mka",
+    "ogg",
+    "opus",
+    "flac",
+    "m4a",
+    "mp4",
+    "m4v",
+    "mov",
+)
 
 
 class YTDLP(YoutubeDL):
@@ -36,6 +47,7 @@ class YTDLP(YoutubeDL):
             "no_warnings": True,
             "noprogress": True,
             "quiet": True,
+            "trim_file_name": 150,
             "color": {"stdout": "no_color", "stderr": "no_color"},
             "postprocessors": [
                 {
@@ -109,7 +121,15 @@ def parse_output_template(info: InfoDict, template: str) -> str:
 
 
 def download_thumbnail(filepath: StrPath, info: InfoDict) -> Path | None:
-    ydl = YTDLP({"writethumbnail": True})
+    ydl = YTDLP(
+        {
+            "writethumbnail": True,
+            "outtmpl": {
+                "thumbnail": "",
+                "pl_thumbnail": "",
+            },
+        }
+    )
 
     final = ydl._write_thumbnails(
         label=filepath, info_dict=info, filename=str(filepath)
@@ -140,53 +160,57 @@ def download_subtitle(filepath: StrPath, info: InfoDict) -> Path | None:
 def format_except_message(exception: Exception) -> str:
     """Get a user friendly message of a YT-DLP message exception."""
 
-    message = str(exception)
+    msg = str(exception)
 
     # No connection
-    if "HTTP Error" in message:
-        pass
+    if "HTTP Error" in msg:
+        msg = (
+            msg
+            + " : You may have exceeded the page request limit, received an IP block, among others. Please try again later."
+        )
 
-    elif "Read timed out" in message:
-        message = "Read timed out."
+    elif "Read timed out" in msg:
+        msg = "Read timed out."
 
-    elif any(
-        s in message for s in ("[Errno -3]", "Failed to extract any player response")
-    ):
-        message = "No internet connection."
+    elif any(s in msg for s in ("[Errno -3]", "Failed to extract any player response")):
+        msg = "No internet connection."
 
     # Invalid URL
-    elif "Unable to download webpage" in message and any(
-        s in message for s in ("[Errno -2]", "[Errno -5]")
+    elif "Unable to download webpage" in msg and any(
+        s in msg for s in ("[Errno -2]", "[Errno -5]")
     ):
-        message = "Invalid URL."
+        msg = "Invalid URL."
 
-    elif "is not a valid URL" in message:
-        splits = message.split()
-        message = splits[1] + " is not a valid URL."
+    elif "is not a valid URL" in msg:
+        splits = msg.split()
+        msg = splits[1] + " is not a valid URL."
 
-    elif "Unsupported URL" in message:
-        splits = message.split()
-        message = "Unsupported URL: " + splits[3]
+    elif "Unsupported URL" in msg:
+        splits = msg.split()
+        msg = "Unsupported URL: " + splits[3]
+
+    elif "Unable to extract webpage video data" in msg:
+        msg = "Unable to extract webpage video data."
 
     # Postprocessing
-    elif "Unable to rename file" in message:
-        message = "Unable to rename file."
+    elif "Unable to rename file" in msg:
+        msg = "Unable to rename file."
 
-    elif "ffmpeg not found" in message:
-        message = "Postprocessing failed. FFmpeg executable not founded."
+    elif "ffmpeg not found" in msg:
+        msg = "Postprocessing failed. FFmpeg executable not founded."
 
     # General
-    elif "No video formats found!" in message:
-        message = "No formats founded."
+    elif "No video formats found!" in msg:
+        msg = "No formats founded."
 
-    elif any(s in message for s in ("Unable to download", "Got error")):
-        message = "Unable to download."
+    elif any(s in msg for s in ("Unable to download", "Got error")):
+        msg = "Unable to download."
 
-    elif "is only available for registered users" in message:
-        message = "Only available for registered users."
+    elif "is only available for registered users" in msg:
+        msg = "Only available for registered users."
 
     # Last parse
-    if message.startswith("ERROR: "):
-        message = message.strip("ERROR: ")
+    if msg.startswith("ERROR: "):
+        msg = msg.strip("ERROR: ")
 
-    return message
+    return msg

@@ -100,7 +100,7 @@ class FormatConfig:
                     postprocessors.append(
                         {
                             "key": "FFmpegVideoRemuxer",
-                            "preferedformat": self.convert or "webm>mkv",
+                            "preferedformat": self.convert or "webm>mp4",
                         },
                     )
                 case "audio":

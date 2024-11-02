@@ -1,8 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, OnErrorOmit
 
 
 class Thumbnail(BaseModel):
     id: str
     url: str
-    width: int
-    height: int
+    width: int = 0
+    height: int = 0
+
+
+ThumbnailList = list[OnErrorOmit[Thumbnail]]
