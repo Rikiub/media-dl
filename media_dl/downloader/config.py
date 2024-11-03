@@ -128,6 +128,12 @@ class FormatConfig:
                     raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
 
             if self.metadata:
+                params |= {
+                    "outtmpl": {
+                        "thumbnail": "",
+                        "pl_thumbnail": "",
+                    },
+                }
                 postprocessors.extend(
                     [
                         {
