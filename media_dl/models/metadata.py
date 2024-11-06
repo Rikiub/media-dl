@@ -1,13 +1,13 @@
 from typing import Annotated
-from pydantic import BaseModel, Field, OnErrorOmit
+from pydantic import BaseModel, Field
 
 
 class MusicMetadata(BaseModel):
     track: str = ""
-    artists: list[str] = []
+    artists: list[str] | None = None
     album: str = ""
     album_artist: str = ""
-    genres: list[str] = []
+    genres: list[str] | None = None
 
 
 class Subtitle(BaseModel):
@@ -21,6 +21,3 @@ class Thumbnail(BaseModel):
     url: str
     width: int = 0
     height: int = 0
-
-
-ThumbnailList = list[OnErrorOmit[Thumbnail]]

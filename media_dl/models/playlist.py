@@ -5,11 +5,11 @@ from typing import Annotated
 from pydantic import Field
 
 from media_dl.models.base import ExtractID
-from media_dl.models.metadata import ThumbnailList
+from media_dl.models.metadata import Thumbnail
 from media_dl.models.stream import LazyStream
 
 
 class Playlist(ExtractID):
     title: str
-    thumbnails: ThumbnailList = []
+    thumbnails: list[Thumbnail] = []
     streams: Annotated[list[LazyStream], Field(alias="entries")]
