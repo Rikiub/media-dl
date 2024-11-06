@@ -124,27 +124,27 @@ class FormatList(GenericList[FormatType], Generic[F]):
     def filter(
         self,
         type: Literal["video"],
-        extension=None,
-        codec=None,
-        quality=None,
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
     ) -> FormatList[VideoFormat]: ...
 
     @overload
     def filter(
         self,
         type: Literal["audio"],
-        extension=None,
-        codec=None,
-        quality=None,
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
     ) -> FormatList[AudioFormat]: ...
 
     @overload
     def filter(
         self,
         type: None = None,
-        extension=None,
-        codec=None,
-        quality=None,
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
     ) -> FormatList[FormatType | Format]: ...
 
     def filter(

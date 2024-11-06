@@ -3,7 +3,7 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 
 from media_dl._ydl import (
     parse_output_template,
@@ -23,22 +23,7 @@ from media_dl.path import get_tempfile
 
 log = logging.getLogger(__name__)
 
-PROGRESS_STATUS = Literal[
-    "downloading",
-    "processing",
-    "finished",
-]
-
 ExtractResult = Playlist | list[LazyStream] | Stream
-
-
-def _gen_postprocessing_dict(stream: Stream, format: Format) -> dict:
-    d = stream.model_dump(by_alias=True)
-
-    if format:
-        d |= format.model_dump(by_alias=True)
-
-    return d
 
 
 class StreamDownloader:
@@ -395,3 +380,12 @@ class StreamDownloader:
             format.extension,
             format.display_quality,
         )
+
+
+def _gen_postprocessing_dict(stream: Stream, format: Format) -> dict:
+    d = stream.model_dump(by_alias=True)
+
+    if format:
+        d |= format.model_dump(by_alias=True)
+
+    return d
