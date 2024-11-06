@@ -1,67 +1,73 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+import datetime
+from typing import Annotated
 
-from media_dl import helper
-from media_dl.models.base import (
-    GLOBAL_INFO,
-    ExtractID,
-    InfoDict,
-)
+from pydantic import AliasChoices, Field, PlainSerializer
+
+from media_dl.extractor import info as info_extractor
+from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList
+from media_dl.models.metadata import MusicMetadata, Subtitle, Thumbnail
+from media_dl.types import MUSIC_SITES
 
 
-@dataclass(slots=True, frozen=True)
-class Stream(ExtractID):
-    """Single `Stream` information.
+class LazyStream(ExtractID):
+    title: str = ""
+    uploader: Annotated[
+        str, Field(validation_alias=AliasChoices("creator", "uploader"))
+    ] = ""
 
-    If the `Stream` was obtained from a `Playlist`, it'll be incomplete and it'll not have `formats` to filter.
-    To access to the complete `Stream` information, you'll need do this::
+    def fetch(self) -> Stream:
+        """Fetch real stream.
 
-        stream = stream.update()
-    """
+        Returns:
+            Updated version of self Stream.
 
-    title: str
-    uploader: str = ""
-    thumbnail: str = ""
-    duration: int = 0
-    formats: FormatList = FormatList([])
+        Raises:
+            ExtractError: Something bad happens when extract.
+        """
 
-    def update(self) -> Stream:
-        """Get a updated version of the `Stream` doing another request."""
-        return self.from_url(self.url)
+        info = info_extractor.extract_url(self.url)
+        stream = Stream(**info)
+        return stream
+
+    def _is_music_site(self) -> bool:
+        if any(s in self.url for s in MUSIC_SITES):
+            return True
+        else:
+            return False
 
     @property
     def display_name(self) -> str:
-        """Get a pretty representation of the `Stream` name."""
+        """Get pretty representation of the stream name."""
 
-        if self.uploader and self.title:
+        if self._is_music_site() and self.uploader and self.title:
             return self.uploader + " - " + self.title
         elif self.title:
             return self.title
         else:
-            return "?"
+            return ""
 
-    @classmethod
-    def _from_info(cls, info: InfoDict) -> Stream:
-        if helper.is_playlist(info):
-            raise TypeError(
-                "Unable to serialize dict. It is a playlist, not a single stream."
-            )
-        elif helper.is_single(info):
-            GLOBAL_INFO.save(info)
 
-        return cls(
-            *helper.extract_meta(info),
-            thumbnail=helper.extract_thumbnail(info),
-            title=info.get("track") or info.get("title") or "",
-            uploader=(
-                info.get("artist")
-                or info.get("channel")
-                or info.get("creator")
-                or info.get("uploader")
-                or ""
-            ),
-            duration=info.get("duration") or 0,
-            formats=FormatList._from_info(info),
-        )
+DatetimeTimestamp = Annotated[
+    datetime.datetime, PlainSerializer(lambda d: d.timestamp())
+]
+
+
+class Stream(LazyStream, MusicMetadata):
+    """Online media stream representation."""
+
+    uploader_id: str | None = None
+    description: str | None = None
+    datetime: Annotated[DatetimeTimestamp | None, Field(alias="timestamp")] = None
+    duration: float = 0
+    formats: Annotated[FormatList, Field(min_length=1)]
+    thumbnails: list[Thumbnail] = []
+    subtitles: dict[str, list[Subtitle]] | None = None
+
+    def __eq__(self, o: object) -> bool:
+        if isinstance(o, self.__class__):
+            return o.id == self.id
+        else:
+            return False

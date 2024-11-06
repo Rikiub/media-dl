@@ -1,41 +1,45 @@
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from typing import Annotated, Generic, TypeVar, overload
 
-from media_dl.extractor import InfoExtractor, InfoDict
-from media_dl.cache import GLOBAL_INFO
+from pydantic import AliasChoices, BaseModel, Field, RootModel
+from typing_extensions import Self
 
-
-_EXTR = InfoExtractor()
+T = TypeVar("T")
 
 
-@dataclass(slots=True, frozen=True)
-class ExtractID(ABC):
-    """Base identifier for all media objects.
+class ExtractID(BaseModel):
+    """Base identifier for media objects."""
 
-    Essential to downloaders.
-    """
-
-    extractor: str
+    extractor: str = Field(
+        alias="extractor_key", validation_alias=AliasChoices("extractor_key", "ie_key")
+    )
+    url: Annotated[str, Field(validation_alias=AliasChoices("original_url", "url"))]
     id: str
-    url: str
 
-    def __eq__(self, value) -> bool:
-        return self.id == value.id
 
-    def get_info_dict(self) -> InfoDict:
-        """Get the original `yt-dlp` info-dict of the object. Has more information but isn't safe.
+class GenericList(RootModel[list[T]], Generic[T]):
+    def __contains__(self, value: object) -> bool:
+        return value in self.root
 
-        It is more for advanced users. You can check it if you know what you're doing.
-        """
+    def __iter__(self):  # type: ignore
+        return iter(self.root)
 
-        return GLOBAL_INFO.load(self.extractor, self.id) or _EXTR.extract_url(self.url)
+    def __len__(self) -> int:
+        return len(self.root)
 
-    @classmethod
-    def from_url(cls, url: str):
-        info = _EXTR.extract_url(url)
-        return cls._from_info(info)
+    def __bool__(self) -> bool:
+        return bool(self.root)
 
-    @classmethod
-    @abstractmethod
-    def _from_info(cls, info: InfoDict):
-        raise NotImplementedError()
+    @overload
+    def __getitem__(self, index: int) -> T: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Self: ...
+
+    def __getitem__(self, index):
+        match index:
+            case slice():
+                return self.__class__(self.root[index])
+            case int():
+                return self.root[index]
+            case _:
+                raise TypeError(index)

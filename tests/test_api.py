@@ -1,80 +1,58 @@
 from tempfile import TemporaryDirectory
 
-import pytest
+try:
+    from rich import print
+except ImportError:
+    from pprint import pprint
 
-from media_dl import MediaDL
-from media_dl.extractor import ExtractionError
-from media_dl.models import Stream, Playlist
+    print = pprint
+
+import media_dl
 
 TEMPDIR = TemporaryDirectory()
 
-
-class TestExtractor:
-    ydl = MediaDL()
-
-    def test_exceptions(self):
-        with pytest.raises(ExtractionError):
-            self.ydl.extract_url("https://unkdown.link.com/")
-
-    def test_single_url(self):
-        info = self.ydl.extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
-        assert isinstance(info, Stream)
-
-    def test_plalist_url(self):
-        info = self.ydl.extract_url(
-            "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
-        )
-        assert isinstance(info, Playlist)
+URL = "https://www.youtube.com/watch?v=BaW_jenozKc"
+PLAYLIST = (
+    "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
+)
 
 
-class TestDownloads:
-    ydl = MediaDL(format="audio", quality=1, output=TEMPDIR.name)
-
-    def test_download_single(self):
-        # Song: Imagine Dragons - Believer
-        url = "https://music.youtube.com/watch?v=Kx7B-XvmFtE"
-        stream = self.ydl.extract_url(url)
-
-        if isinstance(stream, Stream):
-            with TEMPDIR:
-                path = self.ydl.download_single(stream)
-
-                if not path.is_file():
-                    raise FileNotFoundError(path)
-        else:
-            raise AssertionError(stream)
-
-    def test_download_playlist(self):
-        # Playlist: Album - HIVE (Sub Urban)
-        url = "https://music.youtube.com/playlist?list=OLAK5uy_lRrAuEy29zo5mtAH465aEtvmRfakErDoI"
-        playlist = self.ydl.extract_url(url)
-
-        if isinstance(playlist, Playlist):
-            with TEMPDIR:
-                paths = self.ydl.download_multiple(playlist)
-                p = paths[0]
-
-                if not p.is_file():
-                    raise FileNotFoundError(p)
-        else:
-            raise AssertionError(playlist)
-
-
-def test_api_syntax():
-    ydl = MediaDL(format="audio", quality=1, output=TEMPDIR.name)
-
-    print("Extraction")
-    result = ydl.extract_search("Sub urban", "soundcloud")
-    print("Extraction Done")
-
-    print("Update")
-    stream = result[0].update()
-    print("Update Done")
-
-    print("Filter")
-    format = stream.formats.filter("audio").get_best_quality()
-    print("Filter Done")
-
+def test_api():
     with TEMPDIR:
-        path = ydl.download_single(stream, format)
-        print(path)
+        downloader = media_dl.StreamDownloader("audio", quality=1, output=TEMPDIR.name)
+
+        result = media_dl.extract_url(PLAYLIST)
+
+        match result:
+            case media_dl.Stream():
+                path = downloader.download(
+                    result,
+                    on_progress=lambda *args: print(*args),
+                )
+                print(path)
+            case media_dl.Playlist():
+                paths = downloader.download_all(result)
+                print(paths)
+
+
+def test_format_filter():
+    stream = media_dl.extract_url(URL)
+
+    if isinstance(stream, media_dl.Stream):
+        formats = stream.formats
+
+        videos = formats.filter("video")
+        print(videos)
+
+        audios = formats.filter("audio")
+        print(audios)
+
+        best_quality = formats.get_best_quality()
+        print(best_quality)
+
+        by_id = formats.get_by_id("137")
+        print(by_id)
+
+
+if __name__ == "__main__":
+    test_api()

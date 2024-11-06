@@ -1,37 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import Annotated
 
-from media_dl import helper
+from pydantic import Field
+
 from media_dl.models.base import ExtractID
-from media_dl.models.stream import Stream, InfoDict
+from media_dl.models.metadata import Thumbnail
+from media_dl.models.stream import LazyStream
 
 
-@dataclass(slots=True, frozen=True)
-class _StreamList(ExtractID):
-    lenght: int
-    streams: list[Stream]
-
-    def __len__(self):
-        return self.lenght
-
-
-@dataclass(slots=True, frozen=True)
-class Playlist(_StreamList):
-    """List of streams with basic metadata. Access them with the attribute `streams`."""
-
-    thumbnail: str
+class Playlist(ExtractID):
     title: str
-
-    @classmethod
-    def _from_info(cls, info: InfoDict) -> Playlist:
-        if not helper.is_playlist(info):
-            raise TypeError("Unable to serialize dict. Not is a playlist.")
-
-        return cls(
-            *helper.extract_meta(info),
-            thumbnail=helper.extract_thumbnail(info),
-            title=info.get("title") or "",
-            lenght=info["playlist_count"],
-            streams=list(Stream._from_info(entry) for entry in info["entries"]),
-        )
+    thumbnails: list[Thumbnail] = []
+    streams: Annotated[list[LazyStream], Field(alias="entries")]

@@ -1,76 +1,82 @@
-from typing import Annotated, Generator, Literal, get_args, Optional
-from pathlib import Path
-import logging
+try:
+    from typer import Argument, BadParameter, Option, Typer
+except ImportError:
+    raise ImportError("Typer is required to use CLI features.")
 
-from typer import Typer, Argument, Option, BadParameter
+import logging
+from pathlib import Path
+from typing import Annotated, Generator, Literal, Optional, get_args
+
 from strenum import StrEnum
 
-from media_dl import MediaDL
-from media_dl.dirs import APPNAME
 from media_dl.logging import init_logging
-from media_dl.download.downloader import DownloadError
-from media_dl.extractor import ExtractionError, SEARCH_PROVIDER
-from media_dl.download.config import FILE_REQUEST, VIDEO_RES
+from media_dl.rich import Status
+from media_dl.types import FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
 log = logging.getLogger(__name__)
-
 app = Typer()
 
-Format = StrEnum("Format", get_args(FILE_REQUEST))
+
+# Typer: types
+APPNAME = "media-dl"
+
+Format = StrEnum("Format", get_args(FILE_FORMAT))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
 
+# Typer: helpers
 class HelpPanel(StrEnum):
-    formatting = "Format"
-    advanced = "Advanced"
-    view = "View"
+    file = "File"
+    downloader = "Downloader"
+    other = "Other"
 
 
-def show_version(show: bool):
+def show_version(show: bool) -> None:
     if show:
         from importlib.metadata import version
 
         print(version(Path(__file__).parent.name))
+
         raise SystemExit()
 
 
+# Typer: completions
 def complete_query(incomplete: str) -> Generator[str, None, None]:
     for name in SearchFrom:
         if name.value.startswith(incomplete):
             yield name.value + ":"
 
 
-def complete_resolution() -> list[str]:
-    return [str(entry) for entry in get_args(VIDEO_RES)]
+def complete_resolution() -> Generator[str, None, None]:
+    for name in get_args(VIDEO_RES):
+        yield str(name)
 
 
-def parse_input(queries: list[str]) -> list[tuple[SearchFrom, str]]:
+def parse_queries(queries: list[str]) -> Generator[tuple[SearchFrom, str], None, None]:
     providers = [entry.name for entry in SearchFrom]
-    results = []
 
     for entry in queries:
-        target = entry.split(":")[0]
+        selection = entry.split(":")[0]
 
         if entry.startswith(("http://", "https://")):
-            results.append((SearchFrom["url"], entry))
-
-        elif target in providers:
-            final = entry.split(":")[1]
-            results.append((SearchFrom[target], final))
-
+            target = SearchFrom["url"]
+        elif selection in providers:
+            target = SearchFrom[selection]
+            entry = entry.split(":")[1]
         else:
-            completed = [i for i in complete_query(target)]
+            completed = [i for i in complete_query(selection)]
 
             if completed:
                 msg = f"Did you mean '{completed[0]}'?"
             else:
-                msg = "Should be URL or search provider."
+                msg = "Should be URL or search PROVIDER."
 
-            raise BadParameter(f"'{target}' is invalid. {msg}")
+            raise BadParameter(f"'{selection}' is invalid. {msg}")
 
-    return results
+        yield target, entry
 
 
+# Typer: app
 @app.command(no_args_is_help=True)
 def download(
     query: Annotated[
@@ -105,16 +111,16 @@ What format you want request?
 """,
             prompt_required=False,
             show_default=False,
-            rich_help_panel=HelpPanel.formatting,
+            rich_help_panel=HelpPanel.file,
         ),
     ] = Format["video"],
     quality: Annotated[
-        int,
+        Optional[int],
         Option(
             "--quality",
             "-q",
-            help="Prefered video/audio quality to try filter.",
-            rich_help_panel=HelpPanel.formatting,
+            help="Prefered video/audio quality to filter.",
+            rich_help_panel=HelpPanel.file,
             autocompletion=complete_resolution,
             show_default=False,
         ),
@@ -125,8 +131,9 @@ What format you want request?
             "--output",
             "-o",
             help="Directory where to save downloads.",
-            rich_help_panel=HelpPanel.formatting,
+            rich_help_panel=HelpPanel.file,
             show_default=False,
+            dir_okay=True,
             file_okay=False,
         ),
     ] = Path.cwd(),
@@ -135,26 +142,26 @@ What format you want request?
         Option(
             "--ffmpeg",
             help="FFmpeg executable to use.",
-            rich_help_panel=HelpPanel.advanced,
+            rich_help_panel=HelpPanel.downloader,
             show_default=False,
             file_okay=True,
             dir_okay=False,
         ),
     ] = None,
-    threads: Annotated[
+    parallel: Annotated[
         int,
         Option(
-            "--threads",
-            help="Maximum processes to execute.",
-            rich_help_panel=HelpPanel.advanced,
+            "--parallel-max",
+            help="Limit of simultaneous downloads.",
+            rich_help_panel=HelpPanel.downloader,
         ),
-    ] = 4,
+    ] = 5,
     quiet: Annotated[
         bool,
         Option(
             "--quiet",
             help="Supress screen information.",
-            rich_help_panel=HelpPanel.view,
+            rich_help_panel=HelpPanel.other,
         ),
     ] = False,
     verbose: Annotated[
@@ -162,7 +169,7 @@ What format you want request?
         Option(
             "--verbose",
             help="Display more information on screen.",
-            rich_help_panel=HelpPanel.view,
+            rich_help_panel=HelpPanel.other,
         ),
     ] = False,
     version: Annotated[
@@ -170,7 +177,7 @@ What format you want request?
         Option(
             "--version",
             help="Show current version and exit.",
-            rich_help_panel=HelpPanel.view,
+            rich_help_panel=HelpPanel.other,
             callback=show_version,
         ),
     ] = False,
@@ -186,44 +193,54 @@ What format you want request?
 
     init_logging(log_level)
 
+    # Lazy Import
+    with Status("Starting...", disable=quiet):
+        from media_dl.downloader.stream import StreamDownloader
+        from media_dl.exceptions import MediaError
+        from media_dl.extractor.stream import extract_search, extract_url
+        from media_dl.models.playlist import Playlist
+
+    # Init Downloader
     try:
-        ydl = MediaDL(
+        downloader = StreamDownloader(
             format=format.value,
-            quality=quality if quality != 0 else None,
+            quality=quality,
             output=output,
             ffmpeg=ffmpeg,
-            threads=threads,
-            quiet=quiet,
+            threads=parallel,
+            show_progress=not quiet,
         )
     except FileNotFoundError as err:
         raise BadParameter(str(err))
 
-    conf = ydl._downloader.config
-    if conf.convert and not conf.ffmpeg:
+    if downloader.config.convert and not downloader.config.ffmpeg:
         log.warning(
-            "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled.\n"
+            "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
         )
 
-    for target, entry in parse_input(query):
+    for target, entry in parse_queries(query):
         try:
-            if target.value == "url":
-                log.info("🔎 Extracting '%s'", entry)
-                result = ydl.extract_url(entry)
-            else:
-                log.info("🔎 Searching '%s' from '%s'", entry, target.value)
-                result = ydl.extract_search(entry, target.value)
-                result = result[0]
+            with Status("Please wait", disable=quiet):
+                if target.value == "url":
+                    log.info('🔎 Extract URL: "%s".', entry)
+                    result = extract_url(entry)
 
-            ydl.download_multiple(result)
-        except (DownloadError, ExtractionError) as err:
+                    if isinstance(result, Playlist):
+                        log.info('🔎 Playlist Name: "%s".', result.title)
+                else:
+                    log.info('🔎 Search from %s: "%s".', target.value, entry)
+                    result = extract_search(entry, target.value)[0]
+
+            downloader.download_all(result)
+            log.info("✅ Download Finished.")
+        except MediaError as err:
             log.error("❌ %s", str(err))
-            continue
-        else:
-            log.info("✅ Done '%s'\n", entry)
+        finally:
+            log.info("")
 
 
 def run():
-    app(prog_name=APPNAME.lower())
+    app(prog_name=APPNAME)
 
 
 if __name__ == "__main__":

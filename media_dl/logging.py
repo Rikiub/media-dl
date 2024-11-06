@@ -2,50 +2,49 @@ import logging
 
 from rich.logging import RichHandler
 
+from media_dl.rich import CONSOLE
 
-class LoggingFormatter(logging.Formatter):
+
+class ColorFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = super().format(record)
-        color = ""
 
         match record.levelno:
             case logging.DEBUG:
                 color = "[blue]"
             case logging.INFO:
-                color = "[cyan]"
+                color = "[khaki1]"
             case logging.WARNING:
-                color = "[yellow]"
+                color = "[yellow][italic]"
             case logging.ERROR:
                 color = "[red]"
             case logging.CRITICAL:
                 color = "[bold red]"
+            case _:
+                color = ""
 
         return color + message
 
 
-def init_logging(level: int | str):
-    if isinstance(level, str):
-        log_level = logging.getLevelName(level)
+def init_logging(level: int):
+    if level >= 20:
+        verbose = False
     else:
-        log_level = level
+        verbose = True
 
     msg_format = "%(message)s"
-    verbose = True
-
-    if log_level >= 20:
-        verbose = False
-
     rich_handler = RichHandler(
-        level=log_level,
+        level=level,
         show_level=verbose,
-        show_path=verbose,
         show_time=verbose,
+        show_path=verbose,
         markup=True,
+        console=CONSOLE,
     )
-    rich_handler.setFormatter(LoggingFormatter(msg_format))
+    rich_handler.setFormatter(ColorFormatter(msg_format))
 
     logging.basicConfig(
-        level=log_level,
+        level=level,
         format=msg_format,
         datefmt="[%X]",
         handlers=[rich_handler],

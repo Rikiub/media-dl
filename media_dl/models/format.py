@@ -1,107 +1,193 @@
 from __future__ import annotations
 
-from typing import Literal, Any, overload
-from collections.abc import Sequence
-from dataclasses import dataclass
 import bisect
+from abc import ABC, abstractmethod
+from functools import cached_property
+from typing import Annotated, Any, Generic, Literal, overload
 
-from media_dl.models.base import InfoDict
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    Field,
+    OnErrorOmit,
+    SerializerFunctionWrapHandler,
+    field_serializer,
+    field_validator,
+    model_serializer,
+)
+from typing_extensions import Self, TypeVar
 
-FORMAT_TYPE = Literal["video", "audio"]
+from media_dl._ydl import SupportedExtensions
+from media_dl.models.base import GenericList
+from media_dl.types import FORMAT_TYPE
 
 
-@dataclass(slots=True, frozen=True, order=True)
-class Format:
-    """Representation of a remote file from a `Stream`.
+Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 
-    Their fields are determined by their `type`. For example:
-    - If is `video`, `extension` and `codec` would be mp4 and vp9.
-    - If is `audio`, `extension` and `codec` would be m4a and opus.
-    """
 
+class YDLArgs(BaseModel):
+    downloader_options: Annotated[dict, Field(default_factory=dict, repr=False)]
+    http_headers: Annotated[dict, Field(default_factory=dict, repr=False)]
+    cookies: str | None = None
+
+
+class Format(ABC, YDLArgs, BaseModel):
+    """Base Format"""
+
+    id: Annotated[str, Field(alias="format_id")]
     url: str
-    id: str
-    type: FORMAT_TYPE
-    extension: str
-    quality: int = 0
-    codec: str | None = None
-    filesize: int | None = None
+    protocol: str
+    filesize: int | None = 0
+    extension: Annotated[str, Field(alias="ext")]
+
+    @property
+    @abstractmethod
+    def quality(self) -> int: ...
+
+    @property
+    @abstractmethod
+    def display_quality(self) -> str: ...
+
+
+class VideoFormat(Format):
+    extension: Annotated[str, Field(alias="ext")]
+    video_codec: Annotated[Codec, Field(alias="vcodec")]
+    audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
+    width: int
+    height: int
+    fps: float = 0
+
+    @property
+    def codec(self) -> str:
+        return self.video_codec
+
+    @property
+    def quality(self) -> int:
+        return self.height
 
     @property
     def display_quality(self) -> str:
-        """Get a pretty representation of `Format` quality."""
+        return str(self.quality) + "p"
 
-        if self.type == "video":
-            return str(self.quality) + "p"
-        elif self.type == "audio":
-            return str(round(self.quality)) + "kbps"
-        else:
-            return ""
-
-    def _simple_format_dict(self) -> InfoDict:
-        d = {
-            "extractor": "generic",
-            "extractor_key": "Generic",
-            "id": self.id,
-            "format_id": self.id,
-            "url": self.url,
-            "ext": self.extension,
-        }
-
-        match self.type:
-            case "video":
-                d |= {"height": self.quality}
-                d |= {"vcodec": self.codec}
-            case "audio":
-                d |= {"abr": self.quality}
-                d |= {"acodec": self.codec}
-
-        if self.filesize:
-            d |= {"filesize": self.filesize}
-
-        return InfoDict(d)
-
+    @field_validator("extension")
     @classmethod
-    def _from_format_entry(cls, format: dict[str, Any]) -> Format:
-        type: FORMAT_TYPE = (
-            "audio" if format.get("resolution", "") == "audio only" else "video"
-        )
+    def _validate_extension(cls, value) -> str:
+        if value not in SupportedExtensions.video:
+            raise ValueError(f"{value} not is a valid extension.")
 
-        match type:
-            case "video":
-                quality = format.get("height")
-                codec = format.get("vcodec")
-            case "audio":
-                quality = format.get("abr")
-                codec = format.get("acodec")
+        return value
 
-        return cls(
-            url=format["url"],
-            id=format["format_id"],
-            type=type,
-            extension=format["ext"],
-            quality=quality or 0,
-            codec=codec,
-            filesize=format.get("filesize") or None,
-        )
+    @field_serializer("audio_codec")
+    def _none_to_str(self, value) -> str:
+        if not value:
+            return "none"
 
-    def __eq__(self, value) -> bool:
-        if isinstance(value, Format):
-            return self.id == value.id
-        else:
-            return False
+        return value
 
 
-class FormatList(Sequence[Format]):
+class AudioFormat(Format):
+    extension: Annotated[str, Field(alias="ext")]
+    codec: Annotated[Codec, Field(alias="acodec")]
+    bitrate: Annotated[float, Field(alias="abr")] = 0
+
+    @property
+    def quality(self) -> int:
+        return int(self.bitrate)
+
+    @property
+    def display_quality(self) -> str:
+        return str(round(self.quality)) + "kbps"
+
+    @field_validator("extension")
+    @classmethod
+    def _validate_extension(cls, value) -> str:
+        if value not in SupportedExtensions.audio:
+            raise ValueError(f"{value} not is a valid extension.")
+
+        return value
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, handler: SerializerFunctionWrapHandler):
+        result: dict = handler(self)
+        result |= {"vcodec": "none"}
+        return result
+
+
+FormatType = OnErrorOmit[VideoFormat | AudioFormat]
+F = TypeVar("F", default=Format)
+
+
+class FormatList(GenericList[FormatType], Generic[F]):
     """List of formats which can be filtered."""
 
-    def __init__(self, formats: list[Format]) -> None:
-        self._formats = formats
+    @overload
+    def filter(
+        self,
+        type: Literal["video"],
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
+    ) -> FormatList[VideoFormat]: ...
 
-    def type(self) -> Literal[FORMAT_TYPE, "incomplete"]:
+    @overload
+    def filter(
+        self,
+        type: Literal["audio"],
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
+    ) -> FormatList[AudioFormat]: ...
+
+    @overload
+    def filter(
+        self,
+        type: None = None,
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
+    ) -> FormatList[FormatType | Format]: ...
+
+    def filter(
+        self,
+        type: FORMAT_TYPE | None = None,
+        extension: str | None = None,
+        codec: str | None = None,
+        quality: int | None = None,
+    ):
+        """Get filtered format list by options."""
+
+        formats: list[Any] = self.root
+
+        if type:
+            match type:
+                case "video":
+                    selected = VideoFormat
+                case "audio":
+                    selected = AudioFormat
+
+            formats = [f for f in formats if isinstance(f, selected)]
+        if extension:
+            formats = [f for f in formats if f.extension == extension]
+        if quality:
+            formats = [f for f in formats if f.quality == quality]
+        if codec:
+            formats = [f for f in formats if f.codec.startswith(codec)]
+
+        match type:
+            case None:
+                return FormatList(formats)
+            case "video":
+                return FormatList[VideoFormat](formats)
+            case "audio":
+                return FormatList[AudioFormat](formats)
+            case _:
+                raise ValueError(type)
+
+    @cached_property
+    def type(self) -> FORMAT_TYPE:
         """
         Determine main format type.
-        It'll check if is 'video' or 'audio'.
+        It will check if is 'video' or 'audio'.
         """
 
         if self.filter(type="video"):
@@ -109,113 +195,72 @@ class FormatList(Sequence[Format]):
         elif self.filter(type="audio"):
             return "audio"
         else:
-            return "incomplete"
+            return "video"
 
-    def filter(
-        self,
-        type: FORMAT_TYPE | None = None,
-        extension: str | None = None,
-        quality: int | None = None,
-        codec: str | None = None,
-    ) -> FormatList:
-        """Get a filtered format list by provided arguments."""
+    def sort_by(self, attribute: str, reverse: bool = False) -> Self:
+        """Sort by `Format` attribute."""
 
-        formats = self._formats
-
-        if type:
-            formats = [f for f in formats if f.type == type]
-        if extension:
-            formats = [f for f in formats if f.extension == extension]
-        if quality:
-            formats = [f for f in formats if f.quality == quality]
-        if codec:
-            formats = [f for f in formats if f.codec and f.codec.startswith(codec)]
-
-        return FormatList(formats)
-
-    def sort_by(self, attribute: str, reverse: bool = False) -> FormatList:
-        """Sort list by a `Format` attribute."""
-
-        has_attribute = [f for f in self._formats if getattr(f, attribute) is not None]
-        sorted_list = sorted(
-            has_attribute, key=lambda f: getattr(f, attribute), reverse=reverse
+        return self.__class__(
+            sorted(
+                self.root,
+                key=lambda f: getattr(f, attribute),
+                reverse=reverse,
+            )
         )
-        return FormatList(sorted_list)
 
-    def get_by_id(self, id: str) -> Format | None:
-        """Get a `Format` by `id`. If not found, will return `None`."""
+    def get_by_id(self, id: str) -> F:
+        """Get `Format` by `id`.
+
+        Raises:
+            IndexError: Provided id has not been founded.
+        """
 
         if result := [f for f in self if f.id == id]:
-            return result[0]
+            return result[0]  # type: ignore
         else:
-            return None
+            raise IndexError(f"Format with id '{id}' has not been founded")
 
-    def get_best_quality(self) -> Format:
-        """Get the `Format` with best quality in the list."""
-
-        formats = self.sort_by("quality")
-        return formats[-1]
-
-    def get_worst_quality(self) -> Format:
-        """Get the `Format` with worst quality in the list."""
+    def get_best_quality(self) -> F:
+        """Get `Format` with best quality."""
 
         formats = self.sort_by("quality")
-        return formats[0]
+        return formats[-1]  # type: ignore
 
-    def get_closest_quality(self, quality: int) -> Format:
-        """Get the `Format` with the closest quality provided."""
+    def get_worst_quality(self) -> F:
+        """Get `Format` with worst quality."""
 
-        self = self.sort_by("quality")
+        formats = self.sort_by("quality")
+        return formats[0]  # type: ignore
 
-        all_qualities = [i.quality for i in self]
-        pos = bisect.bisect_left(all_qualities, quality)
+    def get_closest_quality(self, quality: int) -> F:
+        """Get `Format` with closest quality."""
+
+        qualities = [i.quality for i in self.sort_by("quality")]
+        pos = bisect.bisect_left(qualities, quality)
+
+        item = None
 
         if pos == 0:
-            return self[0]
+            item = self[0]
         elif pos == len(self):
-            return self[-1]
+            item = self[-1]
         else:
             before = self[pos - 1]
             after = self[pos]
 
             if after.quality - quality < quality - before.quality:
-                return after
+                item = after
             else:
-                return before
+                item = before
 
-    @classmethod
-    def _from_info(cls, info: InfoDict) -> FormatList:
-        new_list = [
-            Format._from_format_entry(format)
-            for format in info.get("formats") or {}
-            if format["ext"] != "mhtml"
-        ]
-        return FormatList(new_list)
-
-    def __bool__(self):
-        return True if self._formats else False
-
-    def __iter__(self):
-        for f in self._formats:
-            yield f
+        return item  # type: ignore
 
     def __contains__(self, other) -> bool:
-        if isinstance(other, Format) and self.get_by_id(other.id):
-            return True
+        if isinstance(other, Format):
+            try:
+                self.get_by_id(other.id)
+                return True
+            except IndexError:
+                return False
         else:
             return False
-
-    def __len__(self) -> int:
-        return len(self._formats)
-
-    @overload
-    def __getitem__(self, index: int) -> Format: ...
-
-    @overload
-    def __getitem__(self, index: slice) -> FormatList: ...
-
-    def __getitem__(self, index):
-        if isinstance(index, slice):
-            return FormatList(self._formats[index])
-        else:
-            return self._formats[index]
