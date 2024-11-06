@@ -27,8 +27,8 @@ SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 # Typer: helpers
 class HelpPanel(StrEnum):
     file = "File"
-    advanced = "Advanced"
-    view = "View"
+    downloader = "Downloader"
+    other = "Other"
 
 
 def show_version(show: bool) -> None:
@@ -142,26 +142,26 @@ What format you want request?
         Option(
             "--ffmpeg",
             help="FFmpeg executable to use.",
-            rich_help_panel=HelpPanel.advanced,
+            rich_help_panel=HelpPanel.downloader,
             show_default=False,
             file_okay=True,
             dir_okay=False,
         ),
     ] = None,
-    threads: Annotated[
+    parallel: Annotated[
         int,
         Option(
-            "--threads",
-            help="Maximum processes to execute.",
-            rich_help_panel=HelpPanel.advanced,
+            "--parallel-max",
+            help="Limit of simultaneous downloads.",
+            rich_help_panel=HelpPanel.downloader,
         ),
-    ] = 4,
+    ] = 5,
     quiet: Annotated[
         bool,
         Option(
             "--quiet",
             help="Supress screen information.",
-            rich_help_panel=HelpPanel.view,
+            rich_help_panel=HelpPanel.other,
         ),
     ] = False,
     verbose: Annotated[
@@ -169,7 +169,7 @@ What format you want request?
         Option(
             "--verbose",
             help="Display more information on screen.",
-            rich_help_panel=HelpPanel.view,
+            rich_help_panel=HelpPanel.other,
         ),
     ] = False,
     version: Annotated[
@@ -177,7 +177,7 @@ What format you want request?
         Option(
             "--version",
             help="Show current version and exit.",
-            rich_help_panel=HelpPanel.view,
+            rich_help_panel=HelpPanel.other,
             callback=show_version,
         ),
     ] = False,
@@ -207,7 +207,7 @@ What format you want request?
             quality=quality,
             output=output,
             ffmpeg=ffmpeg,
-            threads=threads,
+            threads=parallel,
             show_progress=not quiet,
         )
     except FileNotFoundError as err:

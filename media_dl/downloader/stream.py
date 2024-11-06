@@ -3,7 +3,7 @@ import logging
 import shutil
 import time
 from pathlib import Path
-from typing import Callable, Literal
+from typing import Literal, cast
 
 from media_dl._ydl import (
     parse_output_template,
@@ -11,15 +11,15 @@ from media_dl._ydl import (
     download_thumbnail,
     download_subtitle,
 )
-from media_dl.downloader import internal
+from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.config import FormatConfig
+from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
-from media_dl.models.stream import LazyStreams, Stream
+from media_dl.models.stream import LazyStream, Stream
 from media_dl.types import StrPath, FILE_FORMAT
 from media_dl.path import get_tempfile
-from media_dl.rich import DownloadProgress
 
 log = logging.getLogger(__name__)
 
@@ -28,9 +28,17 @@ PROGRESS_STATUS = Literal[
     "processing",
     "finished",
 ]
-ProgressCallback = Callable[[PROGRESS_STATUS, int, int], None]
 
-ExtractResult = Playlist | LazyStreams | Stream
+ExtractResult = Playlist | list[LazyStream] | Stream
+
+
+def _gen_postprocessing_dict(stream: Stream, format: Format) -> dict:
+    d = stream.model_dump(by_alias=True)
+
+    if format:
+        d |= format.model_dump(by_alias=True)
+
+    return d
 
 
 class StreamDownloader:
@@ -39,7 +47,7 @@ class StreamDownloader:
     If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
     Args:
-        format: File format to search or convert with (ffmpeg) if is a extension.
+        format: File format to search or convert with (FFmpeg) if is a extension.
         quality: Quality to filter.
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
@@ -124,7 +132,7 @@ class StreamDownloader:
     def download(
         self,
         stream: Stream,
-        on_progress: ProgressCallback | None = None,
+        on_progress: DownloadCallback | None = None,
     ) -> Path:
         """Download a single `Stream` result.
 
@@ -147,56 +155,67 @@ class StreamDownloader:
 
     def _download_work(
         self,
-        stream: Stream,
-        on_progress: ProgressCallback | None = None,
+        stream: LazyStream | Stream,
+        on_progress: DownloadCallback | None = None,
     ) -> Path:
         task_id = self._progress.add_task(
-            description=stream.display_name or "Fetching...", status="Started"
+            description=stream.display_name or "Fetching...",
+            status="Started",
+            step="",
         )
+
+        real_stream = stream
 
         try:
             # Resolve stream
-            if type(stream) is not Stream:
-                stream = stream.fetch()
-                self._progress.update(task_id, description=stream.display_name)
+            if type(stream) is LazyStream:
+                real_stream = stream.fetch()
+                self._progress.update(task_id, description=real_stream.display_name)
+            elif isinstance(stream, Stream):
+                real_stream = stream
+            else:
+                raise TypeError(stream)
 
-            log.debug('"%s": Downloading stream.', stream.id)
+            log.debug('"%s": Downloading stream.', real_stream.id)
 
             # Resolve formats
-            format_video, format_audio, download_config = self._resolve_format(stream)
+            format_video, format_audio, download_config = self._resolve_format(
+                real_stream
+            )
 
             # STATUS: Download
             self._progress.update(task_id, status="Downloading")
 
-            if format_video:
-                self._log_format(stream.id, format_video)
-            if format_audio:
-                self._log_format(stream.id, format_audio)
-
-            # Configure callbacks
-            total_filesize: int = 0
-
-            def update_filesize(filesize: int):
-                nonlocal total_filesize
-                total_filesize = filesize
-
-            callbacks = [
-                lambda _, filesize: update_filesize(filesize),
-                lambda completed, total: self._progress.update(
-                    task_id, completed=completed, total=total
-                ),
+            [
+                self._log_format(real_stream.id, f)
+                for f in (format_video, format_audio)
+                if f is not None
             ]
-            if on_progress:
-                callbacks.append(
-                    lambda completed, total: on_progress(
-                        "downloading", completed, total
-                    )
+
+            # Add callbacks
+            callbacks = []
+
+            def p(p: ProgressStatus):
+                step = ""
+                if p.steps_total > 1:
+                    step = f"({p.steps_completed}/{p.steps_total})"
+
+                return self._progress.update(
+                    task_id,
+                    completed=p.downloaded_bytes,
+                    total=p.total_bytes,
+                    step=step,
                 )
 
+            callbacks.append(p)
+
+            if on_progress:
+                callbacks.append(on_progress)
+
+            # Downloader config
+            merge_format = None
             if format_video and format_audio and download_config.convert:
                 merge_format = download_config.convert
-            else:
-                merge_format = None
 
             if (
                 download_config.type == "audio"
@@ -206,44 +225,52 @@ class StreamDownloader:
                 format_video = None
 
             # Run download
-            downloaded_file = internal.download(
+            d = YDLDownloader(
                 filepath=get_tempfile(),
                 video=format_video,
                 audio=format_audio,
                 merge_format=merge_format,
                 callbacks=callbacks,
             )
+            downloaded_file = d.run()
+            progress_data = d.progress
 
             # STATUS: Postprocess
             if on_progress:
-                on_progress("processing", total_filesize, total_filesize)
+                progress_data.status = "postprocessing"
+                on_progress(progress_data)
             self._progress.update(task_id, status="Processing")
-            log.debug('"%s": Postprocessing downloaded file.', stream.id)
+            log.debug('"%s": Postprocessing downloaded file.', real_stream.id)
+
+            stream_dict = real_stream.model_dump(by_alias=True)
+
+            if format_video:
+                stream_dict |= _gen_postprocessing_dict(real_stream, format_video)
+            elif format_audio:
+                stream_dict |= _gen_postprocessing_dict(real_stream, format_audio)
 
             # Final filename
-            output_name = parse_output_template(
-                stream._extra_info, "%(uploader)s - %(title)s"
-            )
+            output_name = parse_output_template(stream_dict, "%(uploader)s - %(title)s")
 
             # Download resources
-            if d := download_thumbnail(output_name, stream._extra_info):
-                log.debug('"%s": Thumbnail downloaded: "%s"', stream.id, d)
-            if d := stream.subtitles and download_subtitle(
-                output_name, stream._extra_info
+            if d := download_thumbnail(output_name, stream_dict):
+                log.debug('"%s": Thumbnail downloaded: "%s"', real_stream.id, d)
+            if d := real_stream.subtitles and download_subtitle(
+                output_name, stream_dict
             ):
-                log.debug('"%s": Subtitle downloaded: "%s"', stream.id, d)
+                log.debug('"%s": Subtitle downloaded: "%s"', real_stream.id, d)
 
             # Run postprocessing
-            params = download_config.ydl_params(music_meta=stream._is_music_site())
+            params = download_config.ydl_params(music_meta=real_stream._is_music_site())
 
             downloaded_file = run_postproces(
                 file=downloaded_file,
-                info=stream._extra_info,
+                info=stream_dict,
                 params=params,
             )
             log.debug(
                 '"%s": Postprocessing finished, saved as "%s".',
-                stream.id,
+                real_stream.id,
                 downloaded_file.suffix[1:],
             )
 
@@ -255,7 +282,7 @@ class StreamDownloader:
                 self._progress.update(task_id, status="Skipped")
                 log.info(
                     'Skipped: "%s" (Exists as "%s").',
-                    stream.display_name,
+                    real_stream.display_name,
                     final_path.suffix[1:],
                 )
             # Move file
@@ -268,14 +295,15 @@ class StreamDownloader:
                 final_path = shutil.move(downloaded_file, final_path)
 
                 self._progress.update(task_id, status="Finished")
-                log.info('Finished: "%s".', stream.display_name)
+                log.info('Finished: "%s".', real_stream.display_name)
 
             if on_progress:
-                on_progress("finished", total_filesize, total_filesize)
+                progress_data.status = "finished"
+                on_progress(progress_data)
 
             return final_path
         except MediaError as err:
-            log.error('Error: "%s": %s', stream.display_name, str(err))
+            log.error('Error: "%s": %s', real_stream.display_name, str(err))
             self._progress.update(task_id, status="Error")
             raise
         finally:
@@ -289,10 +317,10 @@ class StreamDownloader:
         match media:
             case Stream():
                 streams = [media]
-            case LazyStreams():
-                streams = media.root
             case Playlist():
-                streams = media.streams.root
+                streams = media.streams
+            case list():
+                streams = media
 
         if not streams:
             raise TypeError(media)
@@ -302,33 +330,32 @@ class StreamDownloader:
     def _resolve_format(
         self,
         stream: Stream,
-        video: Format | None = None,
-        audio: Format | None = None,
-    ) -> tuple[Format | None, Format | None, FormatConfig]:
+        video: VideoFormat | None = None,
+        audio: AudioFormat | None = None,
+    ) -> tuple[VideoFormat | None, AudioFormat | None, FormatConfig]:
         config = self.config
         selected_format = config.format
 
         if not video:
             config.format = "video"
-            video = self._extract_best_format(stream.formats, config)
+            video = cast(
+                VideoFormat | None, self._extract_best_format(stream.formats, config)
+            )
 
         if not audio:
             config.format = "audio"
-            audio = self._extract_best_format(stream.formats, config)
+            audio = cast(
+                AudioFormat | None, self._extract_best_format(stream.formats, config)
+            )
 
         config.format = selected_format
 
         if not config.convert:
-            if stream._is_music_site():
-                log.debug('"%s": Detected music site', stream.id)
-
-                if not audio:
-                    raise MediaError(
-                        "Stream is a music site but audio format wasn't founded."
-                    )
+            if audio and stream._is_music_site():
+                log.debug('"%s": Detected as music site.', stream.id)
 
                 log.debug(
-                    '"%s": Change config to "audio".',
+                    '"%s": Config changed to "audio".',
                     stream.id,
                 )
 
@@ -359,22 +386,11 @@ class StreamDownloader:
         else:
             return format[-1]
 
-    def _get_format_type(self, format) -> str:
-        match format:
-            case VideoFormat():
-                type = "video"
-            case AudioFormat():
-                type = "audio"
-            case _:
-                type = "unkdown"
-
-        return type
-
     def _log_format(self, stream_id: str, format: Format) -> None:
         log.debug(
             '"%s": Download %s format "%s" (%s %s)',
             stream_id,
-            self._get_format_type(format),
+            "video" if isinstance(format, VideoFormat) else "audio",
             format.id,
             format.extension,
             format.display_quality,

@@ -6,12 +6,10 @@ from pydantic import Field
 
 from media_dl.models.base import ExtractID
 from media_dl.models.metadata import ThumbnailList
-from media_dl.models.stream import LazyStreams
+from media_dl.models.stream import LazyStream
 
 
 class Playlist(ExtractID):
-    """Playlist with multiple Streams."""
-
     title: str
     thumbnails: ThumbnailList = []
-    streams: Annotated[LazyStreams, Field(alias="entries")]
+    streams: Annotated[list[LazyStream], Field(alias="entries")]

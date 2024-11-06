@@ -1,15 +1,15 @@
 import pytest
 from rich import print
 
+from media_dl.extractor import stream as media_extractor
 from media_dl.exceptions import ExtractError
-from media_dl import api as media_dl
 from media_dl.models.playlist import Playlist
-from media_dl.models.stream import LazyStreams, Stream
+from media_dl.models.stream import Stream
 from media_dl.types import SEARCH_PROVIDER
 
 
 def extract_url(url: str):
-    result = media_dl.extract_url(url)
+    result = media_extractor.extract_url(url)
     print(result)
     return result
 
@@ -45,8 +45,8 @@ class TestSearch:
     QUERY = "Sub Urban - Rabbit Hole"
 
     def search(self, provider: SEARCH_PROVIDER):
-        streams = media_dl.extract_search(self.QUERY, provider)
-        assert isinstance(streams, LazyStreams)
+        streams = media_extractor.extract_search(self.QUERY, provider)
+        assert isinstance(streams, list)
         print(streams)
 
     def test_youtube(self):
@@ -73,3 +73,6 @@ class TestSite:
 
     def test_pinterest(self):
         extract_url("https://pin.it/61ZG0pA41")
+
+    def test_soundcloud(self):
+        extract_url("https://api.soundcloud.com/tracks/1269676381")

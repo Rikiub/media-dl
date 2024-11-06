@@ -2,16 +2,17 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import api as media_dl
+from media_dl.downloader.stream import StreamDownloader
+from media_dl.extractor import stream as media_extractor
 
 TEMPDIR = TemporaryDirectory()
 
 
-downloader = media_dl.StreamDownloader(quality=1, output=TEMPDIR.name)
+downloader = StreamDownloader(quality=1, output=TEMPDIR.name)
 
 
 def download(url):
-    result = media_dl.extract_url(url)
+    result = media_extractor.extract_url(url)
 
     with TEMPDIR:
         paths = downloader.download_all(result)
@@ -23,7 +24,7 @@ def download(url):
 
 def test_ffmpeg_not_exists():
     with pytest.raises(FileNotFoundError):
-        media_dl.StreamDownloader(ffmpeg="./unkdown_path/")
+        StreamDownloader(ffmpeg="./unkdown_path/")
 
 
 def test_stream():

@@ -13,6 +13,7 @@ dependencies = [
     "strenum>=0.4.15",
     "pydantic>=2.9.2",
     "typing-extensions>=4.12.2",
+    "lazy-imports>=0.3.1",
 ]
 
 [project.optional-dependencies]
