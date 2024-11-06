@@ -277,6 +277,7 @@ source = { editable = "." }
 dependencies = [
     { name = "lazy-imports" },
     { name = "pydantic" },
+    { name = "pyffmpeg-bin" },
     { name = "rich" },
     { name = "strenum" },
     { name = "typer" },
@@ -304,6 +305,7 @@ requires-dist = [
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.5.42" },
     { name = "mkdocstrings", marker = "extra == 'docs'", specifier = ">=0.26.2" },
     { name = "pydantic", specifier = ">=2.9.2" },
+    { name = "pyffmpeg-bin", specifier = ">=1.8.0.1" },
     { name = "rich", specifier = ">=13.9.2" },
     { name = "strenum", specifier = ">=0.4.15" },
     { name = "typer", specifier = ">=0.12.5" },
@@ -552,6 +554,16 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/ca/9c0854829311fb446020ebb540ee22509731abad886d2859c855dd29b904/pydantic_core-2.23.4-pp310-pypy310_pp73-musllinux_1_1_aarch64.whl", hash = "sha256:d06b0c8da4f16d1d1e352134427cb194a0a6e19ad5db9161bf32b2113409e728", size = 1957926 },
     { url = "https://files.pythonhosted.org/packages/c0/1c/7836b67c42d0cd4441fcd9fafbf6a027ad4b79b6559f80cf11f89fd83648/pydantic_core-2.23.4-pp310-pypy310_pp73-musllinux_1_1_x86_64.whl", hash = "sha256:ba1a0996f6c2773bd83e63f18914c1de3c9dd26d55f4ac302a7efe93fb8e7433", size = 2100342 },
     { url = "https://files.pythonhosted.org/packages/a9/f9/b6bcaf874f410564a78908739c80861a171788ef4d4f76f5009656672dfe/pydantic_core-2.23.4-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:9a5bce9d23aac8f0cf0836ecfc033896aa8443b501c58d0602dbfd5bd5b37753", size = 1920344 },
+]
+
+[[package]]
+name = "pyffmpeg-bin"
+version = "1.8.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/c6/b37301acf1a5a75273acd66e3af15ad800226c6a71ff12248bf85b179802/pyffmpeg-bin-1.8.0.1.tar.gz", hash = "sha256:b1c5461d64beb1f997b6b1707f5ba7fb3d1b123b9fb18f8ab099df95f5d46887", size = 3768 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f9/14/d81f314b0757429e75b72ef1b4ea84ffad7d15292699ea8c0d28dc973100/pyffmpeg_bin-1.8.0.1-cp35.cp36.cp37.cp38.cp39-abi3-macosx_10_6_intel.whl", hash = "sha256:eafa3a7609258fffb1d2b5cebcc3886e938e02fa02c198e1d9b6846721b99d60", size = 15547028 },
+    { url = "https://files.pythonhosted.org/packages/9c/8f/bbd63d30654bd51dd476bee02ca519fe6517be31904cbd88f1e124e15a02/pyffmpeg_bin-1.8.0.1-cp35.cp36.cp37.cp38.cp39-abi3-manylinux2010_x86_64.whl", hash = "sha256:8eca501307cc56828686de9e47c5e56b93c4e6e9aa80c16b201961da8ae9c26c", size = 18214673 },
 ]
 
 [[package]]

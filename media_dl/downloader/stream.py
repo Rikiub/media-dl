@@ -23,7 +23,7 @@ from media_dl.path import get_tempfile
 
 log = logging.getLogger(__name__)
 
-ExtractResult = Playlist | list[LazyStream] | Stream
+ExtractResult = Playlist | list[LazyStream] | LazyStream | Stream
 
 
 class StreamDownloader:
@@ -296,21 +296,20 @@ class StreamDownloader:
             time.sleep(1.0)
             self._progress.remove_task(task_id)
 
-    def _media_to_list(self, media: ExtractResult) -> list[Stream]:
+    def _media_to_list(self, media: ExtractResult) -> list[LazyStream]:
         streams = []
 
         match media:
-            case Stream():
+            case LazyStream():
                 streams = [media]
             case Playlist():
                 streams = media.streams
             case list():
                 streams = media
+            case _:
+                raise TypeError(media)
 
-        if not streams:
-            raise TypeError(media)
-
-        return streams  # type: ignore
+        return streams
 
     def _resolve_format(
         self,
