@@ -3,10 +3,11 @@ from __future__ import annotations
 from rich.table import Column
 from rich.progress import (
     BarColumn,
-    DownloadColumn,
+    FileSizeColumn,
     MofNCompleteColumn,
     Progress,
     TextColumn,
+    TotalFileSizeColumn,
 )
 from rich.console import Group, RenderableType
 
@@ -49,24 +50,16 @@ class DownloadProgress(Progress):
         super().__init__(
             TextColumn(
                 "{task.description}",
-                table_column=Column(
-                    justify="left",
-                    width=40,
-                    no_wrap=True,
-                    overflow="ellipsis",
-                ),
+                table_column=Column(ratio=5, no_wrap=True, overflow="ellipsis"),
             ),
             TextColumn(
                 "[turquoise2]{task.fields[status]} {task.fields[step]}",
-                table_column=Column(
-                    justify="right",
-                    width=15,
-                    no_wrap=True,
-                    overflow="ellipsis",
-                ),
+                table_column=Column(ratio=2, no_wrap=True),
             ),
-            BarColumn(table_column=Column(justify="right", width=25)),
-            DownloadColumn(table_column=Column(justify="right", width=10)),
+            BarColumn(table_column=Column(justify="full", ratio=4)),
+            FileSizeColumn(),
+            TextColumn("/"),
+            TotalFileSizeColumn(),
             transient=True,
             expand=True,
             disable=disable,

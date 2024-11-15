@@ -169,8 +169,6 @@ class StreamDownloader:
             )
 
             # STATUS: Download
-            self._progress.update(task_id, status="Downloading")
-
             [
                 self._log_format(real_stream.id, f)
                 for f in (format_video, format_audio)
@@ -189,6 +187,7 @@ class StreamDownloader:
                     task_id,
                     completed=p.downloaded_bytes,
                     total=p.total_bytes,
+                    status=p.status.capitalize(),
                     step=step,
                 )
 
@@ -372,7 +371,7 @@ class StreamDownloader:
 
     def _log_format(self, stream_id: str, format: Format) -> None:
         log.debug(
-            '"%s": Download %s format "%s" (%s %s)',
+            '"%s": Downloading %s format "%s" (%s %s)',
             stream_id,
             "video" if isinstance(format, VideoFormat) else "audio",
             format.id,
