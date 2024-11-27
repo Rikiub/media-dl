@@ -18,17 +18,15 @@ dependencies = [
     "mutagen>=1.47.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
+dev = [
+    "pytest>=8.3.3",
+    "ruff>=0.8.0",
+]
 docs = [
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.5.42",
     "mkdocstrings>=0.26.2",
-]
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.3",
-    "ruff>=0.7.0",
 ]
 
 [project.scripts]
