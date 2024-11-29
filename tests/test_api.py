@@ -17,7 +17,16 @@ PLAYLIST = (
 )
 
 
-def test_api():
+def test_simple():
+    stream = media_dl.extract_url(URL)
+    path = media_dl.StreamDownloader(
+        "audio", quality=1, output=TEMPDIR.name
+    ).download_all(stream)
+
+    print(path)
+
+
+def test_complex():
     with TEMPDIR:
         downloader = media_dl.StreamDownloader("audio", quality=1, output=TEMPDIR.name)
 
@@ -41,18 +50,23 @@ def test_format_filter():
     if isinstance(stream, media_dl.Stream):
         formats = stream.formats
 
-        videos = formats.filter("video")
-        print(videos)
+        fmt = formats.filter("video")
+        assert all(isinstance(f, media_dl.VideoFormat) for f in fmt)
+        print("VIDEOS:")
+        print(fmt)
 
-        audios = formats.filter("audio")
-        print(audios)
+        fmt = formats.filter("audio")
+        assert all(isinstance(f, media_dl.AudioFormat) for f in fmt)
+        print("AUDIOS:")
+        print(fmt)
 
-        best_quality = formats.get_best_quality()
-        print(best_quality)
+        fmt = formats.get_best_quality()
+        assert fmt.quality == 1080
+        print("BEST QUALITY:")
+        print(fmt)
 
-        by_id = formats.get_by_id("137")
-        print(by_id)
-
-
-if __name__ == "__main__":
-    test_api()
+        ID = "137"
+        fmt = formats.get_by_id(ID)
+        assert fmt.id == ID
+        print("BY ID:")
+        print(fmt)

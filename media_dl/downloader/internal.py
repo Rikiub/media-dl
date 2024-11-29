@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from media_dl._ydl import YTDLP, format_except_message
 from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.format import Format
-from media_dl.types import FORMAT_TYPE, EXT_VIDEO, InfoDict
+from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION, InfoDict
 
 
 class ProgressStatus(BaseModel):
@@ -54,7 +54,8 @@ class YDLDownloader:
         # Params
         if merge_format:
             self.params |= {
-                "merge_output_format": merge_format or "/".join(get_args(EXT_VIDEO))
+                "merge_output_format": merge_format
+                or "/".join(get_args(VIDEO_EXTENSION))
             }
 
         if callbacks:

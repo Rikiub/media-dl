@@ -4,7 +4,13 @@ from typing import Any, cast, get_args
 
 from media_dl._ydl import POST_MUSIC
 from media_dl.path import check_executable_exists, get_global_ffmpeg
-from media_dl.types import EXT_AUDIO, EXT_VIDEO, EXTENSION, FILE_FORMAT, FORMAT_TYPE
+from media_dl.types import (
+    AUDIO_EXTENSION,
+    VIDEO_EXTENSION,
+    EXTENSION,
+    FILE_FORMAT,
+    FORMAT_TYPE,
+)
 
 
 @dataclass(slots=True)
@@ -44,10 +50,10 @@ class FormatConfig:
         if self.format in get_args(FORMAT_TYPE):
             return cast(FORMAT_TYPE, self.format)
 
-        elif self.format in get_args(EXT_VIDEO):
+        elif self.format in get_args(VIDEO_EXTENSION):
             return "video"
 
-        elif self.format in get_args(EXT_AUDIO):
+        elif self.format in get_args(AUDIO_EXTENSION):
             return "audio"
 
         else:

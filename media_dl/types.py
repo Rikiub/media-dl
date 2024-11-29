@@ -2,9 +2,9 @@ from os import PathLike
 from typing import Any, Literal
 
 # FORMAT
-EXT_VIDEO = Literal["mp4", "mkv", "mov"]
-EXT_AUDIO = Literal["m4a", "opus", "mp3"]
-EXTENSION = Literal[EXT_VIDEO, EXT_AUDIO]
+VIDEO_EXTENSION = Literal["mp4", "mkv", "mov"]
+AUDIO_EXTENSION = Literal["m4a", "opus", "mp3"]
+EXTENSION = Literal[VIDEO_EXTENSION, AUDIO_EXTENSION]
 """Common lossy compression containers formats with thumbnail and metadata support."""
 
 FORMAT_TYPE = Literal["video", "audio"]

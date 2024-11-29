@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from media_dl import _ydl as ydl
-from media_dl.models.metadata import Thumbnail
+from media_dl.models.metadata import Subtitle, Thumbnail
 from media_dl.types import StrPath
 
 
@@ -11,14 +11,7 @@ def download_thumbnails(filename: StrPath, thumbnails: list[Thumbnail]) -> Path 
     return path
 
 
-def download_subtitles(filename: StrPath, subtitles: dict):
-    info = subtitles.get("subtitles")
-
-    if info:
-        info = subtitles["subtitles"]
-    else:
-        info = subtitles
-
+def download_subtitles(filename: StrPath, subtitles: list[Subtitle]):
+    info = {"subtitles": [s.model_dump() for s in subtitles]}
     path = ydl.download_subtitle(str(filename), info)
-
     return path

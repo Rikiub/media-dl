@@ -3,13 +3,14 @@ from __future__ import annotations
 import bisect
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Annotated, Any, Generic, Literal, overload
+from typing import Annotated, Generic, Literal, overload
 
 from pydantic import (
     AfterValidator,
     BaseModel,
     Field,
     OnErrorOmit,
+    RootModel,
     SerializerFunctionWrapHandler,
     field_serializer,
     field_validator,
@@ -18,7 +19,6 @@ from pydantic import (
 from typing_extensions import Self, TypeVar
 
 from media_dl._ydl import SupportedExtensions
-from media_dl.models.base import GenericList
 from media_dl.types import FORMAT_TYPE
 
 
@@ -113,17 +113,18 @@ class AudioFormat(Format):
         return result
 
 
-FormatType = OnErrorOmit[VideoFormat | AudioFormat]
 F = TypeVar("F", default=Format)
+FormatType = OnErrorOmit[VideoFormat | AudioFormat]
 
 
-class FormatList(GenericList[FormatType], Generic[F]):
+class FormatList(RootModel[list[FormatType]], Generic[F]):
     """List of formats which can be filtered."""
 
     @overload
     def filter(
         self,
         type: Literal["video"],
+        protocol: str | None = None,
         extension: str | None = None,
         codec: str | None = None,
         quality: int | None = None,
@@ -133,6 +134,7 @@ class FormatList(GenericList[FormatType], Generic[F]):
     def filter(
         self,
         type: Literal["audio"],
+        protocol: str | None = None,
         extension: str | None = None,
         codec: str | None = None,
         quality: int | None = None,
@@ -142,46 +144,41 @@ class FormatList(GenericList[FormatType], Generic[F]):
     def filter(
         self,
         type: None = None,
+        protocol: str | None = None,
         extension: str | None = None,
         codec: str | None = None,
         quality: int | None = None,
-    ) -> FormatList[FormatType | Format]: ...
+    ) -> FormatList[F]: ...
 
     def filter(
         self,
         type: FORMAT_TYPE | None = None,
+        protocol: str | None = None,
         extension: str | None = None,
         codec: str | None = None,
         quality: int | None = None,
     ):
-        """Get filtered format list by options."""
+        """Get filtered formats by options."""
 
-        formats: list[Any] = self.root
+        formats = self.root
+        selected = {"video": VideoFormat, "audio": AudioFormat}.get(str(type))
 
-        if type:
-            match type:
-                case "video":
-                    selected = VideoFormat
-                case "audio":
-                    selected = AudioFormat
+        filters = [
+            (selected, lambda f: isinstance(f, selected)),  # type: ignore
+            (extension, lambda f: f.extension == extension),
+            (quality, lambda f: f.quality == quality),
+            (codec, lambda f: f.codec.startswith(codec)),
+            (protocol, lambda f: f.protocol == protocol),
+        ]
 
-            formats = [f for f in formats if isinstance(f, selected)]
-        if extension:
-            formats = [f for f in formats if f.extension == extension]
-        if quality:
-            formats = [f for f in formats if f.quality == quality]
-        if codec:
-            formats = [f for f in formats if f.codec.startswith(codec)]
+        for value, condition in filters:
+            if value:
+                formats = [f for f in formats if condition(f)]
 
-        match type:
-            case None:
-                return FormatList(formats)
-            case "video":
-                return FormatList[VideoFormat](formats)
-            case "audio":
-                return FormatList[AudioFormat](formats)
-            case _:
-                raise ValueError(type)
+        if selected:
+            return FormatList[selected](formats)
+        else:
+            return FormatList(formats)
 
     @cached_property
     def type(self) -> FORMAT_TYPE:
@@ -224,13 +221,13 @@ class FormatList(GenericList[FormatType], Generic[F]):
         """Get `Format` with best quality."""
 
         formats = self.sort_by("quality")
-        return formats[-1]  # type: ignore
+        return formats[-1]
 
     def get_worst_quality(self) -> F:
         """Get `Format` with worst quality."""
 
         formats = self.sort_by("quality")
-        return formats[0]  # type: ignore
+        return formats[0]
 
     def get_closest_quality(self, quality: int) -> F:
         """Get `Format` with closest quality."""
@@ -248,12 +245,12 @@ class FormatList(GenericList[FormatType], Generic[F]):
             before = self[pos - 1]
             after = self[pos]
 
-            if after.quality - quality < quality - before.quality:
+            if after.quality - quality < quality - before.quality:  # type: ignore
                 item = after
             else:
                 item = before
 
-        return item  # type: ignore
+        return item
 
     def __contains__(self, other) -> bool:
         if isinstance(other, Format):
@@ -264,3 +261,27 @@ class FormatList(GenericList[FormatType], Generic[F]):
                 return False
         else:
             return False
+
+    def __iter__(self):  # type: ignore
+        return iter(self.root)
+
+    def __len__(self) -> int:
+        return len(self.root)
+
+    def __bool__(self) -> bool:
+        return bool(self.root)
+
+    @overload
+    def __getitem__(self, index: int) -> F: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Self: ...
+
+    def __getitem__(self, index) -> F | Self:
+        match index:
+            case int():
+                return self.root[index]  # type: ignore
+            case slice():
+                return self.__class__(self.root[index])
+            case _:
+                raise TypeError(index)
