@@ -50,12 +50,11 @@ class Format(ABC, YDLArgs, BaseModel):
 
 
 class VideoFormat(Format):
-    extension: Annotated[str, Field(alias="ext")]
     video_codec: Annotated[Codec, Field(alias="vcodec")]
     audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
     width: int
     height: int
-    fps: float = 0
+    fps: float | None = None
 
     @property
     def codec(self) -> str:
@@ -86,7 +85,6 @@ class VideoFormat(Format):
 
 
 class AudioFormat(Format):
-    extension: Annotated[str, Field(alias="ext")]
     codec: Annotated[Codec, Field(alias="acodec")]
     bitrate: Annotated[float, Field(alias="abr")] = 0
 

@@ -63,6 +63,11 @@ class TestSite:
     def test_ytmusic(self):
         extract_url("https://music.youtube.com/watch?v=Kx7B-XvmFtE")
 
+    def test_facebook(self):
+        extract_url(
+            "https://www.facebook.com/share/v/wfwaBTuUg2eWpd6m/?mibextid=rS40aB7S9Ucbxw6v"
+        )
+
     def test_tiktok(self):
         extract_url("https://www.tiktok.com/@livewallpaper77/video/7410777368064806149")
 

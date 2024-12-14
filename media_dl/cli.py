@@ -14,7 +14,7 @@ from media_dl.rich import Status
 from media_dl.types import FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
 log = logging.getLogger(__name__)
-app = Typer()
+app = Typer(rich_markup_mode="rich")
 
 
 # Typer: types
@@ -82,10 +82,10 @@ def download(
     query: Annotated[
         list[str],
         Argument(
-            help="""URLs and queries to process.
+            help="""[green]URLs[/] and [green]queries[/] to process.
             \n
-            - Insert a URL to download (Default).\n
-            - Select a PROVIDER to search and download.
+            - Insert a [green]URL[/] to download [grey62](Default)[/].\n
+            - Select a [green]PROVIDER[/] to search and download.
             """,
             show_default=False,
             autocompletion=complete_query,
@@ -98,8 +98,8 @@ def download(
             "--format",
             "-f",
             help="""File type to request.\n
-            - To get BEST, select 'video' or 'audio' (Fast).\n
-            - To convert, select a file EXTENSION (Slow).
+            - To get BEST, select [green]video[/] or [green]audio[/] [grey62](Fast)[/].\n
+            - To convert, select a file [green]EXTENSION[/] [grey62](Slow)[/].
             """,
             metavar="TYPE | EXTENSION",
             prompt="""
