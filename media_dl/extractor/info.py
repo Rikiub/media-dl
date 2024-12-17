@@ -27,7 +27,7 @@ def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
         case "soundcloud":
             prov = f"scsearch{search_limit}:"
         case _:
-            raise ValueError(f"{provider} is invalid. Must be: {SEARCH_PROVIDER}")
+            raise ValueError(f"{provider} is invalid. Should be: {SEARCH_PROVIDER}")
 
     log.debug('Search from "%s": "%s".', provider, query)
     return _fetch_query(prov + query)
