@@ -16,6 +16,9 @@ class Subtitle(BaseModel):
     language: Annotated[str, Field(alias="name")] = ""
 
 
+Subtitles = dict[str, list[Subtitle]]
+
+
 class Thumbnail(BaseModel):
     id: str
     url: str

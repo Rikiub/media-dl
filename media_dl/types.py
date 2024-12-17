@@ -17,5 +17,6 @@ SEARCH_PROVIDER = Literal["youtube", "ytmusic", "soundcloud"]
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 
 # Extra
+APPNAME = "media-dl"
 InfoDict = dict[str, Any]
 StrPath = str | PathLike[str]

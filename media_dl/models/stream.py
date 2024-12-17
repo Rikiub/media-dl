@@ -8,7 +8,7 @@ from pydantic import AliasChoices, Field, PlainSerializer
 from media_dl.extractor import info as info_extractor
 from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList
-from media_dl.models.metadata import MusicMetadata, Subtitle, Thumbnail
+from media_dl.models.metadata import MusicMetadata, Subtitles, Thumbnail
 from media_dl.types import MUSIC_SITES
 
 
@@ -64,7 +64,7 @@ class Stream(LazyStream, MusicMetadata):
     duration: float = 0
     formats: Annotated[FormatList, Field(min_length=1)]
     thumbnails: list[Thumbnail] = []
-    subtitles: dict[str, list[Subtitle]] | None = None
+    subtitles: Subtitles | None = None
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, self.__class__):

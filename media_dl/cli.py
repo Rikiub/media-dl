@@ -11,15 +11,13 @@ from strenum import StrEnum
 
 from media_dl.logging import init_logging
 from media_dl.rich import Status
-from media_dl.types import FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
+from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
 log = logging.getLogger(__name__)
 app = Typer(rich_markup_mode="rich")
 
 
 # Typer: types
-APPNAME = "media-dl"
-
 Format = StrEnum("Format", get_args(FILE_FORMAT))
 SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
 
