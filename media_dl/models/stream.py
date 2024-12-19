@@ -9,7 +9,6 @@ from media_dl.extractor import info as info_extractor
 from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList
 from media_dl.models.metadata import MusicMetadata, Subtitles, Thumbnail
-from media_dl.types import MUSIC_SITES
 
 
 class LazyStream(ExtractID):
@@ -29,25 +28,7 @@ class LazyStream(ExtractID):
         """
 
         info = info_extractor.extract_url(self.url)
-        stream = Stream(**info)
-        return stream
-
-    def _is_music_site(self) -> bool:
-        if any(s in self.url for s in MUSIC_SITES):
-            return True
-        else:
-            return False
-
-    @property
-    def display_name(self) -> str:
-        """Get pretty representation of the stream name."""
-
-        if self._is_music_site() and self.uploader and self.title:
-            return self.uploader + " - " + self.title
-        elif self.title:
-            return self.title
-        else:
-            return ""
+        return Stream(**info)
 
 
 DatetimeTimestamp = Annotated[
@@ -65,6 +46,7 @@ class Stream(LazyStream, MusicMetadata):
     formats: Annotated[FormatList, Field(min_length=1)]
     thumbnails: list[Thumbnail] = []
     subtitles: Subtitles | None = None
+    has_cache: Annotated[bool, Field(exclude=True)] = False
 
     def __eq__(self, o: object) -> bool:
         if isinstance(o, self.__class__):

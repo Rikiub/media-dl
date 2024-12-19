@@ -1,9 +1,14 @@
+import logging
 from media_dl.exceptions import ExtractError
+from media_dl.extractor.cache import JsonCache
 from media_dl.extractor import info as info_extractor
 from media_dl.extractor.helper import is_playlist, is_stream
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.types import SEARCH_PROVIDER
+
+
+log = logging.getLogger(__name__)
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER) -> list[LazyStream]:
@@ -21,7 +26,7 @@ def extract_search(query: str, provider: SEARCH_PROVIDER) -> list[LazyStream]:
     if is_playlist(info):
         return [LazyStream(**i) for i in info["entries"]]
     else:
-        raise _extractor_exception(query)
+        raise _exception(query)
 
 
 def extract_url(url: str) -> Stream | Playlist:
@@ -35,20 +40,37 @@ def extract_url(url: str) -> Stream | Playlist:
         ExtractError: Error happen when extract.
     """
 
+    # Try: get cache
+    if info := JsonCache(url).get():
+        log.debug("Using cache of: %s", url)
+
+        try:
+            return Stream.model_validate_json(info)
+        except ValueError:
+            JsonCache(url).remove()
+            log.info("Cache is corrupted, deleting and trying again.")
+
     info = info_extractor.extract_url(url)
 
     try:
         if is_stream(info):
-            return Stream(**info)
+            stream = Stream(**info)
+
+            JsonCache(url).save(stream.model_dump_json(by_alias=True))
+            stream.has_cache = True
+
+            log.debug("Save cache of: %s", url)
         elif is_playlist(info):
-            return Playlist(**info)
+            stream = Playlist(**info)
         else:
             raise ValueError()
+
+        return stream
     except ValueError:
-        raise _extractor_exception(url)
+        raise _exception(url)
 
 
-def _extractor_exception(url: str):
+def _exception(url: str):
     return ExtractError(
         f'"{url}" did not return valid data or lacks downloadable formats.'
     )

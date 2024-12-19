@@ -4,9 +4,11 @@ import shutil
 import tempfile
 from pathlib import Path
 
+import platformdirs
+
 # Constans
 TEMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
-CACHE_DIR = Path("~/.cache/media_dl")
+CACHE_DIR = platformdirs.user_cache_path(appname="media_dl", ensure_exists=True)
 
 
 # Functions
