@@ -5,14 +5,10 @@ import time
 from pathlib import Path
 from typing import cast
 
-from media_dl._ydl import (
-    download_subtitle,
-    download_thumbnail,
-    parse_output_template,
-    run_postproces,
-)
+from media_dl._ydl import download_subtitle, download_thumbnail, run_postproces
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
+from media_dl.downloader.template import generate_output_template
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
@@ -234,13 +230,12 @@ class StreamDownloader:
             elif format_audio:
                 stream_dict |= _gen_postprocessing_dict(_stream, format_audio)
 
-            # Final filename
-            output_name = parse_output_template(stream_dict, "%(uploader)s - %(title)s")
-
             # Download resources
-            if d := download_thumbnail(output_name, stream_dict):
+            if d := download_thumbnail(downloaded_file, stream_dict):
                 log.debug('"%s": Thumbnail downloaded: "%s"', _stream.id, d)
-            if d := _stream.subtitles and download_subtitle(output_name, stream_dict):
+            if d := _stream.subtitles and download_subtitle(
+                downloaded_file, stream_dict
+            ):
                 log.debug('"%s": Subtitle downloaded: "%s"', _stream.id, d)
 
             # Run postprocessing
@@ -253,6 +248,24 @@ class StreamDownloader:
                 info=stream_dict,
                 params=params,
             )
+
+            # Final filename
+            if download_config.output.is_dir():
+                output_name = (
+                    str(download_config.output)
+                    + "/"
+                    + "{uploader} - {title}"
+                    + downloaded_file.suffix
+                )
+            else:
+                output_name = str(download_config.output) + downloaded_file.suffix
+
+            output_name = generate_output_template(
+                output=output_name,
+                stream=_stream,
+                format=format_video or format_audio,
+            )
+
             log.debug(
                 '"%s": Postprocessing finished, saved as "%s".',
                 _stream.id,
@@ -260,7 +273,8 @@ class StreamDownloader:
             )
 
             # STATUS: Finish
-            final_path = Path(self.config.output, output_name + downloaded_file.suffix)
+            final_path = Path(output_name)
+            final_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Check if file is duplicate
             if final_path.exists():
@@ -272,12 +286,8 @@ class StreamDownloader:
                 )
             # Move file
             else:
-                self.config.output.mkdir(parents=True, exist_ok=True)
-
-                downloaded_file = downloaded_file.rename(
-                    downloaded_file.parent / final_path.name
-                )
                 final_path = shutil.move(downloaded_file, final_path)
+                final_path = Path(final_path)
 
                 self._progress.update(task_id, status="Finished")
                 log.info('Finished: "%s".', _stream_display_name(_stream))

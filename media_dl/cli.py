@@ -50,6 +50,14 @@ def complete_resolution() -> Generator[str, None, None]:
         yield str(name)
 
 
+def complete_output(incomplete: str) -> Generator[str, None, None]:
+    if incomplete.endswith("{"):
+        from media_dl.downloader.template import OUTPUT_TEMPLATES
+
+        for key in OUTPUT_TEMPLATES:
+            yield incomplete + key + "}"
+
+
 def parse_queries(queries: list[str]) -> Generator[tuple[SearchFrom, str], None, None]:
     providers = [entry.name for entry in SearchFrom]
 
@@ -130,6 +138,7 @@ What format you want request?
             "-o",
             help="Directory where to save downloads.",
             rich_help_panel=HelpPanel.file,
+            autocompletion=complete_output,
             show_default=False,
             dir_okay=True,
             file_okay=False,

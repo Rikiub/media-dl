@@ -18,12 +18,11 @@ def download(url):
     except TypeError:
         result = Playlist.from_url(url)
 
-    with TEMPDIR:
-        paths = downloader.download_all(result)
+    paths = downloader.download_all(result)
 
-        for path in paths:
-            if not path.is_file():
-                raise FileNotFoundError(path)
+    for path in paths:
+        if not path.is_file():
+            raise FileNotFoundError(path)
 
 
 def test_ffmpeg_not_exists():
