@@ -49,8 +49,8 @@ class Format(ABC, YDLArgs, BaseModel):
 
 
 class VideoFormat(Format):
-    video_codec: Annotated[Codec, Field(alias="vcodec")]
-    audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
+    video_codec: Annotated[Codec, Field(validation_alias="vcodec")]
+    audio_codec: Annotated[Codec | None, Field(validation_alias="acodec")] = None
     width: int
     height: int
     fps: float | None = None
@@ -84,8 +84,8 @@ class VideoFormat(Format):
 
 
 class AudioFormat(Format):
-    codec: Annotated[Codec, Field(alias="acodec")]
-    bitrate: Annotated[float, Field(alias="abr")] = 0
+    codec: Annotated[Codec, Field(alias="audio_codec", validation_alias="acodec")]
+    bitrate: Annotated[float, Field(validation_alias="abr")] = 0
 
     @property
     def quality(self) -> int:

@@ -10,7 +10,7 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.template import generate_output_template
 from media_dl.downloader.progress import DownloadProgress
-from media_dl.exceptions import DownloadError, MediaError
+from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
@@ -19,7 +19,7 @@ from media_dl.types import FILE_FORMAT, MUSIC_SITES, StrPath
 
 log = logging.getLogger(__name__)
 
-ExtractResult = Playlist | list[LazyStream] | LazyStream | Stream
+ExtractResult = list[LazyStream] | LazyStream | Playlist
 
 
 class StreamDownloader:
@@ -72,6 +72,7 @@ class StreamDownloader:
             MediaError: Something bad happens when download.
         """
 
+        playlist = media if isinstance(media, Playlist) else None
         streams = _media_to_list(media)
         paths: list[Path] = []
 
@@ -81,7 +82,8 @@ class StreamDownloader:
         with self._progress:
             with cf.ThreadPoolExecutor(max_workers=self._threads) as executor:
                 futures = [
-                    executor.submit(self._download_work, task) for task in streams
+                    executor.submit(self._download_work, task, playlist)
+                    for task in streams
                 ]
 
                 success = 0
@@ -92,8 +94,11 @@ class StreamDownloader:
                         try:
                             paths.append(ft.result())
                             success += 1
-                        except MediaError:
+                        except ConnectionError:
                             errors += 1
+                except OutputTemplateError as err:
+                    log.error(str(err).strip('"'))
+                    raise SystemExit()
                 except (cf.CancelledError, KeyboardInterrupt):
                     log.warning(
                         "❗ Canceling downloads... (press Ctrl+C again to force)"
@@ -137,6 +142,7 @@ class StreamDownloader:
     def _download_work(
         self,
         stream: LazyStream | Stream,
+        playlist: Playlist | None = None,
         on_progress: DownloadCallback | None = None,
     ) -> Path:
         task_id = self._progress.add_task(
@@ -205,6 +211,21 @@ class StreamDownloader:
             ):
                 format_video = None
 
+            # Generate filename
+            if download_config.output.is_dir():
+                # Default template
+                output = str(download_config.output) + "/" + "{uploader} - {title}"
+            else:
+                # User template
+                output = str(download_config.output)
+
+            output = generate_output_template(
+                output=output,
+                stream=_stream,
+                playlist=playlist,
+                format=format_video or format_audio,
+            )
+
             # Run download
             d = YDLDownloader(
                 filepath=get_tempfile(),
@@ -231,8 +252,11 @@ class StreamDownloader:
                 stream_dict |= _gen_postprocessing_dict(_stream, format_audio)
 
             # Download resources
-            if d := download_thumbnail(downloaded_file, stream_dict):
+            if d := _stream.thumbnails and download_thumbnail(
+                downloaded_file, stream_dict
+            ):
                 log.debug('"%s": Thumbnail downloaded: "%s"', _stream.id, d)
+
             if d := _stream.subtitles and download_subtitle(
                 downloaded_file, stream_dict
             ):
@@ -249,22 +273,9 @@ class StreamDownloader:
                 params=params,
             )
 
-            # Final filename
-            if download_config.output.is_dir():
-                output_name = (
-                    str(download_config.output)
-                    + "/"
-                    + "{uploader} - {title}"
-                    + downloaded_file.suffix
-                )
-            else:
-                output_name = str(download_config.output) + downloaded_file.suffix
-
-            output_name = generate_output_template(
-                output=output_name,
-                stream=_stream,
-                format=format_video or format_audio,
-            )
+            # Add extension to filename
+            output = output.parent / f"{output.stem}{downloaded_file.suffix}"
+            log.debug('"%s": Final filename will be "%s"', _stream.id, output)
 
             log.debug(
                 '"%s": Postprocessing finished, saved as "%s".',
@@ -273,21 +284,18 @@ class StreamDownloader:
             )
 
             # STATUS: Finish
-            final_path = Path(output_name)
-            final_path.parent.mkdir(parents=True, exist_ok=True)
-
             # Check if file is duplicate
-            if final_path.exists():
+            if output.exists():
                 self._progress.update(task_id, status="Skipped")
                 log.info(
                     'Skipped: "%s" (Exists as "%s").',
                     _stream_display_name(_stream),
-                    final_path.suffix[1:],
+                    output.suffix[1:],
                 )
             # Move file
             else:
-                final_path = shutil.move(downloaded_file, final_path)
-                final_path = Path(final_path)
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output = Path(shutil.move(downloaded_file, output))
 
                 self._progress.update(task_id, status="Finished")
                 log.info('Finished: "%s".', _stream_display_name(_stream))
@@ -296,8 +304,8 @@ class StreamDownloader:
                 progress_data.status = "finished"
                 on_progress(progress_data)
 
-            return final_path
-        except MediaError as err:
+            return output
+        except ConnectionError as err:
             log.error('Error: "%s": %s', _stream_display_name(_stream), str(err))
             self._progress.update(task_id, status="Error")
             raise DownloadError(str(err))

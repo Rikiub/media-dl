@@ -235,7 +235,7 @@ What format you want request?
                         result = Stream.from_url(entry)
                     except TypeError:
                         result = Playlist.from_url(entry)
-                        log.info('🔎 Playlist Name: "%s".', result.title)
+                        log.info('🔎 Playlist title: "%s".', result.title)
                 else:
                     log.info('🔎 Search from %s: "%s".', target.value, entry)
                     result = SearchQuery(entry, target.value).streams[0]

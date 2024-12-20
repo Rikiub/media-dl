@@ -60,6 +60,6 @@ def _fetch_query(query: str) -> InfoDict:
         return _fetch_query(info["url"])
 
     if not (is_playlist(info) or is_stream(info)):
-        raise ExtractError('"%s" return nothing.')
+        raise ExtractError(f"{query} return nothing.")
 
     return info

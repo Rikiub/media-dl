@@ -5,7 +5,11 @@ class MediaError(Exception):
     """Base exception."""
 
 
-class DownloadError(MediaError):
+class OutputTemplateError(KeyError):
+    """Output template error."""
+
+
+class DownloadError(ConnectionError):
     """Download error."""
 
 
@@ -13,5 +17,5 @@ class PostProcessingError(DownloadError):
     """Postprocessing error."""
 
 
-class ExtractError(ConnectionError, MediaError):
+class ExtractError(ConnectionError):
     """Extraction error."""
