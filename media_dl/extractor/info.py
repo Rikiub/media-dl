@@ -14,18 +14,16 @@ from media_dl.types import SEARCH_PROVIDER, InfoDict
 log = logging.getLogger(__name__)
 
 
-def extract_search(query: str, provider: SEARCH_PROVIDER) -> InfoDict:
+def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> InfoDict:
     """Extract info from search provider."""
-
-    search_limit = 20
 
     match provider:
         case "youtube":
-            prov = f"ytsearch{search_limit}:"
+            prov = f"ytsearch{limit}:"
         case "ytmusic":
             prov = "https://music.youtube.com/search?q="
         case "soundcloud":
-            prov = f"scsearch{search_limit}:"
+            prov = f"scsearch{limit}:"
         case _:
             raise ValueError(f"{provider} is invalid. Should be: {SEARCH_PROVIDER}")
 

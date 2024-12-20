@@ -3,7 +3,8 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from media_dl.downloader.stream import StreamDownloader
-from media_dl.extractor import stream as media_extractor
+from media_dl.models.stream import Stream
+from media_dl.models.playlist import Playlist
 
 TEMPDIR = TemporaryDirectory()
 
@@ -12,7 +13,10 @@ downloader = StreamDownloader(quality=1, output=TEMPDIR.name)
 
 
 def download(url):
-    result = media_extractor.extract_url(url)
+    try:
+        result = Stream.from_url(url)
+    except TypeError:
+        result = Playlist.from_url(url)
 
     with TEMPDIR:
         paths = downloader.download_all(result)
@@ -28,8 +32,7 @@ def test_ffmpeg_not_exists():
 
 
 def test_stream():
-    # Song: Imagine Dragons - Believer
-    download("https://www.youtube.com/watch?v=BaW_jenozKc")
+    download("https://youtube.com/watch?v=Kx7B-XvmFtE")
 
 
 def test_playlist():

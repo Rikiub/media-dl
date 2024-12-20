@@ -1,15 +1,18 @@
 import pytest
 from rich import print
 
-from media_dl.extractor import stream as media_extractor
 from media_dl.exceptions import ExtractError
-from media_dl.models.playlist import Playlist
+from media_dl.models.playlist import Playlist, SearchQuery
 from media_dl.models.stream import Stream
 from media_dl.types import SEARCH_PROVIDER
 
 
 def extract_url(url: str):
-    result = media_extractor.extract_url(url)
+    try:
+        result = Stream.from_url(url)
+    except TypeError:
+        result = Playlist.from_url(url)
+
     print(result)
     return result
 
@@ -31,7 +34,7 @@ def test_others_exceptions():
 
 class TestBase:
     def test_stream(self):
-        result = extract_url("https://www.youtube.com/watch?v=BaW_jenozKc")
+        result = extract_url("https://youtube.com/watch?v=Kx7B-XvmFtE")
         assert isinstance(result, Stream)
 
     def test_playlist(self):
@@ -45,8 +48,10 @@ class TestSearch:
     QUERY = "Sub Urban - Rabbit Hole"
 
     def search(self, provider: SEARCH_PROVIDER):
-        streams = media_extractor.extract_search(self.QUERY, provider)
-        assert isinstance(streams, list)
+        search = SearchQuery(self.QUERY, provider)
+        streams = search.streams
+
+        assert isinstance(streams, list) and len(streams) > 0
         print(streams)
 
     def test_youtube(self):

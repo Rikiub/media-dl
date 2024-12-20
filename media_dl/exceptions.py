@@ -2,16 +2,16 @@
 
 
 class MediaError(Exception):
-    """Media-DL base exception."""
+    """Base exception."""
 
 
 class DownloadError(MediaError):
     """Download error."""
 
 
-class ExtractError(MediaError):
+class PostProcessingError(DownloadError):
+    """Postprocessing error."""
+
+
+class ExtractError(ConnectionError, MediaError):
     """Extraction error."""
-
-
-class PostProcessingError(MediaError):
-    """Postprocess error."""

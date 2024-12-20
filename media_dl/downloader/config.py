@@ -86,7 +86,7 @@ class FormatConfig:
     def ydl_params(
         self,
         overwrite: bool = False,
-        music_meta: bool = False,
+        music_metadata: bool = False,
     ) -> dict[str, Any]:
         """Generate download parameters for YT-DLP."""
 
@@ -95,7 +95,7 @@ class FormatConfig:
             params |= {"final_ext": self.format}
 
         postprocessors = []
-        if music_meta:
+        if music_metadata:
             postprocessors.extend(POST_MUSIC)
 
         if self.ffmpeg:

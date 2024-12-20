@@ -194,9 +194,9 @@ What format you want request?
     # Lazy Import
     with Status("Starting...", disable=quiet):
         from media_dl.downloader.stream import StreamDownloader
-        from media_dl.exceptions import MediaError
-        from media_dl.extractor.stream import extract_search, extract_url
-        from media_dl.models.playlist import Playlist
+        from media_dl.exceptions import DownloadError, ExtractError
+        from media_dl.models.playlist import Playlist, SearchQuery
+        from media_dl.models.stream import Stream
 
     # Init Downloader
     try:
@@ -221,17 +221,19 @@ What format you want request?
             with Status("Please wait", disable=quiet):
                 if target.value == "url":
                     log.info('🔎 Extract URL: "%s".', entry)
-                    result = extract_url(entry)
 
-                    if isinstance(result, Playlist):
+                    try:
+                        result = Stream.from_url(entry)
+                    except TypeError:
+                        result = Playlist.from_url(entry)
                         log.info('🔎 Playlist Name: "%s".', result.title)
                 else:
                     log.info('🔎 Search from %s: "%s".', target.value, entry)
-                    result = extract_search(entry, target.value)[0]
+                    result = SearchQuery(entry, target.value).streams[0]
 
             downloader.download_all(result)
             log.info("✅ Download Finished.")
-        except MediaError as err:
+        except (ExtractError, DownloadError) as err:
             log.error("❌ %s", str(err))
         finally:
             log.info("")

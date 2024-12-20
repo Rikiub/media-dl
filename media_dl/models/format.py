@@ -37,7 +37,7 @@ class Format(ABC, YDLArgs, BaseModel):
     id: Annotated[str, Field(alias="format_id")]
     url: str
     protocol: str
-    filesize: int | None = 0
+    filesize: int | None = None
     extension: Annotated[str, Field(alias="ext")]
 
     @property

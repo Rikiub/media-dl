@@ -2,20 +2,25 @@ from __future__ import annotations
 
 import datetime
 from typing import Annotated
+from typing_extensions import Self
 
-from pydantic import AliasChoices, Field, PlainSerializer
+from pydantic import AliasChoices, Field, PlainSerializer, PrivateAttr
 
-from media_dl.extractor import info as info_extractor
 from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList
 from media_dl.models.metadata import MusicMetadata, Subtitles, Thumbnail
 
 
-class LazyStream(ExtractID):
+class LazyStream(MusicMetadata, ExtractID):
     title: str = ""
     uploader: Annotated[
         str, Field(validation_alias=AliasChoices("creator", "uploader"))
     ] = ""
+    uploader_id: str | None = None
+    description: str | None = None
+    datetime: Annotated[DatetimeTimestamp | None, Field(alias="timestamp")] = None
+    duration: float = 0
+    thumbnails: list[Thumbnail] = []
 
     def fetch(self) -> Stream:
         """Fetch real stream.
@@ -27,8 +32,7 @@ class LazyStream(ExtractID):
             ExtractError: Something bad happens when extract.
         """
 
-        info = info_extractor.extract_url(self.url)
-        return Stream(**info)
+        return Stream.from_url(self.url)
 
 
 DatetimeTimestamp = Annotated[
@@ -36,20 +40,13 @@ DatetimeTimestamp = Annotated[
 ]
 
 
-class Stream(LazyStream, MusicMetadata):
+class Stream(LazyStream):
     """Online media stream representation."""
 
-    uploader_id: str | None = None
-    description: str | None = None
-    datetime: Annotated[DatetimeTimestamp | None, Field(alias="timestamp")] = None
-    duration: float = 0
-    formats: Annotated[FormatList, Field(min_length=1)]
-    thumbnails: list[Thumbnail] = []
     subtitles: Subtitles | None = None
-    has_cache: Annotated[bool, Field(exclude=True)] = False
+    formats: Annotated[FormatList, Field(min_length=1)]
+    _has_cache: Annotated[bool, PrivateAttr()] = False
 
-    def __eq__(self, o: object) -> bool:
-        if isinstance(o, self.__class__):
-            return o.id == self.id
-        else:
-            return False
+    @classmethod
+    def from_json(cls, json: str) -> Self:
+        return cls.model_validate_json(json)

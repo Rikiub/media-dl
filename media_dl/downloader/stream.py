@@ -14,7 +14,7 @@ from media_dl._ydl import (
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.progress import DownloadProgress
-from media_dl.exceptions import MediaError
+from media_dl.exceptions import DownloadError, MediaError
 from media_dl.extractor.cache import JsonCache
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
@@ -77,7 +77,7 @@ class StreamDownloader:
             MediaError: Something bad happens when download.
         """
 
-        streams = self._media_to_list(media)
+        streams = _media_to_list(media)
         paths: list[Path] = []
 
         log.debug("Founded %s entries.", len(streams))
@@ -183,9 +183,10 @@ class StreamDownloader:
             callbacks = []
 
             def p(p: ProgressStatus):
-                step = ""
                 if p.steps_total > 1:
                     step = f"({p.steps_completed}/{p.steps_total})"
+                else:
+                    step = ""
 
                 return self._progress.update(
                     task_id,
@@ -248,7 +249,7 @@ class StreamDownloader:
 
             # Run postprocessing
             params = download_config.ydl_params(
-                music_meta=_url_is_music_site(_stream.url)
+                music_metadata=_url_is_music_site(_stream.url)
             )
 
             downloaded_file = run_postproces(
@@ -292,33 +293,18 @@ class StreamDownloader:
             JsonCache(_stream.url).remove()
             return final_path
         except MediaError as err:
-            if isinstance(_stream, Stream) and _stream.has_cache:
+            if isinstance(_stream, Stream) and _stream._has_cache:
                 # Fetch again without cache
                 _stream = _stream.fetch()
                 return self._download_work(_stream)
             else:
                 log.error('Error: "%s": %s', _stream_display_name(_stream), str(err))
                 self._progress.update(task_id, status="Error")
-                raise
+                raise DownloadError(str(err))
         finally:
             self._progress.counter.advance()
             time.sleep(1.0)
             self._progress.remove_task(task_id)
-
-    def _media_to_list(self, media: ExtractResult) -> list[LazyStream]:
-        streams = []
-
-        match media:
-            case LazyStream():
-                streams = [media]
-            case Playlist():
-                streams = media.streams
-            case list():
-                streams = media
-            case _:
-                raise TypeError(media)
-
-        return streams
 
     def _resolve_format(
         self,
@@ -389,6 +375,22 @@ def _log_format(stream_id: str, format: Format) -> None:
         format.extension,
         format.display_quality,
     )
+
+
+def _media_to_list(media: ExtractResult) -> list[LazyStream]:
+    streams = []
+
+    match media:
+        case LazyStream():
+            streams = [media]
+        case Playlist():
+            streams = media.streams
+        case list():
+            streams = media
+        case _:
+            raise TypeError(media)
+
+    return streams
 
 
 def _url_is_music_site(url: str) -> bool:
