@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import Annotated
-from typing_extensions import Self
 
 from pydantic import AliasChoices, BaseModel, Field
+from typing_extensions import Self
 
 from media_dl.extractor.helper import is_playlist
 from media_dl.extractor.info import extract_url

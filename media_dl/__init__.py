@@ -1,7 +1,7 @@
 """Media-DL API. Handler for URLs extraction, serialization and streams download."""
 
-from typing import TYPE_CHECKING
 import sys
+from typing import TYPE_CHECKING
 
 from lazy_imports import LazyImporter
 
@@ -9,7 +9,7 @@ from media_dl.exceptions import DownloadError, ExtractError, MediaError
 
 if TYPE_CHECKING:
     from media_dl.downloader.stream import StreamDownloader
-    from media_dl.models.format import VideoFormat, AudioFormat
+    from media_dl.models.format import AudioFormat, VideoFormat
     from media_dl.models.playlist import Playlist
     from media_dl.models.stream import Stream
 

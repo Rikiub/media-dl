@@ -7,8 +7,8 @@ from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
 from media_dl._ydl import YTDLP, format_except_message
-from media_dl.extractor.helper import is_stream, is_playlist
 from media_dl.exceptions import ExtractError
+from media_dl.extractor.helper import is_playlist, is_stream
 from media_dl.types import SEARCH_PROVIDER, InfoDict
 
 log = logging.getLogger(__name__)

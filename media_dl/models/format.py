@@ -21,7 +21,6 @@ from typing_extensions import Self, TypeVar
 from media_dl._ydl import SupportedExtensions
 from media_dl.types import FORMAT_TYPE
 
-
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 
 

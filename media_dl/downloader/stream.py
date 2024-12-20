@@ -6,20 +6,20 @@ from pathlib import Path
 from typing import cast
 
 from media_dl._ydl import (
+    download_subtitle,
+    download_thumbnail,
     parse_output_template,
     run_postproces,
-    download_thumbnail,
-    download_subtitle,
 )
-from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.config import FormatConfig
+from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, MediaError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
-from media_dl.types import MUSIC_SITES, StrPath, FILE_FORMAT
 from media_dl.path import get_tempfile
+from media_dl.types import FILE_FORMAT, MUSIC_SITES, StrPath
 
 log = logging.getLogger(__name__)
 

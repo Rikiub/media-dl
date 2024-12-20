@@ -6,10 +6,10 @@ from media_dl._ydl import POST_MUSIC
 from media_dl.path import check_executable_exists, get_global_ffmpeg
 from media_dl.types import (
     AUDIO_EXTENSION,
-    VIDEO_EXTENSION,
     EXTENSION,
     FILE_FORMAT,
     FORMAT_TYPE,
+    VIDEO_EXTENSION,
 )
 
 

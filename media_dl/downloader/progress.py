@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rich.table import Column
+from rich.console import Group, RenderableType
 from rich.progress import (
     BarColumn,
     FileSizeColumn,
@@ -9,7 +9,7 @@ from rich.progress import (
     TextColumn,
     TotalFileSizeColumn,
 )
-from rich.console import Group, RenderableType
+from rich.table import Column
 
 from media_dl.rich import CONSOLE
 

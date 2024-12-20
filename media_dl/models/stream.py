@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import datetime
 from typing import Annotated
-from typing_extensions import Self
 
 from pydantic import AliasChoices, Field, PlainSerializer
+from typing_extensions import Self
 
 from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList

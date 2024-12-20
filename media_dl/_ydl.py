@@ -8,7 +8,7 @@ from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
-from media_dl.types import StrPath, InfoDict
+from media_dl.types import InfoDict, StrPath
 
 
 class SupportedExtensions(frozenset[str], Enum):
@@ -18,17 +18,19 @@ class SupportedExtensions(frozenset[str], Enum):
     audio = frozenset(MEDIA_EXTENSIONS.audio)
 
 
-ThumbnailSupport = (
-    "mp3",
-    "mkv",
-    "mka",
-    "ogg",
-    "opus",
-    "flac",
-    "m4a",
-    "mp4",
-    "m4v",
-    "mov",
+ThumbnailSupport = frozenset(
+    {
+        "mp3",
+        "mkv",
+        "mka",
+        "ogg",
+        "opus",
+        "flac",
+        "m4a",
+        "mp4",
+        "m4v",
+        "mov",
+    }
 )
 
 

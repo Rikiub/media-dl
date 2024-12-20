@@ -1,7 +1,6 @@
 """Custom `Rich` classes."""
 
 from rich.console import Console, RenderableType
-
 from rich.status import Status as _Status
 
 CONSOLE = Console(stderr=True)
