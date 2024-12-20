@@ -8,7 +8,7 @@ from media_dl.extractor.helper import is_playlist
 from media_dl.extractor.info import extract_url
 
 
-class ExtractID(BaseModel, ABC):
+class ExtractID(ABC, BaseModel):
     """Base identifier for media objects."""
 
     extractor: Annotated[

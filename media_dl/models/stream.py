@@ -4,7 +4,7 @@ import datetime
 from typing import Annotated
 from typing_extensions import Self
 
-from pydantic import AliasChoices, Field, PlainSerializer, PrivateAttr
+from pydantic import AliasChoices, Field, PlainSerializer
 
 from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList
@@ -45,7 +45,6 @@ class Stream(LazyStream):
 
     subtitles: Subtitles | None = None
     formats: Annotated[FormatList, Field(min_length=1)]
-    _has_cache: Annotated[bool, PrivateAttr()] = False
 
     @classmethod
     def from_json(cls, json: str) -> Self:

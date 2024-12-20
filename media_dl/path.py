@@ -6,9 +6,12 @@ from pathlib import Path
 
 import platformdirs
 
+from media_dl.types import APPNAME
+
+platformdirs.site_cache_path()
 # Constans
 TEMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
-CACHE_DIR = platformdirs.user_cache_path(appname="media_dl", ensure_exists=True)
+CACHE_DIR = platformdirs.user_cache_path(appname=APPNAME, ensure_exists=True)
 
 
 # Functions

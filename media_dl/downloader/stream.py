@@ -15,7 +15,6 @@ from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDo
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, MediaError
-from media_dl.extractor.cache import JsonCache
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
@@ -164,9 +163,6 @@ class StreamDownloader:
             else:
                 raise TypeError(stream)
 
-            if JsonCache(_stream.url).exists():
-                log.info("Using cache")
-
             log.debug('"%s": Downloading stream.', _stream.id)
 
             # Resolve formats
@@ -290,17 +286,11 @@ class StreamDownloader:
                 progress_data.status = "finished"
                 on_progress(progress_data)
 
-            JsonCache(_stream.url).remove()
             return final_path
         except MediaError as err:
-            if isinstance(_stream, Stream) and _stream._has_cache:
-                # Fetch again without cache
-                _stream = _stream.fetch()
-                return self._download_work(_stream)
-            else:
-                log.error('Error: "%s": %s', _stream_display_name(_stream), str(err))
-                self._progress.update(task_id, status="Error")
-                raise DownloadError(str(err))
+            log.error('Error: "%s": %s', _stream_display_name(_stream), str(err))
+            self._progress.update(task_id, status="Error")
+            raise DownloadError(str(err))
         finally:
             self._progress.counter.advance()
             time.sleep(1.0)

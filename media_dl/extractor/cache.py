@@ -1,5 +1,3 @@
-"""Stream cache handler"""
-
 from media_dl.path import CACHE_DIR
 
 DIR = CACHE_DIR / "info"
@@ -7,6 +5,8 @@ DIR.mkdir(parents=True, exist_ok=True)
 
 
 class JsonCache:
+    """Stream cache handler"""
+
     def __init__(self, url: str) -> None:
         self.url = url
         self.path = DIR / f"{self._clear_url(url)}.json"
