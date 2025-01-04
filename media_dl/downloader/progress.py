@@ -18,14 +18,12 @@ class CounterProgress:
     def __init__(
         self, total: int = 1, disable: bool = False, visible: bool = True
     ) -> None:
-        self.disable = disable
-
         self._progress = Progress(
             TextColumn("Total:"),
             MofNCompleteColumn(),
             transient=True,
             expand=False,
-            disable=self.disable,
+            disable=disable,
             console=CONSOLE,
         )
         self._task_id = self._progress.add_task(
@@ -71,5 +69,4 @@ class DownloadProgress(Progress):
         return self
 
     def get_renderable(self) -> RenderableType:
-        renderable = Group(self.counter, *self.get_renderables())
-        return renderable
+        return Group(self.counter, *self.get_renderables())

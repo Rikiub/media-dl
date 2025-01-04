@@ -77,7 +77,7 @@ class StreamDownloader:
         paths: list[Path] = []
 
         log.debug("Founded %s entries.", len(streams))
-        self._progress.counter.reset(len(streams))
+        self._progress.counter.reset(len(streams), visible=bool(playlist))
 
         with self._progress:
             with cf.ThreadPoolExecutor(max_workers=self._threads) as executor:
@@ -136,7 +136,7 @@ class StreamDownloader:
         """
 
         with self._progress:
-            self._progress.counter.reset(total=1)
+            self._progress.counter.reset(total=1, visible=False)
             return self._download_work(stream, on_progress=on_progress)
 
     def _download_work(
