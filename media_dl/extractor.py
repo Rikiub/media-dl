@@ -8,10 +8,27 @@ from yt_dlp.networking.exceptions import RequestError
 
 from media_dl._ydl import YTDLP, format_except_message
 from media_dl.exceptions import ExtractError
-from media_dl.extractor.helper import is_playlist, is_stream
 from media_dl.types import SEARCH_PROVIDER, InfoDict
 
 log = logging.getLogger(__name__)
+
+
+def is_playlist(info: InfoDict) -> bool:
+    """Check if info is a playlist."""
+
+    if info.get("_type") == "playlist" or info.get("entries"):
+        return True
+    else:
+        return False
+
+
+def is_stream(info: InfoDict) -> bool:
+    """Check if info is a single Stream."""
+
+    if info.get("_type") == "url" or info.get("formats"):
+        return True
+    else:
+        return False
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> InfoDict:

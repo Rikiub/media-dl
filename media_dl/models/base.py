@@ -4,8 +4,7 @@ from typing import Annotated
 from pydantic import AliasChoices, BaseModel, Field
 from typing_extensions import Self
 
-from media_dl.extractor.helper import is_playlist
-from media_dl.extractor.info import extract_url
+from media_dl.extractor import is_playlist, extract_url
 
 URL_TYPE = ("original_url", "url")
 
