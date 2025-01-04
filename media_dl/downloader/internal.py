@@ -24,11 +24,11 @@ class ProgressStatus(BaseModel):
     fragments_total: Annotated[int, Field(alias="fragment_count")] = 0
     """Available if `step_type` is video."""
 
-    speed: int = 0
-    elapsed: int = 0
+    speed: float = 0
+    elapsed: float = 0
 
-    downloaded_bytes: int = 0
-    total_bytes: int = 0
+    downloaded_bytes: float = 0
+    total_bytes: float = 0
 
 
 DownloadCallback = Callable[[ProgressStatus | None], None]

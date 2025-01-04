@@ -74,14 +74,7 @@ class FormatConfig:
     def as_dict(self) -> dict[str, Any]:
         """Convert to dict."""
 
-        d = asdict(self)
-
-        # Convert pathlib.Path to str
-        for key, value in d.items():
-            if isinstance(value, Path):
-                d[key] = str(value)
-
-        return d
+        return asdict(self)
 
     def ydl_params(
         self,

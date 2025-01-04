@@ -147,7 +147,7 @@ class StreamDownloader:
     ) -> Path:
         task_id = self._progress.add_task(
             description=_stream_display_name(stream) or "Fetching...",
-            status="Started",
+            status="Fetching",
             step="",
         )
 
@@ -412,7 +412,7 @@ def _stream_display_name(stream: LazyStream) -> str:
     """Get pretty representation of the stream name."""
 
     if _url_is_music_site(stream.url) and stream.uploader and stream.title:
-        return stream.uploader + " - " + stream.title
+        return stream.title + " - " + stream.uploader
     elif stream.title:
         return stream.title
     else:
