@@ -39,3 +39,9 @@ class Thumbnail(BaseModel):
     url: str
     width: int = 0
     height: int = 0
+
+
+class Chapter(BaseModel):
+    start_time: int
+    end_time: int
+    title: str

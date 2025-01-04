@@ -65,6 +65,9 @@ class TestSearch:
 
 
 class TestSite:
+    def test_youtube(self):
+        extract_url("https://www.youtube.com/watch?v=lBVhLcfoahw ")
+
     def test_ytmusic(self):
         extract_url("https://music.youtube.com/watch?v=Kx7B-XvmFtE")
 

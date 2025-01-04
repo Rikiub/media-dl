@@ -21,7 +21,7 @@ class Playlist(BaseList, ExtractID):
     ]
     id: Annotated[str, Field(alias="playlist_id", validation_alias="id")]
     title: Annotated[str, Field(alias="playlist_title", validation_alias="title")]
-    uploader: str | None = ""
+    uploader: str | None = None
     thumbnails: list[Thumbnail] = []
 
 

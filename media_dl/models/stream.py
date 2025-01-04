@@ -8,7 +8,11 @@ from typing_extensions import Self
 
 from media_dl.models.base import ExtractID
 from media_dl.models.format import FormatList
-from media_dl.models.metadata import MusicMetadata, Subtitles, Thumbnail
+from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
+
+DatetimeTimestamp = Annotated[
+    datetime.datetime, PlainSerializer(lambda d: d.timestamp())
+]
 
 
 class LazyStream(MusicMetadata, ExtractID):
@@ -35,14 +39,10 @@ class LazyStream(MusicMetadata, ExtractID):
         return Stream.from_url(self.url)
 
 
-DatetimeTimestamp = Annotated[
-    datetime.datetime, PlainSerializer(lambda d: d.timestamp())
-]
-
-
 class Stream(LazyStream):
     """Online media stream representation."""
 
+    chapters: list[Chapter] | None = None
     subtitles: Subtitles | None = None
     formats: Annotated[FormatList, Field(min_length=1)]
 
