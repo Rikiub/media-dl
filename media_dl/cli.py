@@ -207,7 +207,7 @@ What format you want request?
         from media_dl.models.playlist import Playlist, SearchQuery
         from media_dl.models.stream import Stream
 
-    # Init Downloader
+    # Initialize Downloader
     try:
         downloader = StreamDownloader(
             format=format.value,

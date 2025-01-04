@@ -3,6 +3,7 @@
 import logging
 from enum import Enum
 from pathlib import Path
+from typing import Callable, NamedTuple
 
 from yt_dlp import YoutubeDL
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
@@ -69,7 +70,7 @@ class YTDLP(YoutubeDL):
         # Custom parameters
         opts |= params or {}
 
-        # Init
+        # Initialize
         super().__init__(opts)
 
 
@@ -159,60 +160,80 @@ def download_subtitle(filepath: StrPath, info: InfoDict) -> Path | None:
         return None
 
 
+class ExceptMsg(NamedTuple):
+    matchs: list[str]
+    text: str | Callable[[str], str]
+
+
+MESSAGES: list[ExceptMsg] = [
+    ExceptMsg(
+        matchs=["HTTP Error"],
+        text=lambda v: v
+        + " : You may have exceeded the page request limit, received an IP block, among others. Please try again later.",
+    ),
+    ExceptMsg(
+        matchs=["Read timed out"],
+        text="Read timed out.",
+    ),
+    ExceptMsg(
+        matchs=["Unable to download webpage"],
+        text=lambda v: "Invalid URL."
+        if any(s in v for s in ("[Errno -2]", "[Errno -5]"))
+        else v,
+    ),
+    ExceptMsg(
+        matchs=["is not a valid URL"],
+        text=lambda v: v.split()[1] + " is not a valid URL.",
+    ),
+    ExceptMsg(
+        matchs=["Unsupported URL"],
+        text=lambda v: "Unsupported URL: " + v.split()[3],
+    ),
+    ExceptMsg(
+        matchs=["Unable to extract webpage video data"],
+        text="Unable to extract webpage video data.",
+    ),
+    ExceptMsg(
+        matchs=["Private video. Sign in if you've been granted access to this video."],
+        text="Private video, unable to download.",
+    ),
+    ExceptMsg(
+        matchs=["Unable to rename file"],
+        text="Unable to rename file.",
+    ),
+    ExceptMsg(
+        matchs=["ffmpeg not found"],
+        text="Postprocessing failed. FFmpeg executable not founded.",
+    ),
+    ExceptMsg(
+        matchs=["No video formats found!"],
+        text="No formats founded.",
+    ),
+    ExceptMsg(
+        matchs=["Unable to download", "Got error"],
+        text="Unable to download.",
+    ),
+    ExceptMsg(
+        matchs=["is only available for registered users"],
+        text="Only available for registered users.",
+    ),
+]
+
+
 def format_except_message(exception: Exception) -> str:
     """Get a user friendly message of a YT-DLP message exception."""
 
-    msg = str(exception)
+    message: str = str(exception)
 
-    # No connection
-    if "HTTP Error" in msg:
-        msg = (
-            msg
-            + " : You may have exceeded the page request limit, received an IP block, among others. Please try again later."
-        )
+    if message.startswith("ERROR: "):
+        message = message.strip("ERROR: ")
 
-    elif "Read timed out" in msg:
-        msg = "Read timed out."
+    for item in MESSAGES:
+        if any(s in message for s in item.matchs):
+            if callable(item.text):
+                message = item.text(message)
+            else:
+                message = item.text
+            break
 
-    elif any(s in msg for s in ("[Errno -3]", "Failed to extract any player response")):
-        msg = "No internet connection."
-
-    # Invalid URL
-    elif "Unable to download webpage" in msg and any(
-        s in msg for s in ("[Errno -2]", "[Errno -5]")
-    ):
-        msg = "Invalid URL."
-
-    elif "is not a valid URL" in msg:
-        splits = msg.split()
-        msg = splits[1] + " is not a valid URL."
-
-    elif "Unsupported URL" in msg:
-        splits = msg.split()
-        msg = "Unsupported URL: " + splits[3]
-
-    elif "Unable to extract webpage video data" in msg:
-        msg = "Unable to extract webpage video data."
-
-    # Postprocessing
-    elif "Unable to rename file" in msg:
-        msg = "Unable to rename file."
-
-    elif "ffmpeg not found" in msg:
-        msg = "Postprocessing failed. FFmpeg executable not founded."
-
-    # General
-    elif "No video formats found!" in msg:
-        msg = "No formats founded."
-
-    elif any(s in msg for s in ("Unable to download", "Got error")):
-        msg = "Unable to download."
-
-    elif "is only available for registered users" in msg:
-        msg = "Only available for registered users."
-
-    # Last parse
-    if msg.startswith("ERROR: "):
-        msg = msg.strip("ERROR: ")
-
-    return msg
+    return message

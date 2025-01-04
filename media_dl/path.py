@@ -4,13 +4,8 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import platformdirs
-
-from media_dl.types import APPNAME
-
-# Constans
+# Constants
 TEMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
-CACHE_DIR = platformdirs.user_cache_path(appname=APPNAME, ensure_exists=True)
 
 
 # Functions

@@ -17,12 +17,11 @@ def extract_url(url: str):
     return result
 
 
-def test_invalid_url():
+def test_exceptions():
+    # Invalid URL
     with pytest.raises(ExtractError):
         extract_url("https://unkdown.link.com/")
 
-
-def test_others_exceptions():
     # YouTube [Private video]
     with pytest.raises(ExtractError):
         extract_url("https://www.youtube.com/watch?v=yi50KlsCBio")
