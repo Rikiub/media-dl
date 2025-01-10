@@ -120,9 +120,12 @@ class YDLDownloader:
                     p.status = "downloading"
 
                     p.downloaded_bytes = d.get("downloaded_bytes") or 0
-                    p.total_bytes = (
+                    total_bytes = (
                         d.get("total_bytes") or d.get("total_bytes_estimate") or 0
                     )
+
+                    if total_bytes > p.total_bytes:
+                        p.total_bytes = total_bytes
 
                     p.fragments_completed = d.get("fragment_index") or 0
                     p.fragments_total = d.get("fragment_count") or 0
@@ -136,6 +139,8 @@ class YDLDownloader:
 
                         if p.step_type == "video":
                             p.step_type = "audio"
+
+                    p.total_bytes = p.downloaded_bytes
 
             if p.steps_completed == p.steps_total:
                 p.status = "merging"
