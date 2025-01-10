@@ -1,5 +1,6 @@
+from typing import Literal
 from pathlib import Path
-import json
+import re
 
 from pathvalidate import sanitize_filepath
 
@@ -7,9 +8,8 @@ from media_dl.exceptions import OutputTemplateError
 from media_dl.models.format import Format
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import Stream
+from media_dl.template.keys import OUTPUT_TEMPLATES
 from media_dl.types import StrPath
-
-FILEPATH = Path(Path(__file__).parent, "template.json")
 
 
 def generate_output_template(
@@ -18,6 +18,8 @@ def generate_output_template(
     playlist: Playlist | None = None,
     format: Format | None = None,
 ) -> Path:
+    validate_output(output)
+
     data = {}
 
     if format:
@@ -28,15 +30,17 @@ def generate_output_template(
     if stream:
         data |= stream.model_dump()
 
-    try:
-        template = str(output).format(**data)
-    except KeyError as key:
-        raise OutputTemplateError(f"Key {key} from '{output}' is invalid.")
-
+    template = str(output).format(**data)
     path = Path(sanitize_filepath(template, max_len=250))
     return path
 
 
-def get_template_keys() -> list[str]:
-    with FILEPATH.open() as f:
-        return json.load(f)
+def validate_output(output: StrPath) -> Literal[True]:
+    pattern = r"{(.*?)}"
+    keys: list[str] = re.findall(pattern, str(output))
+
+    for key in keys:
+        if key not in OUTPUT_TEMPLATES:
+            raise OutputTemplateError(f"Key '{{{key}}}' from '{output}' is invalid.")
+
+    return True

@@ -8,7 +8,7 @@ from typing import cast
 from media_dl._ydl import download_subtitle, download_thumbnail, run_postproces
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
-from media_dl.downloader.template import generate_output_template
+from media_dl.template.parser import generate_output_template
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
