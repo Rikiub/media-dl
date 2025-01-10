@@ -1,13 +1,15 @@
 from pathlib import Path
+import json
 
-from pydantic import BaseModel
 from pathvalidate import sanitize_filepath
 
 from media_dl.exceptions import OutputTemplateError
-from media_dl.models.format import AudioFormat, Format, VideoFormat, YDLArgs
+from media_dl.models.format import Format
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import Stream
 from media_dl.types import StrPath
+
+FILEPATH = Path(Path(__file__).parent, "template.json")
 
 
 def generate_output_template(
@@ -35,39 +37,6 @@ def generate_output_template(
     return path
 
 
-def _keys(model: type[BaseModel], by_alias: bool = False) -> list[str]:
-    keys = []
-
-    for name, info in model.model_fields.items():
-        if by_alias and info.alias:
-            keys.append(info.alias)
-        else:
-            keys.append(name)
-
-    return keys
-
-
-EXCLUDED_KEYS = frozenset(
-    {
-        *_keys(YDLArgs),
-        "streams",
-        "formats",
-        "subtitles",
-        "thumbnails",
-        "datetime",
-        "extension",
-        "ext",
-    }
-)
-OUTPUT_TEMPLATES = {
-    *_keys(Playlist, True),
-    *_keys(Stream),
-    *_keys(Format),
-    *_keys(VideoFormat),
-    *_keys(AudioFormat, True),
-}
-
-for key in EXCLUDED_KEYS:
-    OUTPUT_TEMPLATES.discard(key)
-
-OUTPUT_TEMPLATES = frozenset(OUTPUT_TEMPLATES)
+def get_template_keys() -> list[str]:
+    with FILEPATH.open() as f:
+        return json.load(f)
