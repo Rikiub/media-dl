@@ -16,7 +16,7 @@ def _gen_keys() -> list[str]:
     from media_dl.models.stream import Stream
 
     def extract(model: type[BaseModel], by_alias: bool = False) -> list[str]:
-        keys = []
+        keys: list[str] = []
 
         for name, info in model.model_fields.items():
             if by_alias and info.alias:
