@@ -13,13 +13,13 @@ from media_dl._ydl import (
 )
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
-from media_dl.template.parser import generate_output_template
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
+from media_dl.template.parser import generate_output_template
 from media_dl.types import FILE_FORMAT, MUSIC_SITES, StrPath
 
 log = logging.getLogger(__name__)

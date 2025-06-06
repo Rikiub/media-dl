@@ -1,7 +1,7 @@
 """Read pre-serialized keys from JSON to improve startup time on shell autocomplete."""
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 _FILEPATH = Path(Path(__file__).parent, f"{Path(__file__).stem}.json")
 
