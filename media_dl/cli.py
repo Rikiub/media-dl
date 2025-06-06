@@ -5,7 +5,7 @@ except ImportError:
 
 import logging
 from pathlib import Path
-from typing import Annotated, Generator, Literal, Optional, get_args
+from typing import Annotated, Generator, Literal, get_args
 
 from strenum import StrEnum
 
@@ -121,7 +121,7 @@ What format you want request?
         ),
     ] = Format["video"],
     quality: Annotated[
-        Optional[int],
+        int | None,
         Option(
             "--quality",
             "-q",
@@ -130,7 +130,7 @@ What format you want request?
             autocompletion=complete_resolution,
             show_default=False,
         ),
-    ] = 0,
+    ] = None,
     output: Annotated[
         Path,
         Option(
@@ -145,7 +145,7 @@ What format you want request?
         ),
     ] = Path.cwd(),
     ffmpeg: Annotated[
-        Optional[Path],
+        Path | None,
         Option(
             "--ffmpeg",
             help="FFmpeg executable to use.",
@@ -155,10 +155,10 @@ What format you want request?
             dir_okay=False,
         ),
     ] = None,
-    parallel: Annotated[
+    threads: Annotated[
         int,
         Option(
-            "--parallel-max",
+            "--threads",
             help="Limit of simultaneous downloads.",
             rich_help_panel=HelpPanel.downloader,
         ),
@@ -214,7 +214,7 @@ What format you want request?
             quality=quality,
             output=output,
             ffmpeg=ffmpeg,
-            threads=parallel,
+            threads=threads,
             show_progress=not quiet,
         )
     except FileNotFoundError as err:

@@ -171,12 +171,6 @@ class StreamDownloader:
             format_video, format_audio, download_config = self._resolve_format(_stream)
 
             # STATUS: Download
-            [
-                _log_format(_stream.id, f)
-                for f in (format_video, format_audio)
-                if f is not None
-            ]
-
             # Add callbacks
             callbacks = []
 
@@ -225,6 +219,12 @@ class StreamDownloader:
                 playlist=playlist,
                 format=format_video or format_audio,
             )
+
+            [
+                _log_format(_stream.id, f)
+                for f in (format_video, format_audio)
+                if f is not None
+            ]
 
             # Run download
             d = YDLDownloader(
@@ -347,10 +347,10 @@ class StreamDownloader:
                 )
 
                 config.format = "audio"
+            elif audio and config.format == "audio":
+                config.format = "audio"
             elif video:
                 config.format = "video"
-            elif audio:
-                config.format = "audio"
 
         return video, audio, config
 
