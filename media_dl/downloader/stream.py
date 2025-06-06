@@ -5,7 +5,12 @@ import time
 from pathlib import Path
 from typing import cast
 
-from media_dl._ydl import download_subtitle, download_thumbnail, run_postproces
+from media_dl._ydl import (
+    SupportedExtensions,
+    download_subtitle,
+    download_thumbnail,
+    run_postproces,
+)
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.template.parser import generate_output_template
@@ -220,6 +225,23 @@ class StreamDownloader:
                 format=format_video or format_audio,
             )
 
+            # Check if file is duplicated by name
+            for file in output.parent.iterdir():
+                if file.is_file() and file.stem == output.name:
+                    if (
+                        download_config.type == "video"
+                        and file.suffix[1:] in SupportedExtensions.video
+                        or download_config.type == "audio"
+                        and file.suffix[1:] in SupportedExtensions.audio
+                    ):
+                        self._progress.update(task_id, status="Skipped")
+                        log.info(
+                            'Skipped: "%s" (Exists as "%s").',
+                            _stream_display_name(_stream),
+                            file.suffix[1:],
+                        )
+                        return file
+
             [
                 _log_format(_stream.id, f)
                 for f in (format_video, format_audio)
@@ -274,7 +296,7 @@ class StreamDownloader:
             )
 
             # Add extension to filename
-            output = output.parent / f"{output.stem}{downloaded_file.suffix}"
+            output = output.parent / f"{output.name}{downloaded_file.suffix}"
             log.debug('"%s": Final filename will be "%s"', _stream.id, output)
 
             log.debug(
@@ -284,21 +306,11 @@ class StreamDownloader:
             )
 
             # STATUS: Finish
-            # Check if file is duplicate
-            if output.exists():
-                self._progress.update(task_id, status="Skipped")
-                log.info(
-                    'Skipped: "%s" (Exists as "%s").',
-                    _stream_display_name(_stream),
-                    output.suffix[1:],
-                )
-            # Move file
-            else:
-                output.parent.mkdir(parents=True, exist_ok=True)
-                output = Path(shutil.move(downloaded_file, output))
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output = Path(shutil.move(downloaded_file, output))
 
-                self._progress.update(task_id, status="Finished")
-                log.info('Finished: "%s".', _stream_display_name(_stream))
+            self._progress.update(task_id, status="Finished")
+            log.info('Finished: "%s".', _stream_display_name(_stream))
 
             if on_progress:
                 progress_data.status = "finished"
