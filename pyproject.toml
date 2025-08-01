@@ -5,10 +5,8 @@ description = "Download any video/audio you want from a simple URL ✨"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    # CLI
     "typer>=0.12.5",
     "rich>=13.9.2",
-    # Core
     "yt-dlp>=2024.10.7",
     "strenum>=0.4.15",
     "pydantic>=2.9.2",
@@ -18,6 +16,9 @@ dependencies = [
     "mutagen>=1.47.0",
     "pathvalidate>=3.2.1",
 ]
+
+[project.scripts]
+media-dl = "media_dl.cli:run"
 
 [dependency-groups]
 dev = [
@@ -29,9 +30,6 @@ docs = [
     "mkdocs-material>=9.5.42",
     "mkdocstrings>=0.26.2",
 ]
-
-[project.scripts]
-media-dl = "media_dl.cli:run"
 
 [build-system]
 requires = ["uv_build>=0.8.0,<0.9"]
