@@ -5,15 +5,13 @@ description = "Download any video/audio you want from a simple URL ✨"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "typer>=0.12.5",
+    "typer>=0.20.0",
     "rich>=13.9.2",
     "yt-dlp>=2024.10.7",
-    "strenum>=0.4.15",
     "pydantic>=2.9.2",
     "typing-extensions>=4.12.2",
-    "lazy-imports>=0.3.1",
+    "lazy-imports>=1.0.0",
     "pyffmpeg-bin>=1.8.0.1",
-    "mutagen>=1.47.0",
     "pathvalidate>=3.2.1",
 ]
 

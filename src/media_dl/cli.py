@@ -3,11 +3,10 @@ try:
 except ImportError:
     raise ImportError("Typer is required to use CLI features.")
 
+from enum import Enum
 import logging
 from pathlib import Path
 from typing import Annotated, Generator, Literal, get_args
-
-from strenum import StrEnum
 
 from media_dl.logging import init_logging
 from media_dl.rich import Status
@@ -18,12 +17,11 @@ app = Typer(rich_markup_mode="rich")
 
 
 # Typer: types
-Format = StrEnum("Format", get_args(FILE_FORMAT))
-SearchFrom = StrEnum("SearchFrom", get_args(Literal["url", SEARCH_PROVIDER]))
+SEARCH_TARGET = Literal["url", SEARCH_PROVIDER]
 
 
 # Typer: helpers
-class HelpPanel(StrEnum):
+class HelpPanel(str, Enum):
     file = "File"
     downloader = "Downloader"
     other = "Other"
@@ -40,7 +38,7 @@ def show_version(show: bool) -> None:
 
 # Typer: completions
 def complete_query(incomplete: str) -> Generator[str, None, None]:
-    for name in SearchFrom:
+    for name in get_args(SEARCH_TARGET):
         if name.value.startswith(incomplete):
             yield name.value + ":"
 
@@ -58,16 +56,19 @@ def complete_output(incomplete: str) -> Generator[str, None, None]:
             yield incomplete + key + "}"
 
 
-def parse_queries(queries: list[str]) -> Generator[tuple[SearchFrom, str], None, None]:
-    providers = [entry.name for entry in SearchFrom]
+def parse_queries(
+    queries: list[str],
+) -> Generator[tuple[SEARCH_TARGET, str], None, None]:
+    providers: list[SEARCH_TARGET] = [entry for entry in get_args(SEARCH_TARGET)]
+    target: SEARCH_TARGET
 
     for entry in queries:
         selection = entry.split(":")[0]
 
         if entry.startswith(("http://", "https://")):
-            target = SearchFrom["url"]
+            target = "url"
         elif selection in providers:
-            target = SearchFrom[selection]
+            target = selection
             entry = entry.split(":")[1]
         else:
             completed = [i for i in complete_query(selection)]
@@ -99,7 +100,7 @@ def download(
         ),
     ],
     format: Annotated[
-        Format,
+        FILE_FORMAT,
         Option(
             "--format",
             "-f",
@@ -119,7 +120,7 @@ What format you want request?
             show_default=False,
             rich_help_panel=HelpPanel.file,
         ),
-    ] = Format["video"],
+    ] = "video",
     quality: Annotated[
         int | None,
         Option(
@@ -210,7 +211,7 @@ What format you want request?
     # Initialize Downloader
     try:
         downloader = StreamDownloader(
-            format=format.value,
+            format=format,
             quality=quality,
             output=output,
             ffmpeg=ffmpeg,
@@ -228,7 +229,7 @@ What format you want request?
     for target, entry in parse_queries(query):
         try:
             with Status("Please wait", disable=quiet):
-                if target.value == "url":
+                if target == "url":
                     log.info('🔎 Extract URL: "%s".', entry)
 
                     try:
@@ -237,8 +238,8 @@ What format you want request?
                         result = Playlist.from_url(entry)
                         log.info('🔎 Playlist title: "%s".', result.title)
                 else:
-                    log.info('🔎 Search from %s: "%s".', target.value, entry)
-                    result = SearchQuery(entry, target.value).streams[0]
+                    log.info('🔎 Search from %s: "%s".', target, entry)
+                    result = SearchQuery(entry, target).streams[0]
 
             downloader.download_all(result)
             log.info("✅ Download Finished.")
