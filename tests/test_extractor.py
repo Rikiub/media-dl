@@ -7,7 +7,7 @@ from media_dl.models.stream import Stream
 from media_dl.types import SEARCH_PROVIDER
 
 
-def extract_url(url: str):
+def extract_url(url: str) -> Stream | Playlist:
     try:
         result = Stream.from_url(url)
     except TypeError:

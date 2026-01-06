@@ -4,10 +4,12 @@ from media_dl import Playlist, Stream, StreamDownloader, AudioFormat, VideoForma
 
 try:
     from rich import print
-except ImportError:
-    from pprint import pprint
 
-    print = pprint
+    pprint = print
+except ImportError:
+    from pprint import pprint as _pprint
+
+    pprint = _pprint
 
 
 TEMPDIR = TemporaryDirectory()
@@ -25,7 +27,7 @@ def test_simple():
             stream
         )
 
-        print(path)
+        pprint(path)
 
 
 def test_advanced():
@@ -36,13 +38,13 @@ def test_advanced():
             result = Stream.from_url(URL)
             paths = downloader.download(
                 result,
-                on_progress=lambda *args: print(*args),
+                on_progress=lambda *args: pprint(*args),
             )
         except TypeError:
             result = Playlist.from_url(PLAYLIST)
             paths = downloader.download_all(result)
 
-        print(paths)
+        pprint(paths)
 
 
 def test_format_filter():
@@ -50,21 +52,21 @@ def test_format_filter():
 
     fmt = formats.filter("video")
     assert all(isinstance(f, VideoFormat) for f in fmt)
-    print("VIDEOS:")
-    print(fmt)
+    pprint("VIDEOS:")
+    pprint(fmt)
 
     fmt = formats.filter("audio")
     assert all(isinstance(f, AudioFormat) for f in fmt)
-    print("AUDIOS:")
-    print(fmt)
+    pprint("AUDIOS:")
+    pprint(fmt)
 
     fmt = formats.get_best_quality()
     assert fmt.quality == 1080
-    print("BEST QUALITY:")
-    print(fmt)
+    pprint("BEST QUALITY:")
+    pprint(fmt)
 
     ID = "137"
     fmt = formats.get_by_id(ID)
     assert fmt.id == ID
-    print("BY ID:")
-    print(fmt)
+    pprint("BY ID:")
+    pprint(fmt)
