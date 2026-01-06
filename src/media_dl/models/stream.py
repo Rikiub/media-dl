@@ -3,7 +3,12 @@ from __future__ import annotations
 import datetime
 from typing import Annotated
 
-from pydantic import AliasChoices, Field, PlainSerializer
+from pydantic import (
+    AliasChoices,
+    Field,
+    PlainSerializer,
+    BeforeValidator,
+)
 from typing_extensions import Self
 
 from media_dl.models.base import ExtractID
@@ -18,7 +23,9 @@ DatetimeTimestamp = Annotated[
 class LazyStream(MusicMetadata, ExtractID):
     title: str = ""
     uploader: Annotated[
-        str, Field(validation_alias=AliasChoices("creator", "uploader"))
+        str,
+        BeforeValidator(lambda d: d.split(",")[0]),
+        Field(validation_alias=AliasChoices("creator", "uploader")),
     ] = ""
     uploader_id: str | None = None
     description: str | None = None
