@@ -2,6 +2,7 @@ import logging
 
 from rich.logging import RichHandler
 
+from media_dl.types import APPNAME
 from media_dl.rich import CONSOLE
 
 
@@ -32,7 +33,6 @@ def init_logging(level: int):
     else:
         verbose = True
 
-    msg_format = "%(message)s"
     rich_handler = RichHandler(
         level=level,
         show_level=verbose,
@@ -41,11 +41,10 @@ def init_logging(level: int):
         markup=True,
         console=CONSOLE,
     )
-    rich_handler.setFormatter(ColorFormatter(msg_format))
+    rich_handler.setFormatter(ColorFormatter())
 
     logging.basicConfig(
         level=level,
-        format=msg_format,
         datefmt="[%X]",
         handlers=[rich_handler],
     )
@@ -54,3 +53,6 @@ def init_logging(level: int):
     logging.logMultiprocessing = False
     logging.logProcesses = False
     logging.logThreads = False
+
+
+logger = logging.getLogger(APPNAME)

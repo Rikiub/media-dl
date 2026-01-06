@@ -1,17 +1,15 @@
 """Raw info extractor."""
 
-import logging
 from typing import cast
 
 from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
+from media_dl.logging import logger
 from media_dl.ydl.wrapper import YTDLP
 from media_dl.ydl.messages import format_except_message
 from media_dl.exceptions import ExtractError
 from media_dl.types import SEARCH_PROVIDER, InfoDict
-
-log = logging.getLogger(__name__)
 
 
 def is_playlist(info: InfoDict) -> bool:
@@ -45,14 +43,14 @@ def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> In
         case _:
             raise ValueError(f"{provider} is invalid. Should be: {SEARCH_PROVIDER}")
 
-    log.debug('Search from "%s": "%s".', provider, query)
+    logger.debug('Search from "%s": "%s".', provider, query)
     return _fetch_query(prov + query)
 
 
 def extract_url(url: str) -> InfoDict:
     """Extract info from URL."""
 
-    log.debug("Extract URL: %s", url)
+    logger.debug("Extract URL: %s", url)
     return _fetch_query(url)
 
 

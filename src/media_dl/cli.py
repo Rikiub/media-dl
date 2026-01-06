@@ -3,16 +3,15 @@ try:
 except ImportError:
     raise ImportError("Typer is required to use CLI features.")
 
-from enum import Enum
 import logging
+from enum import Enum
 from pathlib import Path
 from typing import Annotated, Generator, Literal, get_args
 
-from media_dl.logging import init_logging
+from media_dl.logging import init_logging, logger
 from media_dl.rich import Status
 from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
-log = logging.getLogger(__name__)
 app = Typer(rich_markup_mode="rich")
 
 
@@ -222,7 +221,7 @@ What format you want request?
         raise BadParameter(str(err))
 
     if downloader.config.convert and not downloader.config.ffmpeg:
-        log.warning(
+        logger.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
         )
 
@@ -230,23 +229,23 @@ What format you want request?
         try:
             with Status("Please wait", disable=quiet):
                 if target == "url":
-                    log.info('🔎 Extract URL: "%s".', entry)
+                    logger.info('🔎 Extract URL: "%s".', entry)
 
                     try:
                         result = Stream.from_url(entry)
                     except TypeError:
                         result = Playlist.from_url(entry)
-                        log.info('🔎 Playlist title: "%s".', result.title)
+                        logger.info('🔎 Playlist title: "%s".', result.title)
                 else:
-                    log.info('🔎 Search from %s: "%s".', target, entry)
+                    logger.info('🔎 Search from %s: "%s".', target, entry)
                     result = SearchQuery(entry, target).streams[0]
 
             downloader.download_all(result)
-            log.info("✅ Download Finished.")
+            logger.info("✅ Download Finished.")
         except (ExtractError, DownloadError) as err:
-            log.error("❌ %s", str(err))
+            logger.error("❌ %s", str(err))
         finally:
-            log.info("")
+            logger.info("")
 
 
 def run():
