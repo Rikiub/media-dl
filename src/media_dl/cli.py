@@ -68,7 +68,7 @@ def parse_queries(
         if entry.startswith(("http://", "https://")):
             target = "url"
         elif selection in providers:
-            target = selection
+            target = selection  # ty:ignore[invalid-assignment]
             entry = entry.split(":")[1]
         else:
             completed = [i for i in complete_query(selection)]
