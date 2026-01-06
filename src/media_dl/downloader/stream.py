@@ -1,23 +1,22 @@
-from media_dl.logging import logger
 import concurrent.futures as cf
 import shutil
 import time
 from pathlib import Path
 from typing import cast
 
-from media_dl.ydl.types import SupportedExtensions
-from media_dl.ydl.helpers import download_subtitle, download_thumbnail, run_postproces
-
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
+from media_dl.logging import logger
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
 from media_dl.template.parser import generate_output_template
 from media_dl.types import FILE_FORMAT, MUSIC_SITES, StrPath
+from media_dl.ydl.helpers import download_subtitle, download_thumbnail, run_postproces
+from media_dl.ydl.types import SupportedExtensions
 
 ExtractResult = list[LazyStream] | LazyStream | Playlist
 

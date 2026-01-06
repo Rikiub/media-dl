@@ -5,11 +5,11 @@ from typing import cast
 from yt_dlp import DownloadError
 from yt_dlp.networking.exceptions import RequestError
 
-from media_dl.logging import logger
-from media_dl.ydl.wrapper import YTDLP
-from media_dl.ydl.messages import format_except_message
 from media_dl.exceptions import ExtractError
+from media_dl.logging import logger
 from media_dl.types import SEARCH_PROVIDER, InfoDict
+from media_dl.ydl.messages import format_except_message
+from media_dl.ydl.wrapper import YTDLP
 
 
 def is_playlist(info: InfoDict) -> bool:

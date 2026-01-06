@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from media_dl.ydl.wrapper import YTDLP
 from media_dl.types import InfoDict, StrPath
+from media_dl.ydl.wrapper import YTDLP
 
 
 def run_postproces(file: Path, info: InfoDict, params: dict) -> Path:

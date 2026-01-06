@@ -2,11 +2,10 @@
 
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from .__init_exports import *  # noqa: F403
 else:
-    from lazy_imports import LazyModule, load, module_source, as_package
+    from lazy_imports import LazyModule, as_package, load, module_source
 
     load(
         LazyModule(

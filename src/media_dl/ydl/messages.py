@@ -1,5 +1,5 @@
-from typing import NamedTuple
 from collections.abc import Callable
+from typing import NamedTuple
 
 
 class ExceptMsg(NamedTuple):

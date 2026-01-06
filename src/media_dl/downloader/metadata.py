@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from media_dl.ydl import helpers
 from media_dl.models.metadata import Subtitle, Thumbnail
 from media_dl.types import StrPath
+from media_dl.ydl import helpers
 
 
 def download_thumbnails(filename: StrPath, thumbnails: list[Thumbnail]) -> Path | None:

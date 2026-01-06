@@ -2,8 +2,8 @@ import logging
 
 from rich.logging import RichHandler
 
-from media_dl.types import APPNAME
 from media_dl.rich import CONSOLE
+from media_dl.types import APPNAME
 
 
 class ColorFormatter(logging.Formatter):

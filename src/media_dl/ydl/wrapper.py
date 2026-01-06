@@ -1,7 +1,7 @@
 import logging
 
-from yt_dlp.YoutubeDL import YoutubeDL
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
+from yt_dlp.YoutubeDL import YoutubeDL
 
 
 class YTDLP(YoutubeDL):

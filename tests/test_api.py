@@ -1,6 +1,6 @@
 from tempfile import TemporaryDirectory
 
-from media_dl import Playlist, Stream, StreamDownloader, AudioFormat, VideoFormat
+from media_dl import AudioFormat, Playlist, Stream, StreamDownloader, VideoFormat
 
 try:
     from rich import print
