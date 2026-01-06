@@ -10,7 +10,8 @@ TEMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
 
 # Functions
 def get_tempfile() -> Path:
-    return Path(tempfile.mktemp(dir=TEMP_DIR))
+    with tempfile.NamedTemporaryFile(dir=TEMP_DIR, delete=False) as file:
+        return Path(file.name)
 
 
 def get_global_ffmpeg() -> Path | None:

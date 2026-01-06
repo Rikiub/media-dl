@@ -5,12 +5,9 @@ import time
 from pathlib import Path
 from typing import cast
 
-from media_dl._ydl import (
-    SupportedExtensions,
-    download_subtitle,
-    download_thumbnail,
-    run_postproces,
-)
+from media_dl.ydl.types import SupportedExtensions
+from media_dl.ydl.helpers import download_subtitle, download_thumbnail, run_postproces
+
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.progress import DownloadProgress

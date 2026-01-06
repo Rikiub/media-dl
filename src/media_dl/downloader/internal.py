@@ -4,7 +4,8 @@ from typing import Annotated, Callable, Literal, cast, get_args
 from pydantic import BaseModel, Field
 from yt_dlp import DownloadError as BaseDownloadError
 
-from media_dl._ydl import YTDLP, format_except_message
+from media_dl.ydl.wrapper import YTDLP
+from media_dl.ydl.messages import format_except_message
 from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.format import Format
 from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION, InfoDict

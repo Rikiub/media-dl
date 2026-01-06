@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast, get_args
 
-from media_dl._ydl import POST_MUSIC
+from media_dl.ydl.wrapper import POST_MUSIC
 from media_dl.path import check_executable_exists, get_global_ffmpeg
 from media_dl.types import (
     AUDIO_EXTENSION,
