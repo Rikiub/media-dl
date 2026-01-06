@@ -43,14 +43,18 @@ def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> In
         case _:
             raise ValueError(f"{provider} is invalid. Should be: {SEARCH_PROVIDER}")
 
-    logger.debug('Search from "%s": "%s".', provider, query)
+    logger.debug(
+        'Search from "{provider}": "{query}".',
+        provider=provider,
+        query=query,
+    )
     return _fetch_query(prov + query)
 
 
 def extract_url(url: str) -> InfoDict:
     """Extract info from URL."""
 
-    logger.debug("Extract URL: %s", url)
+    logger.debug("Extract URL: {url}", url=url)
     return _fetch_query(url)
 
 

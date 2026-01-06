@@ -4,11 +4,12 @@ import time
 from pathlib import Path
 from typing import cast
 
+from loguru import logger
+
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
-from media_dl.logging import logger
 from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
@@ -59,7 +60,7 @@ class StreamDownloader:
         self._threads = threads
         self._progress = DownloadProgress(disable=not show_progress)
 
-        logger.debug("Download config: %s", self.config.as_dict())
+        logger.debug("Download config: {config}", config=self.config.as_dict())
 
     def download_all(self, media: ExtractResult) -> list[Path]:
         """Download any result.
@@ -75,7 +76,7 @@ class StreamDownloader:
         streams = _media_to_list(media)
         paths: list[Path] = []
 
-        logger.debug("Founded %s entries.", len(streams))
+        logger.debug("Founded {length} entries.", length=len(streams))
         self._progress.counter.reset(len(streams), visible=bool(playlist))
 
         with self._progress:
@@ -107,10 +108,10 @@ class StreamDownloader:
                     executor.shutdown(wait=True, cancel_futures=True)
 
                     logger.debug(
-                        "%s of %s streams completed. %s errors.",
-                        success,
-                        len(streams),
-                        errors,
+                        "{current} of {total} streams completed. {errors} errors.",
+                        current=success,
+                        total=len(streams),
+                        errors=errors,
                     )
         return paths
 
@@ -164,7 +165,7 @@ class StreamDownloader:
             else:
                 raise TypeError(stream)
 
-            logger.debug('"%s": Downloading stream.', _stream.id)
+            _log_stream(stream, "Downloading stream.")
 
             # Resolve formats
             format_video, format_audio, download_config = self._resolve_format(_stream)
@@ -230,16 +231,23 @@ class StreamDownloader:
                     ):
                         self._progress.update(task_id, status="Skipped")
                         logger.info(
-                            'Skipped: "%s" (Exists as "%s").',
-                            _stream_display_name(_stream),
-                            file.suffix[1:],
+                            'Skipped: "{stream}" (Exists as "{extension}").',
+                            stream=_stream_display_name(_stream),
+                            extension=file.suffix[1:],
                         )
                         return file
 
             [
-                _log_format(_stream.id, f)
-                for f in (format_video, format_audio)
-                if f is not None
+                _log_stream(
+                    stream,
+                    'Downloading {type} format "{format_id}" (extension:{format_extension} | quality:{format_quality})',
+                    type="video" if isinstance(fmt, VideoFormat) else "audio",
+                    format_id=fmt.id,
+                    format_extension=fmt.extension,
+                    format_quality=fmt.display_quality,
+                )
+                for fmt in (format_video, format_audio)
+                if fmt is not None
             ]
 
             # Run download
@@ -258,7 +266,7 @@ class StreamDownloader:
                 progress_data.status = "postprocessing"
                 on_progress(progress_data)
             self._progress.update(task_id, status="Processing")
-            logger.debug('"%s": Postprocessing downloaded file.', _stream.id)
+            logger.debug('"{id}": Postprocessing downloaded file.', id=_stream.id)
 
             stream_dict = _stream.model_dump(by_alias=True)
 
@@ -271,12 +279,20 @@ class StreamDownloader:
             if d := _stream.thumbnails and download_thumbnail(
                 downloaded_file, stream_dict
             ):
-                logger.debug('"%s": Thumbnail downloaded: "%s"', _stream.id, d)
+                logger.debug(
+                    '"{id}": Thumbnail downloaded: "{file}"',
+                    id=_stream.id,
+                    file=d,
+                )
 
             if d := _stream.subtitles and download_subtitle(
                 downloaded_file, stream_dict
             ):
-                logger.debug('"%s": Subtitle downloaded: "%s"', _stream.id, d)
+                logger.debug(
+                    '"{id}": Subtitle downloaded: "{file}"',
+                    id=_stream.id,
+                    file=d,
+                )
 
             # Run postprocessing
             params = download_config.ydl_params(
@@ -289,14 +305,18 @@ class StreamDownloader:
                 params=params,
             )
 
-            # Add extension to filename
+            # Add extension to filepath
             output = output.parent / f"{output.name}{downloaded_file.suffix}"
-            logger.debug('"%s": Final filename will be "%s"', _stream.id, output)
+            logger.debug(
+                '"{id}": Final filepath will be "{filepath}"',
+                id=_stream.id,
+                filepath=output,
+            )
 
             logger.debug(
-                '"%s": Postprocessing finished, saved as "%s".',
-                _stream.id,
-                downloaded_file.suffix[1:],
+                '"{id}": Postprocessing finished, saved as "{extension}".',
+                id=_stream.id,
+                extension=downloaded_file.suffix[1:],
             )
 
             # STATUS: Finish
@@ -304,7 +324,7 @@ class StreamDownloader:
             output = Path(shutil.move(downloaded_file, output))
 
             self._progress.update(task_id, status="Finished")
-            logger.info('Finished: "%s".', _stream_display_name(_stream))
+            logger.info('Finished: "{stream}".', stream=_stream_display_name(_stream))
 
             if on_progress:
                 progress_data.status = "finished"
@@ -312,7 +332,11 @@ class StreamDownloader:
 
             return output
         except ConnectionError as err:
-            logger.error('Error: "%s": %s', _stream_display_name(_stream), str(err))
+            logger.error(
+                'Error: "{stream}": {error}',
+                stream=_stream_display_name(_stream),
+                error=str(err),
+            )
             self._progress.update(task_id, status="Error")
             raise DownloadError(str(err))
         finally:
@@ -345,11 +369,11 @@ class StreamDownloader:
 
         if not config.convert:
             if audio and _url_is_music_site(stream.url):
-                logger.debug('"%s": Detected as music site.', stream.id)
+                logger.debug('"{id}": Detected as music site.', id=stream.id)
 
                 logger.debug(
-                    '"%s": Config changed to "audio".',
-                    stream.id,
+                    '"{id}": Config changed to "audio".',
+                    id=stream.id,
                 )
 
                 config.format = "audio"
@@ -380,15 +404,9 @@ class StreamDownloader:
             return format[-1]
 
 
-def _log_format(stream_id: str, format: Format) -> None:
-    logger.debug(
-        '"%s": Downloading %s format "%s" (%s %s)',
-        stream_id,
-        "video" if isinstance(format, VideoFormat) else "audio",
-        format.id,
-        format.extension,
-        format.display_quality,
-    )
+def _log_stream(stream: Stream, log: str, **kwargs):
+    text = f'"{stream.id}": {log}'
+    logger.debug(text, **kwargs)
 
 
 def _media_to_list(media: ExtractResult) -> list[LazyStream]:

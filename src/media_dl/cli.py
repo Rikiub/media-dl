@@ -1,14 +1,15 @@
+from media_dl.logging import init_logging, LOGGING_LEVELS
+
 try:
     from typer import Argument, BadParameter, Option, Typer
 except ImportError:
     raise ImportError("Typer is required to use CLI features.")
 
-import logging
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Generator, Literal, get_args
 
-from media_dl.logging import init_logging, logger
+from loguru import logger
 from media_dl.rich import Status
 from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
@@ -67,8 +68,8 @@ def parse_queries(
         if entry.startswith(("http://", "https://")):
             target = "url"
         elif selection in providers:
-            target = selection  # ty:ignore[invalid-assignment]
-            entry = entry.split(":")[1]
+            target = selection  # type: ignore
+            entry = entry.split(":")[1].strip()
         else:
             completed = [i for i in complete_query(selection)]
 
@@ -191,12 +192,13 @@ What format you want request?
 ):
     """Download any video/audio you want from a simple URL ✨"""
 
+    log_level: LOGGING_LEVELS
     if quiet:
-        log_level = logging.CRITICAL
+        log_level = "CRITICAL"
     elif verbose:
-        log_level = logging.DEBUG
+        log_level = "DEBUG"
     else:
-        log_level = logging.INFO
+        log_level = "INFO"
 
     init_logging(log_level)
 
@@ -229,21 +231,25 @@ What format you want request?
         try:
             with Status("Please wait", disable=quiet):
                 if target == "url":
-                    logger.info('🔎 Extract URL: "%s".', entry)
+                    logger.info('🔎 Extract URL: "{url}".', url=query)
 
                     try:
                         result = Stream.from_url(entry)
                     except TypeError:
                         result = Playlist.from_url(entry)
-                        logger.info('🔎 Playlist title: "%s".', result.title)
+                        logger.info('🔎 Playlist title: "{title}".', title=result.title)
                 else:
-                    logger.info('🔎 Search from %s: "%s".', target, entry)
+                    logger.info(
+                        '🔎 Search from {extractor}: "{query}".',
+                        extractor=target,
+                        query=entry,
+                    )
                     result = SearchQuery(entry, target).streams[0]
 
             downloader.download_all(result)
             logger.info("✅ Download Finished.")
         except (ExtractError, DownloadError) as err:
-            logger.error("❌ %s", str(err))
+            logger.error("❌ {error}", error=str(err))
         finally:
             logger.info("")
 

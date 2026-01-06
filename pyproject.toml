@@ -13,6 +13,7 @@ dependencies = [
     "lazy-imports>=1.0.0",
     "pyffmpeg-bin>=1.8.0.1",
     "pathvalidate>=3.2.1",
+    "loguru>=0.7.3",
 ]
 
 [project.scripts]

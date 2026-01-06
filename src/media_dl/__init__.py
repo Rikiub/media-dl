@@ -6,6 +6,9 @@ if TYPE_CHECKING:
     from .__init_exports import *  # noqa: F403
 else:
     from lazy_imports import LazyModule, as_package, load, module_source
+    from loguru import logger
+
+    logger.disable("media_dl")
 
     load(
         LazyModule(
