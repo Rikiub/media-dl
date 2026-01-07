@@ -1,7 +1,7 @@
-from typing import Literal
-from loguru import logger
 import logging
+from typing import Literal
 
+from loguru import logger
 from rich.logging import RichHandler
 
 from media_dl.rich import CONSOLE

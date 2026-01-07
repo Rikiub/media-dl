@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import bisect
-from media_dl.types import FORMAT_TYPE
-
 from functools import cached_property
+from typing import Generic, Literal, overload
+
 from pydantic import RootModel
 from typing_extensions import Self, TypeVar
-from typing import overload, Generic, Literal
 
-from media_dl.models.formats.types import Format, FormatType, VideoFormat, AudioFormat
 from media_dl.models.formats.codecs import get_codec_rank
+from media_dl.models.formats.types import AudioFormat, Format, FormatType, VideoFormat
+from media_dl.types import FORMAT_TYPE
 
 F = TypeVar("F", default=Format)
 

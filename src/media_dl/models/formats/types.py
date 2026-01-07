@@ -1,16 +1,18 @@
-from media_dl.ydl.types import SupportedExtensions
-from abc import abstractmethod, ABC
+from abc import ABC, abstractmethod
 from typing import Annotated
+
 from pydantic import (
-    field_validator,
-    model_serializer,
-    SerializerFunctionWrapHandler,
     AfterValidator,
     BaseModel,
     Field,
-    field_serializer,
     OnErrorOmit,
+    SerializerFunctionWrapHandler,
+    field_serializer,
+    field_validator,
+    model_serializer,
 )
+
+from media_dl.ydl.types import SupportedExtensions
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 

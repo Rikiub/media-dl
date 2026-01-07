@@ -1,5 +1,6 @@
-import pytest
 from tempfile import TemporaryDirectory
+
+import pytest
 
 from media_dl import AudioFormat, Playlist, Stream, StreamDownloader, VideoFormat
 from media_dl.models.formats.list import FormatList

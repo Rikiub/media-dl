@@ -1,4 +1,4 @@
-from media_dl.logging import init_logging, LOGGING_LEVELS
+from media_dl.logging import LOGGING_LEVELS, init_logging
 
 try:
     from typer import Argument, BadParameter, Option, Typer
@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Annotated, Generator, Literal, get_args
 
 from loguru import logger
+
 from media_dl.rich import Status
 from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
