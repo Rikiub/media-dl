@@ -1,5 +1,3 @@
-from media_dl.logging import LOGGING_LEVELS, init_logging
-
 try:
     from typer import Argument, BadParameter, Option, Typer
 except ImportError:
@@ -11,6 +9,7 @@ from typing import Annotated, Generator, Literal, get_args
 
 from loguru import logger
 
+from media_dl.logging import LOGGING_LEVELS, init_logging
 from media_dl.rich import Status
 from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
 
