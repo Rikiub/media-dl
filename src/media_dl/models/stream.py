@@ -8,11 +8,12 @@ from pydantic import (
     Field,
     PlainSerializer,
     BeforeValidator,
+    AfterValidator,
 )
 from typing_extensions import Self
 
 from media_dl.models.base import ExtractID
-from media_dl.models.format import FormatList
+from media_dl.models.formats.list import FormatList
 from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
 
 DatetimeTimestamp = Annotated[
@@ -51,7 +52,11 @@ class Stream(LazyStream):
 
     chapters: list[Chapter] | None = None
     subtitles: Subtitles | None = None
-    formats: Annotated[FormatList, Field(min_length=1)]
+    formats: Annotated[
+        FormatList,
+        AfterValidator(lambda list: list.sort_by("best")),
+        Field(min_length=1),
+    ]
 
     @classmethod
     def from_json(cls, json: str) -> Self:

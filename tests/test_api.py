@@ -1,6 +1,8 @@
+import pytest
 from tempfile import TemporaryDirectory
 
 from media_dl import AudioFormat, Playlist, Stream, StreamDownloader, VideoFormat
+from media_dl.models.formats.list import FormatList
 
 try:
     from rich import print
@@ -47,26 +49,31 @@ def test_advanced():
         pprint(paths)
 
 
-def test_format_filter():
-    formats = Stream.from_url(URL).formats
+@pytest.fixture(scope="session")
+def formats():
+    return Stream.from_url(URL).formats
 
-    fmt = formats.filter("video")
-    assert all(isinstance(f, VideoFormat) for f in fmt)
-    pprint("VIDEOS:")
-    pprint(fmt)
 
-    fmt = formats.filter("audio")
-    assert all(isinstance(f, AudioFormat) for f in fmt)
-    pprint("AUDIOS:")
-    pprint(fmt)
+class TestFormatsFilter:
+    def test_video_type(self, formats: FormatList):
+        fmt = formats.only_video()
+        assert all(isinstance(f, VideoFormat) for f in fmt)
+        pprint("VIDEOS:")
+        pprint(fmt)
 
-    fmt = formats.get_best_quality()
-    assert fmt.quality == 1080
-    pprint("BEST QUALITY:")
-    pprint(fmt)
+    def test_audio_type(self, formats: FormatList):
+        fmt = formats.only_audio()
+        assert all(isinstance(f, AudioFormat) for f in fmt)
+        pprint("AUDIOS:")
+        pprint(fmt)
 
-    ID = "137"
-    fmt = formats.get_by_id(ID)
-    assert fmt.id == ID
-    pprint("BY ID:")
-    pprint(fmt)
+    def test_closest_quality(self, formats: FormatList):
+        fmt = formats.get_closest_quality(720)
+        assert fmt.quality == 720
+
+    def test_get_by_id(self, formats: FormatList):
+        ID = "137"
+        fmt = formats.get_by_id(ID)
+        assert fmt.id == ID
+        pprint("BY ID:")
+        pprint(fmt)

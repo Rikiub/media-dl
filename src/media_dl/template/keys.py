@@ -11,7 +11,7 @@ def _gen_keys() -> list[str]:
 
     from pydantic import BaseModel
 
-    from media_dl.models.format import AudioFormat, Format, VideoFormat, YDLArgs
+    from media_dl.models.formats.types import AudioFormat, Format, VideoFormat, YDLArgs
     from media_dl.models.playlist import Playlist
     from media_dl.models.stream import Stream
 

@@ -10,7 +10,8 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
-from media_dl.models.format import AudioFormat, Format, FormatList, VideoFormat
+from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
+from media_dl.models.formats.list import FormatList
 from media_dl.models.playlist import Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
@@ -266,7 +267,7 @@ class StreamDownloader:
                 progress_data.status = "postprocessing"
                 on_progress(progress_data)
             self._progress.update(task_id, status="Processing")
-            logger.debug('"{id}": Postprocessing downloaded file.', id=_stream.id)
+            _log_stream(stream, "Postprocessing downloaded file.")
 
             stream_dict = _stream.model_dump(by_alias=True)
 
@@ -279,8 +280,9 @@ class StreamDownloader:
             if d := _stream.thumbnails and download_thumbnail(
                 downloaded_file, stream_dict
             ):
-                logger.debug(
-                    '"{id}": Thumbnail downloaded: "{file}"',
+                _log_stream(
+                    stream,
+                    'Thumbnail downloaded: "{file}"',
                     id=_stream.id,
                     file=d,
                 )
@@ -288,8 +290,9 @@ class StreamDownloader:
             if d := _stream.subtitles and download_subtitle(
                 downloaded_file, stream_dict
             ):
-                logger.debug(
-                    '"{id}": Subtitle downloaded: "{file}"',
+                _log_stream(
+                    stream,
+                    'Subtitle downloaded: "{file}"',
                     id=_stream.id,
                     file=d,
                 )
@@ -307,14 +310,16 @@ class StreamDownloader:
 
             # Add extension to filepath
             output = output.parent / f"{output.name}{downloaded_file.suffix}"
-            logger.debug(
-                '"{id}": Final filepath will be "{filepath}"',
+            _log_stream(
+                stream,
+                'Final filepath will be "{filepath}"',
                 id=_stream.id,
                 filepath=output,
             )
 
-            logger.debug(
-                '"{id}": Postprocessing finished, saved as "{extension}".',
+            _log_stream(
+                stream,
+                'Postprocessing finished, saved as "{extension}".',
                 id=_stream.id,
                 extension=downloaded_file.suffix[1:],
             )
@@ -369,13 +374,8 @@ class StreamDownloader:
 
         if not config.convert:
             if audio and _url_is_music_site(stream.url):
-                logger.debug('"{id}": Detected as music site.', id=stream.id)
-
-                logger.debug(
-                    '"{id}": Config changed to "audio".',
-                    id=stream.id,
-                )
-
+                _log_stream(stream, "Detected as music site.", id=stream.id)
+                _log_stream(stream, 'Config changed to "audio".', id=stream.id)
                 config.format = "audio"
             elif audio and config.format == "audio":
                 config.format = "audio"
@@ -392,8 +392,11 @@ class StreamDownloader:
         # Filter by extension
         if f := config.convert and formats.filter(extension=config.convert):
             format = f
+
         # Filter by type
-        elif f := formats.filter(type=config.type):
+        elif f := config.type == "video" and formats.only_video():
+            format = f
+        elif f := config.type == "audio" and formats.only_audio():
             format = f
         else:
             return None
@@ -401,10 +404,10 @@ class StreamDownloader:
         if config.quality:
             return format.get_closest_quality(config.quality)
         else:
-            return format[-1]
+            return format[0]
 
 
-def _log_stream(stream: Stream, log: str, **kwargs):
+def _log_stream(stream: LazyStream, log: str, **kwargs):
     text = f'"{stream.id}": {log}'
     logger.debug(text, **kwargs)
 
