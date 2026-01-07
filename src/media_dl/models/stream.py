@@ -25,7 +25,7 @@ class LazyStream(MusicMetadata, ExtractID):
     title: str = ""
     uploader: Annotated[
         str,
-        BeforeValidator(lambda d: d.split(",")[0]),
+        BeforeValidator(lambda d: "" if not d else d.split(",")[0]),
         Field(validation_alias=AliasChoices("creator", "uploader")),
     ] = ""
     uploader_id: str | None = None

@@ -84,7 +84,7 @@ class TestSite:
         )
 
     def test_pinterest(self):
-        extract_url("https://pin.it/61ZG0pA41")
+        extract_url("https://www.pinterest.com/pin/762304674460692892/")
 
     def test_soundcloud(self):
         extract_url("https://api.soundcloud.com/tracks/1269676381")

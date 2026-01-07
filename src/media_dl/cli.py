@@ -39,8 +39,8 @@ def show_version(show: bool) -> None:
 # Typer: completions
 def complete_query(incomplete: str) -> Generator[str, None, None]:
     for name in get_args(SEARCH_TARGET):
-        if name.value.startswith(incomplete):
-            yield name.value + ":"
+        if name.startswith(incomplete):
+            yield name + ":"
 
 
 def complete_resolution() -> Generator[str, None, None]:
@@ -231,7 +231,7 @@ What format you want request?
         try:
             with Status("Please wait", disable=quiet):
                 if target == "url":
-                    logger.info('🔎 Extract URL: "{url}".', url=query)
+                    logger.info('🔎 Extract URL: "{url}".', url=entry)
 
                     try:
                         result = Stream.from_url(entry)

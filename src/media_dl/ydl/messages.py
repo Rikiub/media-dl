@@ -29,7 +29,7 @@ MESSAGES: list[ExceptMsg] = [
     ),
     ExceptMsg(
         matchs=["Unsupported URL"],
-        text=lambda v: "Unsupported URL: " + v.split()[3],
+        text=lambda v: "Unsupported URL: " + v.split()[2],
     ),
     ExceptMsg(
         matchs=["Unable to extract webpage video data"],

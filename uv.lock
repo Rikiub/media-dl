@@ -351,6 +351,7 @@ source = { editable = "." }
 dependencies = [
     { name = "lazy-imports" },
     { name = "loguru" },
+    { name = "mutagen" },
     { name = "pathvalidate" },
     { name = "pydantic" },
     { name = "pyffmpeg-bin" },
@@ -375,6 +376,7 @@ docs = [
 requires-dist = [
     { name = "lazy-imports", specifier = ">=1.0.0" },
     { name = "loguru", specifier = ">=0.7.3" },
+    { name = "mutagen", specifier = ">=1.47.0" },
     { name = "pathvalidate", specifier = ">=3.2.1" },
     { name = "pydantic", specifier = ">=2.9.2" },
     { name = "pyffmpeg-bin", specifier = ">=1.8.0.1" },
@@ -502,6 +504,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c5/33/2fa3243439f794e685d3e694590d28469a9b8ea733af4b48c250a3ffc9a0/mkdocstrings-0.30.1.tar.gz", hash = "sha256:84a007aae9b707fb0aebfc9da23db4b26fc9ab562eb56e335e9ec480cb19744f", size = 106350, upload-time = "2025-09-19T10:49:26.446Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/2c/f0dc4e1ee7f618f5bff7e05898d20bf8b6e7fa612038f768bfa295f136a4/mkdocstrings-0.30.1-py3-none-any.whl", hash = "sha256:41bd71f284ca4d44a668816193e4025c950b002252081e387433656ae9a70a82", size = 36704, upload-time = "2025-09-19T10:49:24.805Z" },
+]
+
+[[package]]
+name = "mutagen"
+version = "1.47.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/e6/64bc71b74eef4b68e61eb921dcf72dabd9e4ec4af1e11891bbd312ccbb77/mutagen-1.47.0.tar.gz", hash = "sha256:719fadef0a978c31b4cf3c956261b3c58b6948b32023078a2117b1de09f0fc99", size = 1274186, upload-time = "2023-09-03T16:33:33.411Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/7a/620f945b96be1f6ee357d211d5bf74ab1b7fe72a9f1525aafbfe3aee6875/mutagen-1.47.0-py3-none-any.whl", hash = "sha256:edd96f50c5907a9539d8e5bba7245f62c9f520aef333d13392a79a4f70aca719", size = 194391, upload-time = "2023-09-03T16:33:29.955Z" },
 ]
 
 [[package]]
