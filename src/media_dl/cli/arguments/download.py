@@ -1,86 +1,20 @@
-try:
-    from typer import Argument, BadParameter, Option, Typer
-except ImportError:
-    raise ImportError("Typer is required to use CLI features.")
-
-from enum import Enum
-from pathlib import Path
-from typing import Annotated, Generator, Literal, get_args
-
 from loguru import logger
-
-from media_dl.logging import LOGGING_LEVELS, init_logging
 from media_dl.rich import Status
-from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
+from pathlib import Path
+from typer import Typer, BadParameter, Argument, Option
+from typing import Annotated
 
-app = Typer(rich_markup_mode="rich")
+from media_dl.cli.utils.completions import (
+    complete_query,
+    complete_resolution,
+    complete_output,
+    parse_queries,
+)
+from media_dl.cli.utils.options import QuietOption
+from media_dl.cli.utils.sections import HelpPanel
+from media_dl.types import FILE_FORMAT
 
-
-# Typer: types
-SEARCH_TARGET = Literal["url", SEARCH_PROVIDER]
-
-
-# Typer: helpers
-class HelpPanel(str, Enum):
-    file = "File"
-    downloader = "Downloader"
-    other = "Other"
-
-
-def show_version(show: bool) -> None:
-    if show:
-        from importlib.metadata import version
-
-        print(version(Path(__file__).parent.name))
-
-        raise SystemExit()
-
-
-# Typer: completions
-def complete_query(incomplete: str) -> Generator[str, None, None]:
-    for name in get_args(SEARCH_TARGET):
-        if name.startswith(incomplete):
-            yield name + ":"
-
-
-def complete_resolution() -> Generator[str, None, None]:
-    for name in get_args(VIDEO_RES):
-        yield str(name)
-
-
-def complete_output(incomplete: str) -> Generator[str, None, None]:
-    if incomplete.endswith("{"):
-        from media_dl.template.keys import OUTPUT_TEMPLATES
-
-        for key in OUTPUT_TEMPLATES:
-            yield incomplete + key + "}"
-
-
-def parse_queries(
-    queries: list[str],
-) -> Generator[tuple[SEARCH_TARGET, str], None, None]:
-    providers: list[SEARCH_TARGET] = [entry for entry in get_args(SEARCH_TARGET)]
-    target: SEARCH_TARGET
-
-    for entry in queries:
-        selection = entry.split(":")[0]
-
-        if entry.startswith(("http://", "https://")):
-            target = "url"
-        elif selection in providers:
-            target = selection  # type: ignore
-            entry = entry.split(":")[1].strip()
-        else:
-            completed = [i for i in complete_query(selection)]
-
-            if completed:
-                msg = f"Did you mean '{completed[0]}'?"
-            else:
-                msg = "Should be URL or search PROVIDER."
-
-            raise BadParameter(f"'{selection}' is invalid. {msg}")
-
-        yield target, entry
+app = Typer()
 
 
 # Typer: app
@@ -148,7 +82,6 @@ What format you want request?
     ffmpeg: Annotated[
         Path | None,
         Option(
-            "--ffmpeg",
             help="FFmpeg executable to use.",
             rich_help_panel=HelpPanel.downloader,
             show_default=False,
@@ -159,48 +92,13 @@ What format you want request?
     threads: Annotated[
         int,
         Option(
-            "--threads",
             help="Limit of simultaneous downloads.",
             rich_help_panel=HelpPanel.downloader,
         ),
     ] = 5,
-    quiet: Annotated[
-        bool,
-        Option(
-            "--quiet",
-            help="Supress screen information.",
-            rich_help_panel=HelpPanel.other,
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        Option(
-            "--verbose",
-            help="Display more information on screen.",
-            rich_help_panel=HelpPanel.other,
-        ),
-    ] = False,
-    version: Annotated[
-        bool,
-        Option(
-            "--version",
-            help="Show current version and exit.",
-            rich_help_panel=HelpPanel.other,
-            callback=show_version,
-        ),
-    ] = False,
+    quiet: QuietOption = False,
 ):
     """Download any video/audio you want from a simple URL ✨"""
-
-    log_level: LOGGING_LEVELS
-    if quiet:
-        log_level = "CRITICAL"
-    elif verbose:
-        log_level = "DEBUG"
-    else:
-        log_level = "INFO"
-
-    init_logging(log_level)
 
     # Lazy Import
     with Status("Starting...", disable=quiet):
@@ -252,11 +150,3 @@ What format you want request?
             logger.error("❌ {error}", error=str(err))
         finally:
             logger.info("")
-
-
-def run():
-    app(prog_name=APPNAME)
-
-
-if __name__ == "__main__":
-    run()

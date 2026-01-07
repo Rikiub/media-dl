@@ -32,3 +32,8 @@ class SearchQuery(BaseList):
         self.extractor: str = info["extractor_key"]
         self.query: str = query
         self.streams = [LazyStream(**s) for s in info["entries"]]
+
+    def __rich_repr__(self):
+        yield "extractor", self.extractor
+        yield "query", self.query
+        yield "streams", self.streams
