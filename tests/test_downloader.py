@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import StreamDownloader, Playlist, Stream
+from media_dl import Playlist, Stream, StreamDownloader
 
 TEMPDIR = TemporaryDirectory()
 

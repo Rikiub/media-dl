@@ -8,8 +8,8 @@ from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.formats.types import Format
 from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION
 from media_dl.ydl.messages import format_except_message
-from media_dl.ydl.wrapper import YTDLP
 from media_dl.ydl.types import InfoDict, YDLParams
+from media_dl.ydl.wrapper import YTDLP
 
 
 class ProgressStatus(BaseModel):

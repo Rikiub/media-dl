@@ -1,9 +1,9 @@
 from pathlib import Path
 
 from media_dl.exceptions import PostProcessingError
+from media_dl.types import StrPath
 from media_dl.ydl.types import InfoDict, YDLParams
 from media_dl.ydl.wrapper import YTDLP
-from media_dl.types import StrPath
 
 
 def run_postproces(file: Path, info: InfoDict, params: YDLParams) -> Path:
