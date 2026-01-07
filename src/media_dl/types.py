@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Any, Literal
+from typing import Literal
 
 # FORMAT
 VIDEO_EXTENSION = Literal["mp4", "mkv", "mov"]
@@ -18,5 +18,4 @@ MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 
 # Extra
 APPNAME = "media-dl"
-InfoDict = dict[str, Any]
 StrPath = str | PathLike[str]

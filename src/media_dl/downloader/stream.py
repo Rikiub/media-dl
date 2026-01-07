@@ -18,7 +18,7 @@ from media_dl.path import get_tempfile
 from media_dl.template.parser import generate_output_template
 from media_dl.types import FILE_FORMAT, MUSIC_SITES, StrPath
 from media_dl.ydl.helpers import download_subtitle, download_thumbnail, run_postproces
-from media_dl.ydl.types import SupportedExtensions
+from media_dl.ydl.types import InfoDict, SupportedExtensions
 
 ExtractResult = list[LazyStream] | LazyStream | Playlist
 
@@ -269,7 +269,7 @@ class StreamDownloader:
             self._progress.update(task_id, status="Processing")
             _log_stream(stream, "Postprocessing downloaded file.")
 
-            stream_dict = _stream.model_dump(by_alias=True)
+            stream_dict: InfoDict = _stream.as_info_dict()
 
             if format_video:
                 stream_dict |= _gen_postprocessing_dict(_stream, format_video)
@@ -446,10 +446,10 @@ def _stream_display_name(stream: LazyStream) -> str:
         return ""
 
 
-def _gen_postprocessing_dict(stream: Stream, format: Format) -> dict:
-    d = stream.model_dump(by_alias=True)
+def _gen_postprocessing_dict(stream: Stream, format: Format) -> InfoDict:
+    d = stream.as_info_dict()
 
     if format:
-        d |= format.model_dump(by_alias=True)
+        d |= format.as_info_dict()
 
     return d

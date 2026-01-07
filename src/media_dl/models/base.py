@@ -5,6 +5,7 @@ from pydantic import AliasChoices, BaseModel, Field
 from typing_extensions import Self
 
 from media_dl.extractor import extract_url, is_playlist
+from media_dl.ydl.types import InfoDict
 
 URL_TYPE = ("original_url", "url")
 
@@ -32,3 +33,6 @@ class ExtractID(ABC, BaseModel):
             raise TypeError(
                 f"{url} fetching was successful but data doesn't match with {cls.__name__} model. Please use {'Stream' if is_playlist(info) else 'Playlist'} instead."
             )
+
+    def as_info_dict(self) -> InfoDict:
+        return self.model_dump(by_alias=True)

@@ -29,6 +29,12 @@ class SearchQuery(BaseList):
     def __init__(self, query: str, provider: SEARCH_PROVIDER, limit: int = 20):
         info = extract_search(query, provider, limit)
 
-        self.extractor: str = info["extractor_key"]
+        try:
+            extractor = info["extractor_key"]
+            entries = info["entries"]
+        except IndexError:
+            raise ValueError()
+
+        self.extractor: str = extractor
         self.query: str = query
-        self.streams = [LazyStream(**s) for s in info["entries"]]
+        self.streams = [LazyStream(**s) for s in entries]

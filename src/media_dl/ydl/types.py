@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 
 from yt_dlp.utils import MEDIA_EXTENSIONS
 
@@ -24,3 +25,7 @@ ThumbnailSupport = frozenset(
         "mov",
     }
 )
+
+
+InfoDict = dict[str, Any]
+YDLParams = dict[str, Any]

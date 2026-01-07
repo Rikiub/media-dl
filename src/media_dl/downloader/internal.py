@@ -2,13 +2,14 @@ from pathlib import Path
 from typing import Annotated, Callable, Literal, cast, get_args
 
 from pydantic import BaseModel, Field
-from yt_dlp import DownloadError as BaseDownloadError
+from yt_dlp.utils import DownloadError as BaseDownloadError
 
 from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.formats.types import Format
-from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION, InfoDict
+from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION
 from media_dl.ydl.messages import format_except_message
 from media_dl.ydl.wrapper import YTDLP
+from media_dl.ydl.types import InfoDict, YDLParams
 
 
 class ProgressStatus(BaseModel):
@@ -48,8 +49,8 @@ class YDLDownloader:
             raise ValueError("No formats to download.")
 
         # Variables
-        self.params: dict = {}
-        self.info: dict = {}
+        self.params: YDLParams = {}
+        self.info: InfoDict = {}
         self.progress: ProgressStatus = ProgressStatus()
 
         # Params
@@ -60,8 +61,11 @@ class YDLDownloader:
             }
 
         if callbacks:
-            wrappers = [lambda d: self._progress_wraper(d, c) for c in callbacks]
-            self.params |= {"progress_hooks": wrappers}
+            self.params |= {
+                "progress_hooks": [
+                    lambda d: self._progress_wraper(d, c) for c in callbacks
+                ]
+            }
             self.progress = ProgressStatus(
                 status="waiting",
                 step_type="video" if video else "audio",
@@ -78,8 +82,8 @@ class YDLDownloader:
         if format_id.startswith("+") or format_id.endswith("+"):
             format_id = format_id.strip("+")
 
-        formats: list[InfoDict] = [
-            f.model_dump(by_alias=True) for f in (video, audio) if f is not None
+        formats: list[dict] = [
+            f.as_info_dict() for f in (video, audio) if f is not None
         ]
 
         self.info = {
@@ -96,11 +100,14 @@ class YDLDownloader:
         path = info["requested_downloads"][0]["filepath"]
         return Path(path)
 
-    def _internal_download(self, info: dict, params: dict) -> InfoDict:
-        retries = {"retries": 0, "fragment_retries": 0}
+    def _internal_download(self, info: InfoDict, params: YDLParams) -> InfoDict:
+        retries: YDLParams = {"retries": 0, "fragment_retries": 0}
 
         try:
-            info = YTDLP(retries | params).process_ie_result(info, download=True)
+            info = YTDLP(retries | params).process_ie_result(
+                info,  # type: ignore
+                download=True,
+            )
             return cast(InfoDict, info)
         except BaseDownloadError as err:
             msg = format_except_message(err)
