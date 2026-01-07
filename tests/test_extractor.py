@@ -1,9 +1,8 @@
 import pytest
 from rich import print
 
+from media_dl import Playlist, SearchQuery, Stream
 from media_dl.exceptions import ExtractError
-from media_dl.models.playlist import Playlist, SearchQuery
-from media_dl.models.stream import Stream
 from media_dl.types import SEARCH_PROVIDER
 
 

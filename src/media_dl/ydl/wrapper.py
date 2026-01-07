@@ -3,6 +3,8 @@ import logging
 from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.YoutubeDL import YoutubeDL
 
+from media_dl.ydl.types import YDLParams
+
 
 class YTDLP(YoutubeDL):
     """Custom `YoutubeDL` which supress output."""
@@ -10,10 +12,10 @@ class YTDLP(YoutubeDL):
     _SUPRESS_LOGGER = logging.getLogger("YoutubeDL")
     _SUPRESS_LOGGER.disabled = True
 
-    def __init__(self, params: dict | None = None):
+    def __init__(self, params: YDLParams | None = None):
         # Default parameters
-        opts = {
-            "logger": self._SUPRESS_LOGGER,
+        opts: YDLParams = {
+            "logger": self._SUPRESS_LOGGER,  # type: ignore
             "ignoreerrors": False,
             "consoletitle": False,
             "no_warnings": True,
@@ -40,7 +42,7 @@ class YTDLP(YoutubeDL):
         opts |= params or {}
 
         # Initialize
-        super().__init__(opts)
+        super().__init__(opts)  # type: ignore
 
 
 POST_MUSIC = [

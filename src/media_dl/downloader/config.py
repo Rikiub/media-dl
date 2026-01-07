@@ -10,6 +10,7 @@ from media_dl.types import (
     FORMAT_TYPE,
     VIDEO_EXTENSION,
 )
+from media_dl.ydl.types import YDLParams
 from media_dl.ydl.wrapper import POST_MUSIC
 
 
@@ -80,9 +81,10 @@ class FormatConfig:
         self,
         overwrite: bool = False,
         music_metadata: bool = False,
-    ) -> dict[str, Any]:
+    ) -> YDLParams:
         """Generate download parameters for YT-DLP."""
 
+        params: YDLParams
         params = {"overwrites": overwrite}
         if self.convert:
             params |= {"final_ext": self.format}

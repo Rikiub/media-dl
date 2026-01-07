@@ -2,13 +2,14 @@
 
 from typing import cast
 
-from yt_dlp import DownloadError
+from loguru import logger
 from yt_dlp.networking.exceptions import RequestError
+from yt_dlp.utils import DownloadError
 
 from media_dl.exceptions import ExtractError
-from media_dl.logging import logger
-from media_dl.types import SEARCH_PROVIDER, InfoDict
+from media_dl.types import SEARCH_PROVIDER
 from media_dl.ydl.messages import format_except_message
+from media_dl.ydl.types import InfoDict
 from media_dl.ydl.wrapper import YTDLP
 
 
@@ -76,8 +77,9 @@ def _fetch_query(query: str) -> InfoDict:
 
     # Some extractors need redirect to "real URL" (Example: Pinterest)
     # In this case, we need do another request.
-    if info["extractor_key"] == "Generic" and info["url"] != query:
-        return _fetch_query(info["url"])
+    if info.get("extractor_key") == "Generic" and info.get("url") != query:
+        if url := info.get("url"):
+            return _fetch_query(url)
 
     if not (is_playlist(info) or is_stream(info)):
         raise ExtractError(f"{query} return nothing.")
