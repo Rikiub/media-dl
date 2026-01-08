@@ -4,7 +4,7 @@ import bisect
 from functools import cached_property
 from typing import Generic, Literal, overload
 
-from pydantic import RootModel
+from pydantic import OnErrorOmit, RootModel
 from typing_extensions import Self, TypeVar
 
 from media_dl.models.formats.codecs import get_codec_rank
@@ -49,7 +49,7 @@ def format_sort(format: FormatType):
         )
 
 
-class FormatList(RootModel[list[FormatType]], Generic[F]):
+class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
     """List of formats which can be filtered."""
 
     def filter(

@@ -5,7 +5,6 @@ from pydantic import (
     AfterValidator,
     BaseModel,
     Field,
-    OnErrorOmit,
     SerializerFunctionWrapHandler,
     field_serializer,
     field_validator,
@@ -106,4 +105,4 @@ class AudioFormat(Format):
         return result
 
 
-FormatType = OnErrorOmit[VideoFormat | AudioFormat]
+FormatType = VideoFormat | AudioFormat
