@@ -1,5 +1,4 @@
 from loguru import logger
-from media_dl.rich import Status
 from pathlib import Path
 from typer import Typer, BadParameter, Argument, Option
 from typing import Annotated
@@ -10,6 +9,7 @@ from media_dl.cli.utils.completions import (
     complete_output,
     parse_queries,
 )
+from media_dl.rich import Status
 from media_dl.cli.utils.options import QuietOption
 from media_dl.cli.utils.sections import HelpPanel
 from media_dl.types import FILE_FORMAT
@@ -104,8 +104,8 @@ What format you want request?
     with Status("Starting...", disable=quiet):
         from media_dl.downloader.stream import StreamDownloader
         from media_dl.exceptions import DownloadError, ExtractError
-        from media_dl.models.playlist import Playlist, SearchQuery
-        from media_dl.models.stream import Stream
+        from media_dl.models.playlist import SearchQuery
+        from media_dl.cli.utils.helpers import extract_query
 
     # Initialize Downloader
     try:
@@ -127,22 +127,9 @@ What format you want request?
 
     for target, entry in parse_queries(query):
         try:
-            with Status("Please wait", disable=quiet):
-                if target == "url":
-                    logger.info('🔎 Extract URL: "{url}".', url=entry)
-
-                    try:
-                        result = Stream.from_url(entry)
-                    except TypeError:
-                        result = Playlist.from_url(entry)
-                        logger.info('🔎 Playlist title: "{title}".', title=result.title)
-                else:
-                    logger.info(
-                        '🔎 Search from {extractor}: "{query}".',
-                        extractor=target,
-                        query=entry,
-                    )
-                    result = SearchQuery(entry, target).streams[0]
+            result = extract_query(target, entry, quiet)
+            if isinstance(result, SearchQuery):
+                result = result.streams[0]
 
             downloader.download_all(result)
             logger.info("✅ Download Finished.")
