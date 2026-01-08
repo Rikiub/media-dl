@@ -1,9 +1,10 @@
-from abc import ABC
-from typing import Annotated
+from abc import ABC, abstractmethod
+from typing import Annotated, Literal
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, BaseModel, Field, computed_field
 from typing_extensions import Self
 
+from media_dl.cache import load_info, save_info
 from media_dl.extractor import extract_url, is_playlist, is_stream
 from media_dl.ydl.types import YDLExtractInfo
 
@@ -15,47 +16,65 @@ ExtractorKey = Annotated[
         validation_alias=AliasChoices("extractor_key", "ie_key"),
     ),
 ]
-EntriesField = Field(validation_alias="entries")
+TypeField = Annotated[Literal["url", "playlist"], Field(alias="_type")]
 
 
 class ExtractID(ABC, BaseModel):
     """Base identifier for media objects."""
 
+    type: TypeField = "url"
     extractor: ExtractorKey
     url: Annotated[str, Field(validation_alias=UrlAlias)]
     id: str
 
     @classmethod
     def from_url(cls, url: str) -> Self:
+        # Load from cache
+        if info := load_info(url):
+            return cls.model_validate_json(info)
+
+        # Fetch info
         info = extract_url(url)
+        isPlaylist = is_playlist(info)
 
         try:
-            return cls(**info)
+            cls = cls(type="playlist" if isPlaylist else "url", **info)
         except ValueError:
             raise TypeError(
-                f"{url} fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if is_playlist(info) else 'Stream'}' instead."
+                f"{url} fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Stream'}' instead."
             )
+
+        # Save to cache
+        save_info(cls.url, cls.model_dump_json())
+        return cls
 
     def as_info_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 
 
-class BaseDataList(BaseModel):
-    streams: Annotated[list, EntriesField]
-    playlists: Annotated[list, EntriesField]
+class BaseDataList(ABC, BaseModel):
+    type: TypeField = "playlist"
+    entries: Annotated[list, Field(alias="entries")]
 
-    @field_validator("streams", mode="before")
-    def _streams(cls, value: list):
+    @computed_field
+    @property
+    @abstractmethod
+    def streams(self) -> list:
         results = []
-        for entry in value:
+        for entry in self.entries:
             if is_stream(entry):
                 results.append(entry)
         return results
 
-    @field_validator("playlists", mode="before")
-    def _playlists(cls, value: list):
+    @computed_field
+    @property
+    @abstractmethod
+    def playlists(self) -> list:
         results = []
-        for entry in value:
+        for entry in self.entries:
             if is_playlist(entry):
                 results.append(entry)
         return results
+
+    def as_info_dict(self) -> YDLExtractInfo:
+        return self.model_dump(by_alias=True)

@@ -13,7 +13,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from media_dl.models.base import EntriesField, ExtractID
+from media_dl.models.base import ExtractID
 from media_dl.models.formats.list import FormatList
 from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
 
@@ -48,10 +48,7 @@ class LazyStream(MusicMetadata, ExtractID):
         return Stream.from_url(self.url)
 
 
-LazyStreams = Annotated[
-    list[OnErrorOmit[LazyStream]],
-    EntriesField,
-]
+LazyStreams = list[OnErrorOmit[LazyStream]]
 
 
 class Stream(LazyStream):

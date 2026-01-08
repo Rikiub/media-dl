@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import Field, OnErrorOmit
+from pydantic import Field, OnErrorOmit, computed_field
 
-from media_dl.models.base import BaseDataList, EntriesField, ExtractID, UrlAlias
+from media_dl.models.base import BaseDataList, ExtractID, UrlAlias
 from media_dl.models.metadata import Thumbnail
-from media_dl.models.stream import LazyStreams
+from media_dl.models.stream import LazyStream, LazyStreams
 
 
 class LazyPlaylist(BaseDataList, ExtractID):
@@ -17,8 +17,15 @@ class LazyPlaylist(BaseDataList, ExtractID):
     uploader: str | None = None
     thumbnails: list[Thumbnail] = []
 
-    streams: LazyStreams = []
-    playlists: LazyPlaylists = []
+    @computed_field
+    @property
+    def streams(self) -> LazyStreams:
+        return [LazyStream(**info) for info in self.entries]
+
+    @computed_field
+    @property
+    def playlists(self) -> LazyPlaylists:
+        return [LazyPlaylist(**info) for info in self.entries]
 
     def fetch(self) -> Playlist:
         """Fetch real playlist.
@@ -33,10 +40,7 @@ class LazyPlaylist(BaseDataList, ExtractID):
         return Playlist.from_url(self.url)
 
 
-LazyPlaylists = Annotated[
-    list[OnErrorOmit[LazyPlaylist]],
-    EntriesField,
-]
+LazyPlaylists = list[OnErrorOmit[LazyPlaylist]]
 
 
 class Playlist(LazyPlaylist): ...

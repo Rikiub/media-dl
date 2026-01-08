@@ -5,6 +5,9 @@ import tempfile
 from pathlib import Path
 
 # Constants
+CACHE_DIR = Path(tempfile.gettempdir(), "media-dl")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 TEMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
 
 
