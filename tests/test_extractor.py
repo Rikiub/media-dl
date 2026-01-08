@@ -1,7 +1,7 @@
 import pytest
 from rich import print
 
-from media_dl import Playlist, SearchQuery, Stream
+from media_dl import Playlist, Search, Stream
 from media_dl.exceptions import ExtractError
 from media_dl.types import SEARCH_PROVIDER
 
@@ -46,7 +46,7 @@ class TestSearch:
     QUERY = "Sub Urban - Rabbit Hole"
 
     def search(self, provider: SEARCH_PROVIDER):
-        search = SearchQuery(self.QUERY, provider)
+        search = Search.from_query(self.QUERY, provider)
         streams = search.streams
 
         assert isinstance(streams, list) and len(streams) > 0
@@ -55,11 +55,25 @@ class TestSearch:
     def test_youtube(self):
         self.search("youtube")
 
+    def test_soundcloud(self):
+        self.search("soundcloud")
+
     def test_ytmusic(self):
         self.search("ytmusic")
 
-    def test_soundcloud(self):
-        self.search("soundcloud")
+    def test_fetch_streams(self):
+        result = Search.from_query("If Nevermore", "ytmusic")
+
+        for entry in result.streams:
+            entry = entry.fetch()
+            print(entry)
+
+    def test_fetch_playlists(self):
+        result = Search.from_query("If Nevermore", "ytmusic")
+
+        for entry in result.playlists:
+            entry = entry.fetch()
+            print(entry)
 
 
 class TestSite:

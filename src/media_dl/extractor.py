@@ -12,13 +12,15 @@ from media_dl.ydl.messages import format_except_message
 from media_dl.ydl.types import InfoDict
 from media_dl.ydl.wrapper import YTDLP
 
+PLAYLISTS_EXTRACTORS = ["YoutubeTab"]
+
 
 def is_playlist(info: InfoDict) -> bool:
     """Check if info is a playlist."""
 
     if (
         info.get("_type") == "playlist"
-        or info.get("ie_key") == "YoutubeTab"
+        or info.get("ie_key") in PLAYLISTS_EXTRACTORS
         or info.get("entries")
     ):
         return True
@@ -29,10 +31,12 @@ def is_playlist(info: InfoDict) -> bool:
 def is_stream(info: InfoDict) -> bool:
     """Check if info is a single Stream."""
 
+    if info.get("ie_key") in PLAYLISTS_EXTRACTORS:
+        return False
     if info.get("_type") == "url" or info.get("formats"):
         return True
-    else:
-        return False
+
+    return False
 
 
 def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> InfoDict:
