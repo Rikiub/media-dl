@@ -11,7 +11,7 @@ from pydantic import (
     model_serializer,
 )
 
-from media_dl.ydl.types import InfoDict, SupportedExtensions
+from media_dl.ydl.types import SupportedExtensions, YDLExtractInfo
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 
@@ -39,7 +39,7 @@ class Format(ABC, YDLArgs, BaseModel):
     @abstractmethod
     def display_quality(self) -> str: ...
 
-    def as_info_dict(self) -> InfoDict:
+    def as_info_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 
 

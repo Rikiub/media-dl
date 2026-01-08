@@ -5,7 +5,7 @@ from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self
 
 from media_dl.extractor import extract_url, is_playlist, is_stream
-from media_dl.ydl.types import InfoDict
+from media_dl.ydl.types import YDLExtractInfo
 
 UrlAlias = AliasChoices("original_url", "url")
 ExtractorKey = Annotated[
@@ -36,7 +36,7 @@ class ExtractID(ABC, BaseModel):
                 f"{url} fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if is_playlist(info) else 'Stream'}' instead."
             )
 
-    def as_info_dict(self) -> InfoDict:
+    def as_info_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 
 

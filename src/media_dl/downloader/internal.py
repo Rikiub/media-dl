@@ -8,7 +8,7 @@ from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.formats.types import Format
 from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION
 from media_dl.ydl.messages import format_except_message
-from media_dl.ydl.types import InfoDict, YDLParams
+from media_dl.ydl.types import YDLExtractInfo, YDLParams
 from media_dl.ydl.wrapper import YTDLP
 
 
@@ -50,7 +50,7 @@ class YDLDownloader:
 
         # Variables
         self.params: YDLParams = {}
-        self.info: InfoDict = {}
+        self.info: YDLExtractInfo = {}
         self.progress: ProgressStatus = ProgressStatus()
 
         # Params
@@ -100,7 +100,9 @@ class YDLDownloader:
         path = info["requested_downloads"][0]["filepath"]
         return Path(path)
 
-    def _internal_download(self, info: InfoDict, params: YDLParams) -> InfoDict:
+    def _internal_download(
+        self, info: YDLExtractInfo, params: YDLParams
+    ) -> YDLExtractInfo:
         retries: YDLParams = {"retries": 0, "fragment_retries": 0}
 
         try:
@@ -108,7 +110,7 @@ class YDLDownloader:
                 info,  # type: ignore
                 download=True,
             )
-            return cast(InfoDict, info)
+            return cast(YDLExtractInfo, info)
         except BaseDownloadError as err:
             msg = format_except_message(err)
 

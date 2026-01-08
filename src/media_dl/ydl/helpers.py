@@ -2,11 +2,11 @@ from pathlib import Path
 
 from media_dl.exceptions import PostProcessingError
 from media_dl.types import StrPath
-from media_dl.ydl.types import InfoDict, YDLParams
+from media_dl.ydl.types import YDLExtractInfo, YDLParams
 from media_dl.ydl.wrapper import YTDLP
 
 
-def run_postproces(file: Path, info: InfoDict, params: YDLParams) -> Path:
+def run_postproces(file: Path, info: YDLExtractInfo, params: YDLParams) -> Path:
     """Postprocess file by params."""
 
     info = YTDLP(params).post_process(
@@ -20,7 +20,7 @@ def run_postproces(file: Path, info: InfoDict, params: YDLParams) -> Path:
     raise PostProcessingError("File not founded.")
 
 
-def parse_output_template(info: InfoDict, template: str) -> str:
+def parse_output_template(info: YDLExtractInfo, template: str) -> str:
     """Get a custom filename by output template."""
 
     return YTDLP().prepare_filename(
@@ -29,7 +29,7 @@ def parse_output_template(info: InfoDict, template: str) -> str:
     )
 
 
-def download_thumbnail(filepath: StrPath, info: InfoDict) -> Path | None:
+def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
     ydl = YTDLP(
         {
             "writethumbnail": True,
@@ -52,7 +52,7 @@ def download_thumbnail(filepath: StrPath, info: InfoDict) -> Path | None:
         return None
 
 
-def download_subtitle(filepath: StrPath, info: InfoDict) -> Path | None:
+def download_subtitle(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
     ydl = YTDLP({"writesubtitles": True, "allsubtitles": True})
 
     subs = ydl.process_subtitles(

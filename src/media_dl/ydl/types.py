@@ -27,5 +27,5 @@ ThumbnailSupport = frozenset(
 )
 
 
-InfoDict = dict[str, Any]
+YDLExtractInfo = dict[str, Any]
 YDLParams = dict[str, Any]

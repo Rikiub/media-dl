@@ -9,13 +9,13 @@ from yt_dlp.utils import DownloadError
 from media_dl.exceptions import ExtractError
 from media_dl.types import SEARCH_PROVIDER
 from media_dl.ydl.messages import format_except_message
-from media_dl.ydl.types import InfoDict
+from media_dl.ydl.types import YDLExtractInfo
 from media_dl.ydl.wrapper import YTDLP
 
 PLAYLISTS_EXTRACTORS = ["YoutubeTab"]
 
 
-def is_playlist(info: InfoDict) -> bool:
+def is_playlist(info: YDLExtractInfo) -> bool:
     """Check if info is a playlist."""
 
     if (
@@ -28,7 +28,7 @@ def is_playlist(info: InfoDict) -> bool:
         return False
 
 
-def is_stream(info: InfoDict) -> bool:
+def is_stream(info: YDLExtractInfo) -> bool:
     """Check if info is a single Stream."""
 
     if info.get("ie_key") in PLAYLISTS_EXTRACTORS:
@@ -39,7 +39,9 @@ def is_stream(info: InfoDict) -> bool:
     return False
 
 
-def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> InfoDict:
+def extract_search(
+    query: str, provider: SEARCH_PROVIDER, limit: int = 20
+) -> YDLExtractInfo:
     """Extract info from search provider."""
 
     match provider:
@@ -60,14 +62,14 @@ def extract_search(query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> In
     return _fetch_query(prov + query)
 
 
-def extract_url(url: str) -> InfoDict:
+def extract_url(url: str) -> YDLExtractInfo:
     """Extract info from URL."""
 
     logger.debug("Extract URL: {url}", url=url)
     return _fetch_query(url)
 
 
-def _fetch_query(query: str) -> InfoDict:
+def _fetch_query(query: str) -> YDLExtractInfo:
     """Base info dict extractor."""
 
     try:
@@ -78,7 +80,7 @@ def _fetch_query(query: str) -> InfoDict:
             }
         )
         info = ydl.extract_info(query, download=False)
-        info = cast(InfoDict, info)
+        info = cast(YDLExtractInfo, info)
     except (DownloadError, RequestError) as err:
         msg = format_except_message(err)
         raise ExtractError(msg)
