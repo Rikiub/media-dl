@@ -3,7 +3,6 @@ from typing_extensions import Self
 from media_dl.extractor import extract_search
 from media_dl.models.base import BaseDataList, ExtractorKey
 from media_dl.models.playlist import LazyPlaylists
-
 from media_dl.models.stream import LazyStreams
 from media_dl.types import SEARCH_PROVIDER
 

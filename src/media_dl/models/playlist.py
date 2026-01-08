@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import Field, OnErrorOmit
 
-from media_dl.models.base import EntriesField, BaseDataList, ExtractID, UrlAlias
+from media_dl.models.base import BaseDataList, EntriesField, ExtractID, UrlAlias
 from media_dl.models.metadata import Thumbnail
 from media_dl.models.stream import LazyStreams
 
