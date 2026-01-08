@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, Field, computed_field
+from pydantic import BaseModel, BeforeValidator, Field
 
 
 def _validate_artists(value: list[str]) -> list[str]:
@@ -16,13 +16,6 @@ class MusicMetadata(BaseModel):
     album: str = ""
     album_artist: str = ""
     genres: list[str] | None = None
-
-    @computed_field
-    @property
-    def artist(self) -> str:
-        if self.artists:
-            return self.artists[0]
-        return ""
 
 
 class Subtitle(BaseModel):

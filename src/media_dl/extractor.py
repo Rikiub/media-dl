@@ -16,7 +16,11 @@ from media_dl.ydl.wrapper import YTDLP
 def is_playlist(info: InfoDict) -> bool:
     """Check if info is a playlist."""
 
-    if info.get("_type") == "playlist" or info.get("entries"):
+    if (
+        info.get("_type") == "playlist"
+        or info.get("ie_key") == "YoutubeTab"
+        or info.get("entries")
+    ):
         return True
     else:
         return False
