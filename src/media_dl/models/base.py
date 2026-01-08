@@ -31,7 +31,7 @@ class ExtractID(ABC, BaseModel):
             return cls(**info)
         except ValueError:
             raise TypeError(
-                f"{url} fetching was successful but data doesn't match with {cls.__name__} model. Please use {'Stream' if is_playlist(info) else 'Playlist'} instead."
+                f"{url} fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Stream' if is_playlist(info) else 'Playlist'}' instead."
             )
 
     def as_info_dict(self) -> InfoDict:
