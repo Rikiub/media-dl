@@ -69,7 +69,7 @@ class TestFormatsFilter:
         pprint(fmt)
 
     def test_closest_quality(self, formats: FormatList):
-        fmt = formats.get_closest_quality(720)
+        fmt = formats.get_closest_quality(600)
         assert fmt.quality == 720
 
     def test_get_by_id(self, formats: FormatList):
