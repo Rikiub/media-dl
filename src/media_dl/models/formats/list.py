@@ -128,27 +128,21 @@ class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
             raise IndexError(f"Format with id '{id}' has not been founded")
 
     def get_closest_quality(self, quality: int) -> F:
-        """Get `Format` with closest quality."""
-
-        qualities = [i.quality for i in self.sort_by("quality")]
+        items = self.sort_by("quality", reverse=False)
+        qualities = [i.quality for i in items]
         pos = bisect.bisect_left(qualities, quality)
 
-        item = None
-
         if pos == 0:
-            item = self[0]
-        elif pos == len(self):
-            item = self[-1]
-        else:
-            before = self[pos - 1]
-            after = self[pos]
+            return items[0]
+        if pos == len(items):
+            return items[-1]
 
-            if after.quality - quality < quality - before.quality:  # type: ignore
-                item = after
-            else:
-                item = before
+        before = items[pos - 1]
+        after = items[pos]
 
-        return item
+        if (after.quality - quality) <= (quality - before.quality):  # type: ignore
+            return after
+        return before
 
     def __contains__(self, other) -> bool:
         if isinstance(other, Format):
