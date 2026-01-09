@@ -63,10 +63,10 @@ class Extract(Serializable):
     def from_url(
         cls,
         url: str,
-        cache: bool = True,
+        use_cache: bool = True,
     ) -> Self:
         # Load from cache
-        if info := cache and _load_cache(cls, url):
+        if info := use_cache and _load_cache(cls, url):
             return info
 
         # Fetch info
@@ -81,7 +81,9 @@ class Extract(Serializable):
             )
 
         # Save to cache
-        save_info(cls.url, cls.as_ydl_json())
+        if use_cache:
+            save_info(cls.url, cls.as_ydl_json())
+
         return cls
 
 
@@ -114,10 +116,10 @@ class ExtractSearch(ExtractList):
         query: str,
         provider: SEARCH_PROVIDER,
         limit: int = 20,
-        cache: bool = True,
+        use_cache: bool = True,
     ) -> Self:
         # Load from cache
-        if info := cache and _load_cache(cls, query):
+        if info := use_cache and _load_cache(cls, query):
             return info
 
         # Fetch info
@@ -125,5 +127,7 @@ class ExtractSearch(ExtractList):
         cls = cls(query=query, provider=provider, **info)
 
         # Save to cache
-        save_info(cls.query, cls.as_ydl_json())
+        if use_cache:
+            save_info(cls.query, cls.as_ydl_json())
+
         return cls
