@@ -11,7 +11,7 @@ from pydantic import (
     model_serializer,
 )
 
-from media_dl.models.base import Base
+from media_dl.models.base import BaseData
 from media_dl.ydl.types import SupportedExtensions
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
@@ -23,7 +23,7 @@ class YDLArgs(BaseModel):
     cookies: str | None = None
 
 
-class Format(Base, YDLArgs):
+class Format(BaseData, YDLArgs):
     """Base Format"""
 
     id: Annotated[str, Field(alias="format_id")]

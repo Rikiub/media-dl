@@ -19,15 +19,15 @@ ExtractorKey = Annotated[
 TypeField: TypeAlias = Annotated[Literal["url", "playlist"], Field(alias="_type")]
 
 
-class Base(ABC, BaseModel):
-    def as_info_dict(self) -> YDLExtractInfo:
+class BaseData(ABC, BaseModel):
+    def as_ydl_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 
     def as_ydl_json(self) -> str:
         return self.model_dump_json(by_alias=True)
 
 
-class ExtractID(Base):
+class ExtractID(BaseData):
     """Base identifier for media objects."""
 
     type: TypeField = "url"
@@ -62,7 +62,7 @@ class ExtractID(Base):
         return cls
 
 
-class BaseDataList(Base):
+class BaseDataList(BaseData):
     type: TypeField = "playlist"
     streams: list
     playlists: list
