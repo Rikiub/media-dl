@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Annotated
 
 from pydantic import (
@@ -11,7 +11,8 @@ from pydantic import (
     model_serializer,
 )
 
-from media_dl.ydl.types import SupportedExtensions, YDLExtractInfo
+from media_dl.models.base import Base
+from media_dl.ydl.types import SupportedExtensions
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 
@@ -22,7 +23,7 @@ class YDLArgs(BaseModel):
     cookies: str | None = None
 
 
-class Format(ABC, YDLArgs, BaseModel):
+class Format(Base, YDLArgs):
     """Base Format"""
 
     id: Annotated[str, Field(alias="format_id")]
@@ -39,13 +40,10 @@ class Format(ABC, YDLArgs, BaseModel):
     @abstractmethod
     def display_quality(self) -> str: ...
 
-    def as_info_dict(self) -> YDLExtractInfo:
-        return self.model_dump(by_alias=True)
-
 
 class VideoFormat(Format):
-    video_codec: Annotated[Codec, Field(validation_alias="vcodec")]
-    audio_codec: Annotated[Codec | None, Field(validation_alias="acodec")] = None
+    video_codec: Annotated[Codec, Field(alias="vcodec")]
+    audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
     width: int
     height: int
     fps: float | None = None
@@ -79,8 +77,8 @@ class VideoFormat(Format):
 
 
 class AudioFormat(Format):
-    codec: Annotated[Codec, Field(alias="audio_codec", validation_alias="acodec")]
-    bitrate: Annotated[float, Field(validation_alias="abr")] = 0
+    codec: Annotated[Codec, Field(alias="acodec")]
+    bitrate: Annotated[float, Field(alias="abr")] = 0
 
     @property
     def quality(self) -> int:

@@ -48,7 +48,13 @@ class LazyStream(MusicMetadata, ExtractID):
         return Stream.from_url(self.url)
 
 
-LazyStreams = list[OnErrorOmit[LazyStream]]
+LazyStreams = Annotated[
+    list[OnErrorOmit[LazyStream]],
+    Field(
+        alias="streams",
+        validation_alias=AliasChoices("streams", "entries"),
+    ),
+]
 
 
 class Stream(LazyStream):

@@ -1,14 +1,14 @@
-from abc import ABC, abstractmethod
-from typing import Annotated, Literal
+from abc import ABC
+from typing import Annotated, Literal, TypeAlias
 
-from pydantic import AliasChoices, BaseModel, Field, computed_field
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
 from media_dl.extractor import extract_url, is_playlist, is_stream
 from media_dl.ydl.types import YDLExtractInfo
 
-UrlAlias = AliasChoices("original_url", "url")
+URL_CHOICES = ("original_url", "url")
 ExtractorKey = Annotated[
     str,
     Field(
@@ -16,22 +16,35 @@ ExtractorKey = Annotated[
         validation_alias=AliasChoices("extractor_key", "ie_key"),
     ),
 ]
-TypeField = Annotated[Literal["url", "playlist"], Field(alias="_type")]
+TypeField: TypeAlias = Annotated[Literal["url", "playlist"], Field(alias="_type")]
 
 
-class ExtractID(ABC, BaseModel):
+class Base(ABC, BaseModel):
+    def as_info_dict(self) -> YDLExtractInfo:
+        return self.model_dump(by_alias=True)
+
+    def as_ydl_json(self) -> str:
+        return self.model_dump_json(by_alias=True)
+
+
+class ExtractID(Base):
     """Base identifier for media objects."""
 
     type: TypeField = "url"
     extractor: ExtractorKey
-    url: Annotated[str, Field(validation_alias=UrlAlias)]
+    url: Annotated[str, Field(validation_alias=AliasChoices(*URL_CHOICES))]
     id: str
 
     @classmethod
     def from_url(cls, url: str) -> Self:
         # Load from cache
         if info := load_info(url):
-            return cls.model_validate_json(info)
+            try:
+                return cls.model_validate_json(info)
+            except ValueError:
+                raise TypeError(
+                    f"'{url}' fetched from cache but data doesn't match with model"
+                )
 
         # Fetch info
         info = extract_url(url)
@@ -41,40 +54,31 @@ class ExtractID(ABC, BaseModel):
             cls = cls(type="playlist" if isPlaylist else "url", **info)
         except ValueError:
             raise TypeError(
-                f"{url} fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Stream'}' instead."
+                f"'{url}' fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Stream'}' instead."
             )
 
         # Save to cache
-        save_info(cls.url, cls.model_dump_json())
+        save_info(cls.url, cls.as_ydl_json())
         return cls
 
-    def as_info_dict(self) -> YDLExtractInfo:
-        return self.model_dump(by_alias=True)
 
-
-class BaseDataList(ABC, BaseModel):
+class BaseDataList(Base):
     type: TypeField = "playlist"
-    entries: Annotated[list, Field(alias="entries")]
+    streams: list
+    playlists: list
 
-    @computed_field
-    @property
-    @abstractmethod
-    def streams(self) -> list:
+    @field_validator("streams", mode="before")
+    def _streams(cls, value: list):
         results = []
-        for entry in self.entries:
+        for entry in value:
             if is_stream(entry):
                 results.append(entry)
         return results
 
-    @computed_field
-    @property
-    @abstractmethod
-    def playlists(self) -> list:
+    @field_validator("playlists", mode="before")
+    def _playlists(cls, value: list):
         results = []
-        for entry in self.entries:
+        for entry in value:
             if is_playlist(entry):
                 results.append(entry)
         return results
-
-    def as_info_dict(self) -> YDLExtractInfo:
-        return self.model_dump(by_alias=True)

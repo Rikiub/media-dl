@@ -3,7 +3,7 @@ import time
 
 from media_dl.path import CACHE_DIR
 
-EXPIRATION = 100
+EXPIRATION = 24 * 60 * 60
 
 
 def load_info(url: str) -> str | None:

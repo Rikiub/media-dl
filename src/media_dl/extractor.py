@@ -31,7 +31,7 @@ def is_playlist(info: YDLExtractInfo) -> bool:
 def is_stream(info: YDLExtractInfo) -> bool:
     """Check if info is a single Stream."""
 
-    if info.get("ie_key") or info.get("extractor_key") in PLAYLISTS_EXTRACTORS:
+    if info.get("ie_key", info.get("extractor_key")) in PLAYLISTS_EXTRACTORS:
         return False
     if info.get("_type") == "url" or info.get("formats"):
         return True
