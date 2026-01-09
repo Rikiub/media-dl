@@ -1,15 +1,16 @@
-from abc import ABC
-from typing import Annotated, Literal
+from typing import Annotated, Literal, TypeVar
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
-from media_dl.extractor import extract_url, is_playlist, is_stream
+from media_dl.extractor import extract_search, extract_url, is_playlist, is_stream
+from media_dl.types import SEARCH_PROVIDER
 from media_dl.ydl.types import YDLExtractInfo
 
-URL_CHOICES = ("original_url", "url")
-ExtractorKey = Annotated[
+# Types
+URL_CHOICES = ["original_url", "url"]
+ExtractorField = Annotated[
     str,
     Field(
         alias="extractor_key",
@@ -22,19 +23,39 @@ TypeField = Annotated[
 ]
 
 
-class BaseData(ABC, BaseModel):
+# Interfaces
+class Serializable(BaseModel):
     def as_ydl_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 
     def as_ydl_json(self) -> str:
         return self.model_dump_json(by_alias=True)
 
+    @classmethod
+    def from_ydl_json(cls, data: str) -> Self:
+        return cls.model_validate_json(data, by_alias=True)
 
-class ExtractID(BaseData):
+
+# Helpers
+T = TypeVar("T", bound=Serializable)
+
+
+def _load_cache(cls: type[T], url: str):
+    if info := load_info(url):
+        try:
+            return cls.from_ydl_json(info)
+        except ValueError:
+            raise TypeError(
+                f"'{url}' fetched from cache but data doesn't match with model"
+            )
+
+
+# Identifier
+class Extract(Serializable):
     """Base identifier for media objects."""
 
     type: TypeField = "url"
-    extractor: ExtractorKey
+    extractor: ExtractorField
     url: Annotated[str, Field(validation_alias=AliasChoices(*URL_CHOICES))]
     id: str
 
@@ -45,13 +66,8 @@ class ExtractID(BaseData):
         cache: bool = True,
     ) -> Self:
         # Load from cache
-        if info := cache and load_info(url):
-            try:
-                return cls.model_validate_json(info)
-            except ValueError:
-                raise TypeError(
-                    f"'{url}' fetched from cache but data doesn't match with model"
-                )
+        if info := cache and _load_cache(cls, url):
+            return info
 
         # Fetch info
         info = extract_url(url)
@@ -69,23 +85,45 @@ class ExtractID(BaseData):
         return cls
 
 
-class BaseDataList(BaseData):
+# Lists
+class ExtractList(Serializable):
     type: TypeField = "playlist"
     streams: list
     playlists: list
 
     @field_validator("streams", mode="before")
-    def _streams(cls, value: list):
-        results = []
-        for entry in value:
-            if is_stream(entry):
-                results.append(entry)
-        return results
+    def _validate_streams(cls, data):
+        if isinstance(data, list):
+            return [item for item in data if is_stream(item)]
 
     @field_validator("playlists", mode="before")
-    def _playlists(cls, value: list):
-        results = []
-        for entry in value:
-            if is_playlist(entry):
-                results.append(entry)
-        return results
+    def _validate_playlists(cls, data):
+        if isinstance(data, list):
+            return [item for item in data if is_playlist(item)]
+
+
+class ExtractSearch(ExtractList):
+    extractor: ExtractorField
+
+    query: str = ""
+    provider: str = ""
+
+    @classmethod
+    def from_query(
+        cls,
+        query: str,
+        provider: SEARCH_PROVIDER,
+        limit: int = 20,
+        cache: bool = True,
+    ) -> Self:
+        # Load from cache
+        if info := cache and _load_cache(cls, query):
+            return info
+
+        # Fetch info
+        info = extract_search(query, provider, limit)
+        cls = cls(query=query, provider=provider, **info)
+
+        # Save to cache
+        save_info(cls.query, cls.as_ydl_json())
+        return cls

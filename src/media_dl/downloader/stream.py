@@ -12,7 +12,7 @@ from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
-from media_dl.models.playlist import Playlist
+from media_dl.models.list import Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
 from media_dl.template.parser import generate_output_template

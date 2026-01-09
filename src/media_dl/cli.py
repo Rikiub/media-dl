@@ -216,8 +216,7 @@ What format you want request?
     with Status("Starting...", disable=quiet):
         from media_dl.downloader.stream import StreamDownloader
         from media_dl.exceptions import DownloadError, ExtractError
-        from media_dl.models.playlist import Playlist
-        from media_dl.models.search import Search
+        from media_dl.models.list import Playlist, Search
         from media_dl.models.stream import Stream
 
     # Initialize Downloader

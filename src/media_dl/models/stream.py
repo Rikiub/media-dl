@@ -8,12 +8,10 @@ from pydantic import (
     AliasChoices,
     BeforeValidator,
     Field,
-    OnErrorOmit,
     PlainSerializer,
 )
-from typing_extensions import Self
 
-from media_dl.models.base import ExtractID
+from media_dl.models.base import Extract
 from media_dl.models.formats.list import FormatList
 from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
 
@@ -22,7 +20,7 @@ DatetimeTimestamp = Annotated[
 ]
 
 
-class LazyStream(MusicMetadata, ExtractID):
+class LazyStream(MusicMetadata, Extract):
     title: str = ""
     uploader: Annotated[
         str,
@@ -48,15 +46,6 @@ class LazyStream(MusicMetadata, ExtractID):
         return Stream.from_url(self.url)
 
 
-LazyStreams = Annotated[
-    list[OnErrorOmit[LazyStream]],
-    Field(
-        alias="streams",
-        validation_alias=AliasChoices("streams", "entries"),
-    ),
-]
-
-
 class Stream(LazyStream):
     """Online media stream representation."""
 
@@ -67,7 +56,3 @@ class Stream(LazyStream):
         AfterValidator(lambda list: list.sort_by("best")),
         Field(min_length=1),
     ]
-
-    @classmethod
-    def from_json(cls, json: str) -> Self:
-        return cls.model_validate_json(json)
