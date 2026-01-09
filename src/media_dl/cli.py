@@ -232,7 +232,7 @@ What format you want request?
     except FileNotFoundError as err:
         raise BadParameter(str(err))
 
-    if downloader.config.convert and not downloader.config.ffmpeg:
+    if downloader.config.convert and not downloader.config.ffmpeg_path:
         logger.warning(
             "❗ FFmpeg not installed. File conversion and metadata embeding will be disabled."
         )

@@ -25,20 +25,22 @@ class FormatConfig:
         quality: Target quality to try filter.
         output: Directory where to save files.
         ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
-        metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
+        embed_metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
     """
 
     format: FILE_FORMAT
     quality: int | None = None
     output: Path = Path.cwd()
-    ffmpeg: Path | None = None
-    metadata: bool = True
+    ffmpeg_path: Path | None = None
+    embed_metadata: bool = True
 
     def __post_init__(self):
-        if self.ffmpeg and not check_executable_exists(self.ffmpeg):
-            raise FileNotFoundError(f"'{self.ffmpeg.name}' is not a FFmpeg executable.")
+        if self.ffmpeg_path and not check_executable_exists(self.ffmpeg_path):
+            raise FileNotFoundError(
+                f"'{self.ffmpeg_path.name}' is not a FFmpeg executable."
+            )
         else:
-            self.ffmpeg = get_global_ffmpeg() or None
+            self.ffmpeg_path = get_global_ffmpeg() or None
 
     @property
     def type(self) -> FORMAT_TYPE:
@@ -93,8 +95,8 @@ class FormatConfig:
         if music_metadata:
             postprocessors.extend(POST_MUSIC)
 
-        if self.ffmpeg:
-            params |= {"ffmpeg_location": str(self.ffmpeg)}
+        if self.ffmpeg_path:
+            params |= {"ffmpeg_location": str(self.ffmpeg_path)}
 
             match self.type:
                 case "video":
@@ -128,7 +130,7 @@ class FormatConfig:
                 case _:
                     raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
 
-            if self.metadata:
+            if self.embed_metadata:
                 params |= {
                     "outtmpl": {
                         "thumbnail": "",

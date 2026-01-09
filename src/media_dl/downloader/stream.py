@@ -32,9 +32,9 @@ class StreamDownloader:
         format: File format to search or convert with (FFmpeg) if is a extension.
         quality: Quality to filter.
         output: Directory where to save files.
-        ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
-        metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
         threads: Maximum processes to execute.
+        ffmpeg_path: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
+        embed_metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
         show_progress: Choice if render download progress.
 
     Raises:
@@ -46,17 +46,17 @@ class StreamDownloader:
         format: FILE_FORMAT = "video",
         quality: int | None = None,
         output: StrPath = Path.cwd(),
-        ffmpeg: StrPath | None = None,
-        metadata: bool = True,
         threads: int = 4,
+        ffmpeg_path: StrPath | None = None,
+        embed_metadata: bool = True,
         show_progress: bool = True,
     ):
         self.config = FormatConfig(
             format=format,
             quality=quality,
             output=Path(output),
-            ffmpeg=Path(ffmpeg) if ffmpeg else None,
-            metadata=metadata,
+            ffmpeg_path=Path(ffmpeg_path) if ffmpeg_path else None,
+            embed_metadata=embed_metadata,
         )
         self._threads = threads
         self._progress = DownloadProgress(disable=not show_progress)
