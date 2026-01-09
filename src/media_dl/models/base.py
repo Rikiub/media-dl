@@ -39,9 +39,13 @@ class ExtractID(BaseData):
     id: str
 
     @classmethod
-    def from_url(cls, url: str) -> Self:
+    def from_url(
+        cls,
+        url: str,
+        cache: bool = True,
+    ) -> Self:
         # Load from cache
-        if info := load_info(url):
+        if info := cache and load_info(url):
             try:
                 return cls.model_validate_json(info)
             except ValueError:

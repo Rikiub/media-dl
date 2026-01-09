@@ -164,6 +164,14 @@ What format you want request?
             rich_help_panel=HelpPanel.downloader,
         ),
     ] = 5,
+    no_cache: Annotated[
+        bool,
+        Option(
+            "--no-cache",
+            help="Process without use the cache.",
+            rich_help_panel=HelpPanel.other,
+        ),
+    ] = False,
     quiet: Annotated[
         bool,
         Option(
@@ -202,6 +210,8 @@ What format you want request?
 
     init_logging(log_level)
 
+    no_cache = not no_cache
+
     # Lazy Import
     with Status("Starting...", disable=quiet):
         from media_dl.downloader.stream import StreamDownloader
@@ -235,9 +245,9 @@ What format you want request?
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
 
                     try:
-                        result = Stream.from_url(entry)
+                        result = Stream.from_url(entry, no_cache)
                     except TypeError:
-                        result = Playlist.from_url(entry)
+                        result = Playlist.from_url(entry, no_cache)
                         logger.info('🔎 Playlist title: "{title}".', title=result.title)
                 else:
                     logger.info(
@@ -245,7 +255,11 @@ What format you want request?
                         extractor=target,
                         query=entry,
                     )
-                    result = Search.from_query(entry, target).streams[0]
+                    result = Search.from_query(
+                        entry,
+                        target,
+                        cache=no_cache,
+                    ).streams[0]
 
             downloader.download_all(result)
             logger.info("✅ Download Finished.")

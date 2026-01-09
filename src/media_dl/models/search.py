@@ -18,9 +18,15 @@ class Search(BaseDataList):
     playlists: LazyPlaylists = []
 
     @classmethod
-    def from_query(cls, query: str, provider: SEARCH_PROVIDER, limit: int = 20) -> Self:
+    def from_query(
+        cls,
+        query: str,
+        provider: SEARCH_PROVIDER,
+        limit: int = 20,
+        cache: bool = True,
+    ) -> Self:
         # Load from cache
-        if info := load_info(query):
+        if info := cache and load_info(query):
             return cls.model_validate_json(info)
 
         # Fetch info
