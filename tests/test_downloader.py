@@ -7,7 +7,11 @@ from media_dl import Playlist, Stream, StreamDownloader
 TEMPDIR = TemporaryDirectory()
 
 
-downloader = StreamDownloader(quality=1, output=TEMPDIR.name)
+downloader = StreamDownloader(
+    quality=1,
+    output=TEMPDIR.name,
+    use_cache=True,
+)
 
 
 def download(url):
@@ -25,7 +29,7 @@ def download(url):
 
 def test_ffmpeg_not_exists():
     with pytest.raises(FileNotFoundError):
-        StreamDownloader(ffmpeg="./unkdown_path/")
+        StreamDownloader(ffmpeg_path="./unkdown_path/")
 
 
 def test_stream():

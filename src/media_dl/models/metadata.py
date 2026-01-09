@@ -1,6 +1,8 @@
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BeforeValidator, Field, RootModel
+
+from media_dl.models.base import Serializable
 
 
 def _validate_artists(value: list[str]) -> list[str]:
@@ -10,7 +12,7 @@ def _validate_artists(value: list[str]) -> list[str]:
     return value
 
 
-class MusicMetadata(BaseModel):
+class MusicMetadata(Serializable):
     track: str = ""
     artists: Annotated[list[str] | None, BeforeValidator(_validate_artists)] = None
     album: str = ""
@@ -18,23 +20,23 @@ class MusicMetadata(BaseModel):
     genres: list[str] | None = None
 
 
-class Subtitle(BaseModel):
+class Subtitle(Serializable):
     url: str
     extension: Annotated[str, Field(alias="ext")]
     language: Annotated[str, Field(alias="name")] = ""
 
 
-Subtitles = dict[str, list[Subtitle]]
+class Subtitles(Serializable, RootModel[dict[str, list[Subtitle]]]): ...
 
 
-class Thumbnail(BaseModel):
+class Thumbnail(Serializable):
     id: str = ""
     url: str
     width: int = 0
     height: int = 0
 
 
-class Chapter(BaseModel):
+class Chapter(Serializable):
     start_time: int
     end_time: int
     title: str

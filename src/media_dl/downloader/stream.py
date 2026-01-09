@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import concurrent.futures as cf
 import shutil
 import time
@@ -7,20 +8,25 @@ from typing import cast
 from loguru import logger
 
 from media_dl.downloader.config import FormatConfig
-from media_dl.downloader.internal import DownloadCallback, ProgressStatus, YDLDownloader
+from media_dl.downloader.internal import (
+    DownloadCallback,
+    ProgressStatus,
+    download_formats,
+)
+from media_dl.downloader.metadata import download_subtitles, download_thumbnails
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
-from media_dl.models.list import Playlist
+from media_dl.models.list import BaseList, Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
 from media_dl.template.parser import generate_output_template
-from media_dl.types import FILE_FORMAT, MUSIC_SITES, StrPath
-from media_dl.ydl.helpers import download_subtitle, download_thumbnail, run_postproces
-from media_dl.ydl.types import SupportedExtensions, YDLExtractInfo
+from media_dl.types import FILE_FORMAT, StrPath
+from media_dl.ydl.helpers import run_postproces
+from media_dl.ydl.types import SupportedExtensions
 
-ExtractResult = list[LazyStream] | LazyStream | Playlist
+ExtractResult = BaseList | LazyStream
 
 
 class StreamDownloader:
@@ -47,6 +53,7 @@ class StreamDownloader:
         quality: int | None = None,
         output: StrPath = Path.cwd(),
         threads: int = 4,
+        use_cache: bool = True,
         ffmpeg_path: StrPath | None = None,
         embed_metadata: bool = True,
         show_progress: bool = True,
@@ -58,7 +65,8 @@ class StreamDownloader:
             ffmpeg_path=Path(ffmpeg_path) if ffmpeg_path else None,
             embed_metadata=embed_metadata,
         )
-        self._threads = threads
+        self.cache = use_cache
+        self.threads = threads
         self._progress = DownloadProgress(disable=not show_progress)
 
         logger.debug("Download config: {config}", config=self.config.to_dict())
@@ -81,7 +89,7 @@ class StreamDownloader:
         self._progress.counter.reset(len(streams), visible=bool(playlist))
 
         with self._progress:
-            with cf.ThreadPoolExecutor(max_workers=self._threads) as executor:
+            with cf.ThreadPoolExecutor(max_workers=self.threads) as executor:
                 futures = [
                     executor.submit(self._download_work, task, playlist)
                     for task in streams
@@ -142,7 +150,7 @@ class StreamDownloader:
 
     def _download_work(
         self,
-        stream: LazyStream | Stream,
+        stream: LazyStream,
         playlist: Playlist | None = None,
         on_progress: DownloadCallback | None = None,
     ) -> Path:
@@ -152,28 +160,30 @@ class StreamDownloader:
             step="",
         )
 
-        _stream = stream
+        full_stream = stream
 
         try:
             # Resolve stream
             if type(stream) is LazyStream:
-                _stream = stream.fetch()
+                full_stream = stream.fetch(self.cache)
                 self._progress.update(
-                    task_id, description=_stream_display_name(_stream)
+                    task_id, description=_stream_display_name(full_stream)
                 )
             elif isinstance(stream, Stream):
-                _stream = stream
+                full_stream = stream
             else:
                 raise TypeError(stream)
 
             _log_stream(stream, "Downloading stream.")
 
             # Resolve formats
-            format_video, format_audio, download_config = self._resolve_format(_stream)
+            format_video, format_audio, download_config = self._resolve_format(
+                full_stream
+            )
 
             # STATUS: Download
             # Add callbacks
-            callbacks = []
+            callbacks: list[Callable] = []
 
             def p(p: ProgressStatus):
                 if p.steps_total > 1:
@@ -216,7 +226,7 @@ class StreamDownloader:
 
             output = generate_output_template(
                 output=output,
-                stream=_stream,
+                stream=full_stream,
                 playlist=playlist,
                 format=format_video or format_audio,
             )
@@ -233,7 +243,7 @@ class StreamDownloader:
                         self._progress.update(task_id, status="Skipped")
                         logger.info(
                             'Skipped: "{stream}" (Exists as "{extension}").',
-                            stream=_stream_display_name(_stream),
+                            stream=_stream_display_name(full_stream),
                             extension=file.suffix[1:],
                         )
                         return file
@@ -252,60 +262,56 @@ class StreamDownloader:
             ]
 
             # Run download
-            d = YDLDownloader(
+            downloaded_file, progress = download_formats(
                 filepath=get_tempfile(),
                 video=format_video,
                 audio=format_audio,
                 merge_format=merge_format,
                 callbacks=callbacks,
             )
-            downloaded_file = d.run()
-            progress_data = d.progress
 
             # STATUS: Postprocess
             if on_progress:
-                progress_data.status = "postprocessing"
-                on_progress(progress_data)
+                progress.status = "postprocessing"
+                on_progress(progress)
             self._progress.update(task_id, status="Processing")
             _log_stream(stream, "Postprocessing downloaded file.")
 
-            stream_dict: YDLExtractInfo = _stream.to_ydl_dict()
-
-            if format_video:
-                stream_dict |= _gen_postprocessing_dict(_stream, format_video)
-            elif format_audio:
-                stream_dict |= _gen_postprocessing_dict(_stream, format_audio)
-
             # Download resources
-            if d := _stream.thumbnails and download_thumbnail(
-                downloaded_file, stream_dict
+            if file := full_stream.thumbnails and download_thumbnails(
+                downloaded_file,
+                full_stream.thumbnails,
             ):
                 _log_stream(
                     stream,
                     'Thumbnail downloaded: "{file}"',
-                    id=_stream.id,
-                    file=d,
+                    id=full_stream.id,
+                    file=file,
                 )
 
-            if d := _stream.subtitles and download_subtitle(
-                downloaded_file, stream_dict
+            if file := full_stream.subtitles and download_subtitles(
+                downloaded_file,
+                full_stream.subtitles,
             ):
                 _log_stream(
                     stream,
                     'Subtitle downloaded: "{file}"',
-                    id=_stream.id,
-                    file=d,
+                    id=full_stream.id,
+                    file=file,
                 )
 
             # Run postprocessing
-            params = download_config.ydl_params(
-                music_metadata=_url_is_music_site(_stream.url)
-            )
+            temp_dict = full_stream.to_ydl_dict()
+
+            if format_video:
+                temp_dict |= format_video.to_ydl_dict()
+            elif format_audio:
+                temp_dict |= format_audio.to_ydl_dict()
 
             downloaded_file = run_postproces(
                 file=downloaded_file,
-                info=stream_dict,
-                params=params,
+                info=temp_dict,
+                params=download_config.ydl_params(music_metadata=full_stream.is_music),
             )
 
             # Add extension to filepath
@@ -313,14 +319,14 @@ class StreamDownloader:
             _log_stream(
                 stream,
                 'Final filepath will be "{filepath}"',
-                id=_stream.id,
+                id=full_stream.id,
                 filepath=output,
             )
 
             _log_stream(
                 stream,
                 'Postprocessing finished, saved as "{extension}".',
-                id=_stream.id,
+                id=full_stream.id,
                 extension=downloaded_file.suffix[1:],
             )
 
@@ -329,17 +335,19 @@ class StreamDownloader:
             output = Path(shutil.move(downloaded_file, output))
 
             self._progress.update(task_id, status="Finished")
-            logger.info('Finished: "{stream}".', stream=_stream_display_name(_stream))
+            logger.info(
+                'Finished: "{stream}".', stream=_stream_display_name(full_stream)
+            )
 
             if on_progress:
-                progress_data.status = "finished"
-                on_progress(progress_data)
+                progress.status = "finished"
+                on_progress(progress)
 
             return output
         except ConnectionError as err:
             logger.error(
                 'Error: "{stream}": {error}',
-                stream=_stream_display_name(_stream),
+                stream=_stream_display_name(full_stream),
                 error=str(err),
             )
             self._progress.update(task_id, status="Error")
@@ -373,7 +381,7 @@ class StreamDownloader:
         config.format = selected_format
 
         if not config.convert:
-            if audio and _url_is_music_site(stream.url):
+            if audio and stream.is_music:
                 _log_stream(stream, "Detected as music site.", id=stream.id)
                 _log_stream(stream, 'Config changed to "audio".', id=stream.id)
                 config.format = "audio"
@@ -418,38 +426,20 @@ def _media_to_list(media: ExtractResult) -> list[LazyStream]:
     match media:
         case LazyStream():
             streams = [media]
-        case Playlist():
+        case BaseList():
             streams = media.streams
-        case list():
-            streams = media
         case _:
             raise TypeError(media)
 
     return streams
 
 
-def _url_is_music_site(url: str) -> bool:
-    if any(s in url for s in MUSIC_SITES):
-        return True
-    else:
-        return False
-
-
 def _stream_display_name(stream: LazyStream) -> str:
     """Get pretty representation of the stream name."""
 
-    if _url_is_music_site(stream.url) and stream.uploader and stream.title:
+    if stream.is_music and stream.uploader and stream.title:
         return stream.title + " - " + stream.uploader
     elif stream.title:
         return stream.title
     else:
         return ""
-
-
-def _gen_postprocessing_dict(stream: Stream, format: Format) -> YDLExtractInfo:
-    d = stream.to_ydl_dict()
-
-    if format:
-        d |= format.to_ydl_dict()
-
-    return d

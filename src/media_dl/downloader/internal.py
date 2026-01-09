@@ -33,100 +33,97 @@ class ProgressStatus(BaseModel):
 DownloadCallback = Callable[[ProgressStatus | None], None]
 
 
-class YDLDownloader:
-    def __init__(
-        self,
-        filepath: Path,
-        video: Format | None,
-        audio: Format | None,
-        merge_format: str | None = None,
-        callbacks: list[DownloadCallback] | None = None,
-    ) -> None:
-        if not (video or audio):
-            raise ValueError("No formats to download.")
+def download_formats(
+    filepath: Path,
+    video: Format | None,
+    audio: Format | None,
+    merge_format: str | None = None,
+    callbacks: list[DownloadCallback] | None = None,
+) -> tuple[Path, ProgressStatus]:
+    if not (video or audio):
+        raise ValueError("No formats to download.")
 
-        # Variables
-        self.params: YDLParams = {}
-        self.info: YDLExtractInfo = {}
-        self.progress: ProgressStatus = ProgressStatus()
+    # Variables
+    params: YDLParams = {}
+    info: YDLExtractInfo = {}
+    progress: ProgressStatus = ProgressStatus()
 
-        # Params
-        if merge_format:
-            self.params |= {
-                "merge_output_format": merge_format
-                or "/".join(get_args(VIDEO_EXTENSION))
-            }
-
-        if callbacks:
-            self.params |= {
-                "progress_hooks": [
-                    lambda d: self._progress_wraper(d, c) for c in callbacks
-                ]
-            }
-            self.progress = ProgressStatus(
-                status="waiting",
-                step_type="video" if video else "audio",
-                steps_total=2 if video and audio else 1,
-            )
-
-        self.params |= {"outtmpl": {"default": f"{filepath}.%(ext)s"}}
-
-        # Info
-        format_id = (
-            str(video.id if video else "") + "+" + str(audio.id if audio else "")
-        )
-
-        if format_id.startswith("+") or format_id.endswith("+"):
-            format_id = format_id.strip("+")
-
-        formats: list[dict] = [f.to_ydl_dict() for f in (video, audio) if f is not None]
-
-        self.info = {
-            "extractor": "generic",
-            "extractor_key": "Generic",
-            "title": filepath.stem,
-            "id": filepath.stem,
-            "formats": formats,
-            "format_id": format_id,
+    # Params
+    if merge_format:
+        params |= {
+            "merge_output_format": merge_format or "/".join(get_args(VIDEO_EXTENSION))
         }
 
-    def run(self) -> Path:
-        return download_from_info(self.info, self.params)
+    if callbacks:
+        params |= {
+            "progress_hooks": [
+                lambda d: _progress_wraper(d, call, progress) for call in callbacks
+            ]
+        }
+        progress = ProgressStatus(
+            status="waiting",
+            step_type="video" if video else "audio",
+            steps_total=2 if video and audio else 1,
+        )
 
-    def _progress_wraper(self, d: dict, callback: DownloadCallback) -> None:
-        """`YT-DLP` progress hook, but stable and without issues."""
+    params |= {"outtmpl": {"default": f"{filepath}.%(ext)s"}}
 
-        if self.progress:
-            p = self.progress
+    # Info
+    format_id = str(video.id if video else "") + "+" + str(audio.id if audio else "")
 
-            match d["status"]:
-                case "downloading":
-                    p.status = "downloading"
+    if format_id.startswith("+") or format_id.endswith("+"):
+        format_id = format_id.strip("+")
 
-                    p.downloaded_bytes = d.get("downloaded_bytes") or 0
-                    total_bytes = (
-                        d.get("total_bytes") or d.get("total_bytes_estimate") or 0
-                    )
+    formats: list[dict] = [f.to_ydl_dict() for f in (video, audio) if f is not None]
 
-                    if total_bytes > p.total_bytes:
-                        p.total_bytes = total_bytes
+    info = {
+        "extractor": "generic",
+        "extractor_key": "Generic",
+        "title": filepath.stem,
+        "id": filepath.stem,
+        "formats": formats,
+        "format_id": format_id,
+    }
 
-                    p.fragments_completed = d.get("fragment_index") or 0
-                    p.fragments_total = d.get("fragment_count") or 0
+    return download_from_info(info, params), progress
 
-                    p.speed = d["speed"]
-                    p.elapsed = d["elapsed"]
-                case "finished":
-                    if p.steps_completed < p.steps_total:
-                        p.downloaded_bytes = p.total_bytes
-                        p.steps_completed += 1
 
-                        if p.step_type == "video":
-                            p.step_type = "audio"
+def _progress_wraper(
+    data: dict,
+    callback: DownloadCallback,
+    progress: ProgressStatus,
+) -> None:
+    """`YT-DLP` progress hook, but stable and without issues."""
 
-                    p.total_bytes = p.downloaded_bytes
+    d = data
+    p = progress
 
-            if p.steps_completed == p.steps_total:
-                p.status = "merging"
+    match d["status"]:
+        case "downloading":
+            p.status = "downloading"
 
-            callback(p)
+            p.downloaded_bytes = d.get("downloaded_bytes") or 0
+            total_bytes = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+
+            if total_bytes > p.total_bytes:
+                p.total_bytes = total_bytes
+
+            p.fragments_completed = d.get("fragment_index") or 0
+            p.fragments_total = d.get("fragment_count") or 0
+
+            p.speed = d["speed"]
+            p.elapsed = d["elapsed"]
+        case "finished":
+            if p.steps_completed < p.steps_total:
+                p.downloaded_bytes = p.total_bytes
+                p.steps_completed += 1
+
+                if p.step_type == "video":
+                    p.step_type = "audio"
+
+            p.total_bytes = p.downloaded_bytes
+
+    if p.steps_completed == p.steps_total:
+        p.status = "merging"
+
+    callback(p)

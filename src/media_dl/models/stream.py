@@ -14,6 +14,7 @@ from pydantic import (
 from media_dl.models.base import Extract
 from media_dl.models.formats.list import FormatList
 from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
+from media_dl.types import MUSIC_SITES
 
 DatetimeTimestamp = Annotated[
     datetime.datetime, PlainSerializer(lambda d: d.timestamp())
@@ -33,7 +34,14 @@ class LazyStream(MusicMetadata, Extract):
     duration: float = 0
     thumbnails: list[Thumbnail] = []
 
-    def fetch(self) -> Stream:
+    @property
+    def is_music(self) -> bool:
+        if any(s in self.url for s in MUSIC_SITES):
+            return True
+        else:
+            return False
+
+    def fetch(self, use_cache: bool = True) -> Stream:
         """Fetch real stream.
 
         Returns:
@@ -43,7 +51,7 @@ class LazyStream(MusicMetadata, Extract):
             ExtractError: Something bad happens when extract.
         """
 
-        return Stream.from_url(self.url)
+        return Stream.from_url(self.url, use_cache)
 
 
 class Stream(LazyStream):
