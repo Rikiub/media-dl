@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self
@@ -16,7 +16,10 @@ ExtractorKey = Annotated[
         validation_alias=AliasChoices("extractor_key", "ie_key"),
     ),
 ]
-TypeField: TypeAlias = Annotated[Literal["url", "playlist"], Field(alias="_type")]
+TypeField = Annotated[
+    Literal["url", "playlist"],
+    Field(alias="_type"),
+]
 
 
 class BaseData(ABC, BaseModel):

@@ -6,7 +6,7 @@ from pydantic import AliasChoices, Field, OnErrorOmit
 
 from media_dl.models.base import URL_CHOICES, BaseDataList, ExtractID
 from media_dl.models.metadata import Thumbnail
-from media_dl.models.stream import LazyStream, LazyStreams
+from media_dl.models.stream import LazyStreams
 
 
 class LazyPlaylist(BaseDataList, ExtractID):
@@ -37,7 +37,6 @@ class LazyPlaylist(BaseDataList, ExtractID):
 
     streams: LazyStreams = []
     playlists: LazyPlaylists = []
-    entries: list[OnErrorOmit[LazyStream | LazyPlaylist]]
 
     def fetch(self) -> Playlist:
         """Fetch real playlist.
