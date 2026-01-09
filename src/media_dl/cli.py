@@ -145,17 +145,6 @@ What format you want request?
             file_okay=False,
         ),
     ] = Path.cwd(),
-    ffmpeg: Annotated[
-        Path | None,
-        Option(
-            "--ffmpeg",
-            help="FFmpeg executable to use.",
-            rich_help_panel=HelpPanel.downloader,
-            show_default=False,
-            file_okay=True,
-            dir_okay=False,
-        ),
-    ] = None,
     threads: Annotated[
         int,
         Option(
@@ -164,14 +153,25 @@ What format you want request?
             rich_help_panel=HelpPanel.downloader,
         ),
     ] = 5,
-    no_cache: Annotated[
+    ffmpeg_path: Annotated[
+        Path | None,
+        Option(
+            help="FFmpeg executable to use.",
+            rich_help_panel=HelpPanel.downloader,
+            show_default=False,
+            file_okay=True,
+            dir_okay=False,
+        ),
+    ] = None,
+    cache: Annotated[
         bool,
         Option(
             "--no-cache",
             help="Process without use the cache.",
             rich_help_panel=HelpPanel.other,
+            show_default=False,
         ),
-    ] = False,
+    ] = True,
     quiet: Annotated[
         bool,
         Option(
@@ -200,6 +200,8 @@ What format you want request?
 ):
     """Download any video/audio you want from a simple URL ✨"""
 
+    cache = not cache
+
     log_level: LOGGING_LEVELS
     if quiet:
         log_level = "CRITICAL"
@@ -209,8 +211,6 @@ What format you want request?
         log_level = "INFO"
 
     init_logging(log_level)
-
-    no_cache = not no_cache
 
     # Lazy Import
     with Status("Starting...", disable=quiet):
@@ -225,8 +225,8 @@ What format you want request?
             format=format,
             quality=quality,
             output=output,
-            ffmpeg=ffmpeg,
             threads=threads,
+            ffmpeg_path=ffmpeg_path,
             show_progress=not quiet,
         )
     except FileNotFoundError as err:
@@ -244,9 +244,9 @@ What format you want request?
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
 
                     try:
-                        result = Stream.from_url(entry, no_cache)
+                        result = Stream.from_url(entry, cache)
                     except TypeError:
-                        result = Playlist.from_url(entry, no_cache)
+                        result = Playlist.from_url(entry, cache)
                         logger.info('🔎 Playlist title: "{title}".', title=result.title)
                 else:
                     logger.info(
@@ -257,7 +257,7 @@ What format you want request?
                     result = Search.from_query(
                         entry,
                         target,
-                        cache=no_cache,
+                        use_cache=cache,
                     ).streams[0]
 
             downloader.download_all(result)
