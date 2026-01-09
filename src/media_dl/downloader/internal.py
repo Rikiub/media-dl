@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated, Callable, Literal, cast, get_args
 
 from pydantic import BaseModel, Field
-from yt_dlp.utils import DownloadError as BaseDownloadError
+from yt_dlp.utils import DownloadError as YDLDownloadError
 
 from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.formats.types import Format
@@ -109,7 +109,7 @@ class YDLDownloader:
                 download=True,
             )
             return cast(YDLExtractInfo, info)
-        except BaseDownloadError as err:
+        except YDLDownloadError as err:
             msg = format_except_message(err)
 
             if "Postprocessing:" in msg:

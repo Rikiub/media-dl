@@ -4,7 +4,7 @@ from typing import cast
 
 from loguru import logger
 from yt_dlp.networking.exceptions import RequestError
-from yt_dlp.utils import DownloadError
+from yt_dlp.utils import DownloadError as YDLDownloadError
 
 from media_dl.exceptions import ExtractError
 from media_dl.types import SEARCH_PROVIDER
@@ -81,7 +81,7 @@ def _fetch_query(query: str) -> YDLExtractInfo:
         )
         info = ydl.extract_info(query, download=False)
         info = cast(YDLExtractInfo, info)
-    except (DownloadError, RequestError) as err:
+    except (YDLDownloadError, RequestError) as err:
         msg = format_except_message(err)
         raise ExtractError(msg)
 
