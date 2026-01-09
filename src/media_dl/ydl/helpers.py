@@ -1,23 +1,48 @@
 from pathlib import Path
+from typing import cast
 
-from media_dl.exceptions import PostProcessingError
+from yt_dlp.utils import DownloadError as YDLDownloadError
+from yt_dlp.networking.exceptions import RequestError
+
+from media_dl.exceptions import DownloadError, ExtractError, PostProcessingError
 from media_dl.types import StrPath
+from media_dl.ydl.messages import format_except_message
 from media_dl.ydl.types import YDLExtractInfo, YDLParams
 from media_dl.ydl.wrapper import YTDLP
 
 
-def run_postproces(file: Path, info: YDLExtractInfo, params: YDLParams) -> Path:
-    """Postprocess file by params."""
+def extract_info(query: str) -> YDLExtractInfo:
+    try:
+        ydl = YTDLP(
+            {
+                "extract_flat": "in_playlist",
+                "skip_download": True,
+            }
+        )
+        info = ydl.extract_info(query, download=False)
+        return cast(YDLExtractInfo, info)
+    except (YDLDownloadError, RequestError) as err:
+        msg = format_except_message(err)
+        raise ExtractError(msg)
 
-    info = YTDLP(params).post_process(
-        filename=str(file),
-        info=info,  # type: ignore
-    )
 
-    if path := info.get("filepath"):
-        return Path(path)
+def download_from_info(info: YDLExtractInfo, params: YDLParams) -> Path:
+    retries: YDLParams = {"retries": 0, "fragment_retries": 0}
 
-    raise PostProcessingError("File not founded.")
+    try:
+        result = YTDLP(retries | params).process_ie_result(
+            info,  # type: ignore
+            download=True,
+        )
+        filepath = result["requested_downloads"][0]["filepath"]  # type: ignore
+        return Path(filepath)
+    except YDLDownloadError as err:
+        msg = format_except_message(err)
+
+        if "Postprocessing:" in msg:
+            raise PostProcessingError(msg)
+        else:
+            raise DownloadError(msg)
 
 
 def parse_output_template(info: YDLExtractInfo, template: str) -> str:
@@ -71,3 +96,17 @@ def download_subtitle(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
         return Path(final[0][0])
     else:
         return None
+
+
+def run_postproces(file: Path, info: YDLExtractInfo, params: YDLParams) -> Path:
+    """Postprocess file by params."""
+
+    info = YTDLP(params).post_process(
+        filename=str(file),
+        info=info,  # type: ignore
+    )
+
+    if path := info.get("filepath"):
+        return Path(path)
+
+    raise PostProcessingError("File not founded.")

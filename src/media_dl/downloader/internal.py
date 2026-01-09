@@ -1,15 +1,12 @@
 from pathlib import Path
-from typing import Annotated, Callable, Literal, cast, get_args
+from typing import Annotated, Callable, Literal, get_args
 
 from pydantic import BaseModel, Field
-from yt_dlp.utils import DownloadError as YDLDownloadError
 
-from media_dl.exceptions import DownloadError, PostProcessingError
 from media_dl.models.formats.types import Format
 from media_dl.types import FORMAT_TYPE, VIDEO_EXTENSION
-from media_dl.ydl.messages import format_except_message
+from media_dl.ydl.helpers import download_from_info
 from media_dl.ydl.types import YDLExtractInfo, YDLParams
-from media_dl.ydl.wrapper import YTDLP
 
 
 class ProgressStatus(BaseModel):
@@ -94,28 +91,7 @@ class YDLDownloader:
         }
 
     def run(self) -> Path:
-        info = self._internal_download(self.info, self.params)
-        path = info["requested_downloads"][0]["filepath"]
-        return Path(path)
-
-    def _internal_download(
-        self, info: YDLExtractInfo, params: YDLParams
-    ) -> YDLExtractInfo:
-        retries: YDLParams = {"retries": 0, "fragment_retries": 0}
-
-        try:
-            info = YTDLP(retries | params).process_ie_result(
-                info,  # type: ignore
-                download=True,
-            )
-            return cast(YDLExtractInfo, info)
-        except YDLDownloadError as err:
-            msg = format_except_message(err)
-
-            if "Postprocessing:" in msg:
-                raise PostProcessingError(msg)
-            else:
-                raise DownloadError(msg)
+        return download_from_info(self.info, self.params)
 
     def _progress_wraper(self, d: dict, callback: DownloadCallback) -> None:
         """`YT-DLP` progress hook, but stable and without issues."""

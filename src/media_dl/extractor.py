@@ -1,42 +1,13 @@
 """Raw info extractor."""
 
-from typing import cast
-
 from loguru import logger
-from yt_dlp.networking.exceptions import RequestError
-from yt_dlp.utils import DownloadError as YDLDownloadError
 
 from media_dl.exceptions import ExtractError
 from media_dl.types import SEARCH_PROVIDER
-from media_dl.ydl.messages import format_except_message
+from media_dl.ydl.helpers import extract_info
 from media_dl.ydl.types import YDLExtractInfo
-from media_dl.ydl.wrapper import YTDLP
 
 PLAYLISTS_EXTRACTORS = ["YoutubeTab"]
-
-
-def is_playlist(info: YDLExtractInfo) -> bool:
-    """Check if info is a playlist."""
-
-    if (
-        info.get("_type") == "playlist"
-        or info.get("ie_key") in PLAYLISTS_EXTRACTORS
-        or info.get("entries")
-    ):
-        return True
-    else:
-        return False
-
-
-def is_stream(info: YDLExtractInfo) -> bool:
-    """Check if info is a single Stream."""
-
-    if info.get("ie_key", info.get("extractor_key")) in PLAYLISTS_EXTRACTORS:
-        return False
-    if info.get("_type") == "url" or info.get("formats"):
-        return True
-
-    return False
 
 
 def extract_search(
@@ -69,21 +40,34 @@ def extract_url(url: str) -> YDLExtractInfo:
     return _fetch_query(url)
 
 
+def is_playlist(info: YDLExtractInfo) -> bool:
+    """Check if info is a playlist."""
+
+    if (
+        info.get("_type") == "playlist"
+        or info.get("ie_key") in PLAYLISTS_EXTRACTORS
+        or info.get("entries")
+    ):
+        return True
+    else:
+        return False
+
+
+def is_stream(info: YDLExtractInfo) -> bool:
+    """Check if info is a single Stream."""
+
+    if info.get("ie_key", info.get("extractor_key")) in PLAYLISTS_EXTRACTORS:
+        return False
+    if info.get("_type") == "url" or info.get("formats"):
+        return True
+
+    return False
+
+
 def _fetch_query(query: str) -> YDLExtractInfo:
     """Base info dict extractor."""
 
-    try:
-        ydl = YTDLP(
-            {
-                "extract_flat": "in_playlist",
-                "skip_download": True,
-            }
-        )
-        info = ydl.extract_info(query, download=False)
-        info = cast(YDLExtractInfo, info)
-    except (YDLDownloadError, RequestError) as err:
-        msg = format_except_message(err)
-        raise ExtractError(msg)
+    info = extract_info(query)
 
     # Some extractors need redirect to "real URL" (Example: Pinterest)
     # In this case, we need do another request.
