@@ -28,13 +28,17 @@ def _gen_keys() -> list[str]:
 
     EXCLUDED_KEYS = {
         *extract(YDLArgs),
+        "extractor_key",
+        "_type",
         "streams",
+        "playlists",
         "formats",
         "subtitles",
+        "chapters",
         "thumbnails",
         "datetime",
         "extension",
-        "ext",
+        "codec",
     }
 
     templates = {
@@ -42,7 +46,7 @@ def _gen_keys() -> list[str]:
         *extract(Stream),
         *extract(Format),
         *extract(VideoFormat),
-        *extract(AudioFormat, True),
+        *extract(AudioFormat),
     }
 
     for key in EXCLUDED_KEYS:
