@@ -82,7 +82,7 @@ class YDLDownloader:
         if format_id.startswith("+") or format_id.endswith("+"):
             format_id = format_id.strip("+")
 
-        formats: list[dict] = [f.as_ydl_dict() for f in (video, audio) if f is not None]
+        formats: list[dict] = [f.to_ydl_dict() for f in (video, audio) if f is not None]
 
         self.info = {
             "extractor": "generic",

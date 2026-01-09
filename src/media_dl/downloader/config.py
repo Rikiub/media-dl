@@ -72,7 +72,7 @@ class FormatConfig:
             cast(EXTENSION, self.format) if self.format in get_args(EXTENSION) else None
         )
 
-    def as_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dict."""
 
         return asdict(self)

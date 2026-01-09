@@ -25,10 +25,10 @@ TypeField = Annotated[
 
 # Interfaces
 class Serializable(BaseModel):
-    def as_ydl_dict(self) -> YDLExtractInfo:
+    def to_ydl_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 
-    def as_ydl_json(self) -> str:
+    def to_ydl_json(self) -> str:
         return self.model_dump_json(by_alias=True)
 
     @classmethod
@@ -82,7 +82,7 @@ class Extract(Serializable):
 
         # Save to cache
         if use_cache:
-            save_info(cls.url, cls.as_ydl_json())
+            save_info(cls.url, cls.to_ydl_json())
 
         return cls
 
@@ -128,6 +128,6 @@ class ExtractSearch(ExtractList):
 
         # Save to cache
         if use_cache:
-            save_info(cls.query, cls.as_ydl_json())
+            save_info(cls.query, cls.to_ydl_json())
 
         return cls

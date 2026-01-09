@@ -61,7 +61,7 @@ class StreamDownloader:
         self._threads = threads
         self._progress = DownloadProgress(disable=not show_progress)
 
-        logger.debug("Download config: {config}", config=self.config.as_dict())
+        logger.debug("Download config: {config}", config=self.config.to_dict())
 
     def download_all(self, media: ExtractResult) -> list[Path]:
         """Download any result.
@@ -269,7 +269,7 @@ class StreamDownloader:
             self._progress.update(task_id, status="Processing")
             _log_stream(stream, "Postprocessing downloaded file.")
 
-            stream_dict: YDLExtractInfo = _stream.as_ydl_dict()
+            stream_dict: YDLExtractInfo = _stream.to_ydl_dict()
 
             if format_video:
                 stream_dict |= _gen_postprocessing_dict(_stream, format_video)
@@ -447,9 +447,9 @@ def _stream_display_name(stream: LazyStream) -> str:
 
 
 def _gen_postprocessing_dict(stream: Stream, format: Format) -> YDLExtractInfo:
-    d = stream.as_ydl_dict()
+    d = stream.to_ydl_dict()
 
     if format:
-        d |= format.as_ydl_dict()
+        d |= format.to_ydl_dict()
 
     return d
