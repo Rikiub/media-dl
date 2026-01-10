@@ -11,7 +11,7 @@ class YTDLP(YoutubeDL):
     _SUPRESS_LOGGER = logging.getLogger("YoutubeDL")
     _SUPRESS_LOGGER.disabled = True
 
-    def __init__(self, params: YDLParams | None = None):
+    def __init__(self, params: YDLParams | None = None, auto_init: bool = False):
         # Default parameters
         opts: YDLParams = {
             "logger": self._SUPRESS_LOGGER,  # type: ignore
@@ -28,4 +28,7 @@ class YTDLP(YoutubeDL):
         opts |= params or {}
 
         # Initialize
-        super().__init__(opts)  # type: ignore
+        super().__init__(
+            opts,  # type: ignore
+            auto_init,
+        )

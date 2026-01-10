@@ -14,10 +14,11 @@ from media_dl.ydl.wrapper import YTDLP
 def extract_info(query: str) -> YDLExtractInfo:
     try:
         ydl = YTDLP(
-            {
+            params={
                 "extract_flat": "in_playlist",
                 "skip_download": True,
-            }
+            },
+            auto_init=True,
         )
         info = ydl.extract_info(query, download=False)
         return cast(YDLExtractInfo, info)
@@ -30,7 +31,10 @@ def download_from_info(info: YDLExtractInfo, params: YDLParams) -> Path:
     retries: YDLParams = {"retries": 0, "fragment_retries": 0}
 
     try:
-        result = YTDLP(retries | params).process_ie_result(
+        result = YTDLP(
+            params=retries | params,
+            auto_init=True,
+        ).process_ie_result(
             info,  # type: ignore
             download=True,
         )
