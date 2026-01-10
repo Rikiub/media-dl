@@ -224,6 +224,7 @@ What format you want request?
             quality=quality,
             output=output,
             threads=threads,
+            use_cache=cache,
             ffmpeg_path=ffmpeg_path,
             show_progress=not quiet,
         )
