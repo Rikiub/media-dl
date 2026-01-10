@@ -211,7 +211,7 @@ What format you want request?
     init_logging(log_level)
 
     # Lazy Import
-    with Status("Starting...", disable=quiet):
+    with Status("Starting[blink]...", disable=quiet):
         from media_dl.downloader.stream import StreamDownloader
         from media_dl.exceptions import DownloadError, ExtractError
         from media_dl.models.list import Playlist, Search
@@ -238,7 +238,7 @@ What format you want request?
 
     for target, entry in parse_queries(query):
         try:
-            with Status("Please wait", disable=quiet):
+            with Status("Please wait[blink]...", disable=quiet):
                 if target == "url":
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
 
