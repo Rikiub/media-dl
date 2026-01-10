@@ -97,17 +97,3 @@ def download_subtitles(filepath: StrPath, info: YDLExtractInfo) -> list[Path] | 
         return result
     else:
         return None
-
-
-def run_postproces(file: Path, info: YDLExtractInfo, params: YDLParams) -> Path:
-    """Postprocess file by params."""
-
-    info = YTDLP(params).post_process(
-        filename=str(file),
-        info=info,  # type: ignore
-    )
-
-    if path := info.get("filepath"):
-        return Path(path)
-
-    raise PostProcessingError("File not founded.")
