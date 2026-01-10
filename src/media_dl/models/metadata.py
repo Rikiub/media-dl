@@ -1,7 +1,6 @@
 from pathlib import Path
-
-
 from typing import Annotated
+
 from pydantic import BeforeValidator, Field, RootModel
 
 from media_dl.models.base import Serializable

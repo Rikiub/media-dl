@@ -1,7 +1,7 @@
-from collections.abc import Callable
 import concurrent.futures as cf
 import shutil
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -13,7 +13,6 @@ from media_dl.downloader.internal import (
     ProgressStatus,
     download_formats,
 )
-from media_dl.postprocessor import PostProcessor
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
@@ -21,6 +20,7 @@ from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.list import BaseList, Playlist
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
+from media_dl.postprocessor import PostProcessor
 from media_dl.template.parser import generate_output_template
 from media_dl.types import FILE_FORMAT, StrPath
 from media_dl.ydl.types import SupportedExtensions

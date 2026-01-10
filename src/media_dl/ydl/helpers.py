@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import cast
 
-from yt_dlp.utils import DownloadError as YDLDownloadError
 from yt_dlp.networking.exceptions import RequestError
+from yt_dlp.utils import DownloadError as YDLDownloadError
 
 from media_dl.exceptions import DownloadError, ExtractError, PostProcessingError
 from media_dl.types import StrPath

@@ -5,7 +5,7 @@ from typing import Annotated
 
 from pydantic import AliasChoices, Field
 
-from media_dl.models.base import URL_CHOICES, ExtractList, Extract, ExtractSearch
+from media_dl.models.base import URL_CHOICES, Extract, ExtractList, ExtractSearch
 from media_dl.models.metadata import Thumbnail
 from media_dl.models.stream import LazyStream
 

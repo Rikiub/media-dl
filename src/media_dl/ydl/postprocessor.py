@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
 from yt_dlp.postprocessor.ffmpeg import (
     FFmpegEmbedSubtitlePP,
@@ -8,6 +7,7 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegMetadataPP,
     FFmpegVideoRemuxerPP,
 )
+from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
 from media_dl.types import StrPath
 from media_dl.ydl.types import YDLExtractInfo
