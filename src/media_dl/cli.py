@@ -166,10 +166,10 @@ What format you want request?
     cache: Annotated[
         bool,
         Option(
-            "--no-cache",
             help="Process without use the cache.",
             rich_help_panel=HelpPanel.other,
             show_default=False,
+            hidden=True,
         ),
     ] = False,
     quiet: Annotated[
@@ -199,8 +199,6 @@ What format you want request?
     ] = False,
 ):
     """Download any video/audio you want from a simple URL ✨"""
-
-    cache = not cache
 
     log_level: LOGGING_LEVELS
     if quiet:
