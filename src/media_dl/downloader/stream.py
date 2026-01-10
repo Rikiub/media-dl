@@ -155,7 +155,7 @@ class StreamDownloader:
     ) -> Path:
         task_id = self._progress.add_task(
             description=_stream_display_name(stream) or "Fetching...",
-            status="Fetching",
+            status="Fetching[blink]...",
             step="",
         )
 
@@ -269,7 +269,7 @@ class StreamDownloader:
             if on_progress:
                 progress.status = "postprocessing"
                 on_progress(progress)
-            self._progress.update(task_id, status="Processing")
+            self._progress.update(task_id, status="Processing[blink]...")
             _log_stream(full_stream, "Postprocessing downloaded file.")
 
             # Run postprocessing
