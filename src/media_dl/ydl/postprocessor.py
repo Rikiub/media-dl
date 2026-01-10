@@ -7,7 +7,6 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegMetadataPP,
     FFmpegVideoRemuxerPP,
 )
-from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 
 from media_dl.types import StrPath
 from media_dl.ydl.types import YDLExtractInfo
@@ -45,49 +44,15 @@ class YDLPostProcessor:
 
         _, data = pp.run(self.params)
         self.filepath = self._get_file(data)
-        return
+        return self
 
-    def embed_metadata(self, data: YDLExtractInfo, include_music: bool = False):
+    def embed_metadata(self, data: YDLExtractInfo):
         pp = FFmpegMetadataPP(
             None,
             add_metadata=True,
             add_chapters=True,
         )
         pp.run(self.params | data)
-
-        if include_music:
-            pp = MetadataParserPP(
-                None,
-                [
-                    (
-                        MetadataParserPP.interpretter,
-                        "%(track,title)s",
-                        "%(meta_track)s",
-                    ),
-                    (
-                        MetadataParserPP.interpretter,
-                        "%(artist,uploader)s",
-                        "%(meta_artist)s",
-                    ),
-                    (
-                        MetadataParserPP.interpretter,
-                        "%(album,title)s",
-                        "%(meta_album)s",
-                    ),
-                    (
-                        MetadataParserPP.interpretter,
-                        "%(album_artist,uploader)s",
-                        "%(meta_album_artist)s",
-                    ),
-                    (
-                        MetadataParserPP.interpretter,
-                        "%(release_year,release_date>%Y,upload_date>%Y)s",
-                        "%(meta_date)s",
-                    ),
-                ],
-            )
-            pp.run(self.params | data)
-
         return self
 
     def embed_thumbnail(self, thumbnail: StrPath, square: bool = False):

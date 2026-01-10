@@ -14,9 +14,13 @@ class PostProcessor(YDLPostProcessor):
         include_music: bool = False,
     ):
         if isinstance(data, Stream):
-            data = data.to_ydl_dict()
+            info = data.to_ydl_dict()
+            if include_music:
+                info |= _stream_to_music_metadata(data)
+        else:
+            info = data
 
-        super().embed_metadata(data)
+        super().embed_metadata(info)
         return self
 
     def embed_thumbnail(
@@ -32,7 +36,7 @@ class PostProcessor(YDLPostProcessor):
         else:
             new_thumbnail = Path(thumbnail)
 
-        super().embed_thumbnail(new_thumbnail)
+        super().embed_thumbnail(new_thumbnail, square)
         return self
 
     def embed_subtitles(
@@ -49,3 +53,12 @@ class PostProcessor(YDLPostProcessor):
 
         super().embed_subtitles(new_subtitles)  # type: ignore
         return self
+
+
+def _stream_to_music_metadata(stream: Stream) -> YDLExtractInfo:
+    return {
+        "meta_track": stream.track or stream.title,
+        "meta_artist": ", ".join(stream.artists) if stream.artists else stream.uploader,
+        "meta_album_artist": stream.album_artist or stream.uploader,
+        "meta_date": str(stream.datetime.year) if stream.datetime else "",
+    }
