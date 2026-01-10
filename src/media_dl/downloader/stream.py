@@ -13,7 +13,7 @@ from media_dl.downloader.internal import (
     ProgressStatus,
     download_formats,
 )
-from media_dl.downloader.metadata import download_subtitles, download_thumbnails
+from media_dl.postprocessor import PostProcessor
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
@@ -23,7 +23,6 @@ from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
 from media_dl.template.parser import generate_output_template
 from media_dl.types import FILE_FORMAT, StrPath
-from media_dl.ydl.helpers import run_postproces
 from media_dl.ydl.types import SupportedExtensions
 
 ExtractResult = BaseList | LazyStream
@@ -174,7 +173,7 @@ class StreamDownloader:
             else:
                 raise TypeError(stream)
 
-            _log_stream(stream, "Downloading stream.")
+            _log_stream(full_stream, "Downloading stream.")
 
             # Resolve formats
             format_video, format_audio, download_config = self._resolve_format(
@@ -206,15 +205,11 @@ class StreamDownloader:
 
             # Downloader config
             merge_format = None
-            if format_video and format_audio and download_config.convert:
-                merge_format = download_config.convert
 
-            if (
-                download_config.type == "audio"
-                and format_audio
-                and not download_config.convert
-            ):
+            if download_config.type == "audio" and format_audio:
                 format_video = None
+            elif format_video and format_audio and download_config.convert:
+                merge_format = download_config.convert
 
             # Generate filename
             if download_config.output.is_dir():
@@ -232,25 +227,25 @@ class StreamDownloader:
             )
 
             # Check if file is duplicated by name
-            for file in output.parent.iterdir():
-                if file.is_file() and file.stem == output.name:
+            for meta in output.parent.iterdir():
+                if meta.is_file() and meta.stem == output.name:
                     if (
                         download_config.type == "video"
-                        and file.suffix[1:] in SupportedExtensions.video
+                        and meta.suffix[1:] in SupportedExtensions.video
                         or download_config.type == "audio"
-                        and file.suffix[1:] in SupportedExtensions.audio
+                        and meta.suffix[1:] in SupportedExtensions.audio
                     ):
                         self._progress.update(task_id, status="Skipped")
                         logger.info(
                             'Skipped: "{stream}" (Exists as "{extension}").',
                             stream=_stream_display_name(full_stream),
-                            extension=file.suffix[1:],
+                            extension=meta.suffix[1:],
                         )
-                        return file
+                        return meta
 
             [
                 _log_stream(
-                    stream,
+                    full_stream,
                     'Downloading {type} format "{format_id}" (extension:{format_extension} | quality:{format_quality})',
                     type="video" if isinstance(fmt, VideoFormat) else "audio",
                     format_id=fmt.id,
@@ -275,56 +270,66 @@ class StreamDownloader:
                 progress.status = "postprocessing"
                 on_progress(progress)
             self._progress.update(task_id, status="Processing")
-            _log_stream(stream, "Postprocessing downloaded file.")
-
-            # Download resources
-            if file := full_stream.thumbnails and download_thumbnails(
-                downloaded_file,
-                full_stream.thumbnails,
-            ):
-                _log_stream(
-                    stream,
-                    'Thumbnail downloaded: "{file}"',
-                    id=full_stream.id,
-                    file=file,
-                )
-
-            if file := full_stream.subtitles and download_subtitles(
-                downloaded_file,
-                full_stream.subtitles,
-            ):
-                _log_stream(
-                    stream,
-                    'Subtitle downloaded: "{file}"',
-                    id=full_stream.id,
-                    file=file,
-                )
+            _log_stream(full_stream, "Postprocessing downloaded file.")
 
             # Run postprocessing
-            temp_dict = full_stream.to_ydl_dict()
+            if download_config.ffmpeg_path:
+                pp = PostProcessor(
+                    downloaded_file,
+                    download_config.ffmpeg_path,
+                )
 
-            if format_video:
-                temp_dict |= format_video.to_ydl_dict()
-            elif format_audio:
-                temp_dict |= format_audio.to_ydl_dict()
+                if download_config.type == "video" and format_video:
+                    pp.remux(download_config.convert or "webm>mp4")
+                    _log_stream(
+                        full_stream,
+                        'Video remuxed as "{extension}"',
+                        extension=pp.extension,
+                    )
 
-            downloaded_file = run_postproces(
-                file=downloaded_file,
-                info=temp_dict,
-                params=download_config.ydl_params(music_metadata=full_stream.is_music),
-            )
+                    if full_stream.subtitles:
+                        pp.embed_subtitles(full_stream.subtitles)
+                        _log_stream(
+                            full_stream,
+                            'Subtitles embedded in: "{file}"',
+                            file=pp.filepath,
+                        )
+                elif download_config.type == "audio" and format_audio:
+                    if (
+                        download_config.convert
+                        and download_config.convert != format_audio.extension
+                    ):
+                        pp.remux(download_config.convert)
+                        _log_stream(
+                            full_stream,
+                            'Remuxed in audio as "{extension}"',
+                            extension=pp.extension,
+                        )
+
+                if full_stream.thumbnails:
+                    best_thumb = full_stream.thumbnails[-1]
+                    pp.embed_thumbnail(best_thumb, square=full_stream.is_music)
+
+                    _log_stream(
+                        full_stream,
+                        'Thumbnail embedded in: "{file}"',
+                        file=pp.filepath,
+                    )
+
+                pp.embed_metadata(full_stream, full_stream.is_music)
+                downloaded_file = pp.filepath
 
             # Add extension to filepath
             output = output.parent / f"{output.name}{downloaded_file.suffix}"
             _log_stream(
-                stream,
+                full_stream,
                 'Final filepath will be "{filepath}"',
                 id=full_stream.id,
                 filepath=output,
             )
 
             _log_stream(
-                stream,
+                full_stream,
                 'Postprocessing finished, saved as "{extension}".',
                 id=full_stream.id,
                 extension=downloaded_file.suffix[1:],

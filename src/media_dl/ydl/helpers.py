@@ -77,7 +77,7 @@ def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
         return None
 
 
-def download_subtitle(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
+def download_subtitles(filepath: StrPath, info: YDLExtractInfo) -> list[Path] | None:
     ydl = YTDLP({"writesubtitles": True, "allsubtitles": True})
 
     subs = ydl.process_subtitles(
@@ -87,13 +87,14 @@ def download_subtitle(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
     )
     info |= {"requested_subtitles": subs}  # type: ignore
 
-    final = ydl._write_subtitles(  # type: ignore
+    final: list[tuple[str, str]] = ydl._write_subtitles(  # type: ignore
         info_dict=info,
         filename=str(filepath),
     )
 
     if final:
-        return Path(final[0][0])
+        result = [Path(entry[0]) for entry in final]
+        return result
     else:
         return None
 

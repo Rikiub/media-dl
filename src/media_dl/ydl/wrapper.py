@@ -1,6 +1,5 @@
 import logging
 
-from yt_dlp.postprocessor.metadataparser import MetadataParserPP
 from yt_dlp.YoutubeDL import YoutubeDL
 
 from media_dl.ydl.types import YDLParams
@@ -23,19 +22,6 @@ class YTDLP(YoutubeDL):
             "quiet": True,
             "trim_file_name": 150,
             "color": {"stdout": "no_color", "stderr": "no_color"},
-            "postprocessors": [
-                {
-                    "key": "MetadataParser",
-                    "when": "pre_process",
-                    "actions": [
-                        (
-                            MetadataParserPP.interpretter,
-                            "uploader",
-                            "(?P<uploader>.+)(?: - Topic)$",
-                        ),
-                    ],
-                },
-            ],
         }
 
         # Custom parameters
@@ -43,38 +29,3 @@ class YTDLP(YoutubeDL):
 
         # Initialize
         super().__init__(opts)  # type: ignore
-
-
-POST_MUSIC = [
-    {
-        "key": "MetadataParser",
-        "when": "post_process",
-        "actions": [
-            (
-                MetadataParserPP.interpretter,
-                "%(track,title)s",
-                "%(meta_track)s",
-            ),
-            (
-                MetadataParserPP.interpretter,
-                "%(artist,uploader)s",
-                "%(meta_artist)s",
-            ),
-            (
-                MetadataParserPP.interpretter,
-                "%(album,title)s",
-                "%(meta_album)s",
-            ),
-            (
-                MetadataParserPP.interpretter,
-                "%(album_artist,uploader)s",
-                "%(meta_album_artist)s",
-            ),
-            (
-                MetadataParserPP.interpretter,
-                "%(release_year,release_date>%Y,upload_date>%Y)s",
-                "%(meta_date)s",
-            ),
-        ],
-    }
-]

@@ -171,7 +171,7 @@ What format you want request?
             rich_help_panel=HelpPanel.other,
             show_default=False,
         ),
-    ] = True,
+    ] = False,
     quiet: Annotated[
         bool,
         Option(

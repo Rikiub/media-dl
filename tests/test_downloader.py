@@ -43,6 +43,10 @@ def test_playlist():
     )
 
 
+def test_subtitles():
+    download("https://youtu.be/HVmeWkqIYqo")
+
+
 class TestSite:
     def test_ytmusic(self):
         download("https://music.youtube.com/watch?v=Kx7B-XvmFtE")

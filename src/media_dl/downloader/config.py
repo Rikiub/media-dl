@@ -10,8 +10,6 @@ from media_dl.types import (
     FORMAT_TYPE,
     VIDEO_EXTENSION,
 )
-from media_dl.ydl.types import YDLParams
-from media_dl.ydl.wrapper import POST_MUSIC
 
 
 @dataclass(slots=True)
@@ -78,77 +76,3 @@ class FormatConfig:
         """Convert to dict."""
 
         return asdict(self)
-
-    def ydl_params(
-        self,
-        overwrite: bool = False,
-        music_metadata: bool = False,
-    ) -> YDLParams:
-        """Generate download parameters for YT-DLP."""
-
-        params: YDLParams
-        params = {"overwrites": overwrite}
-        if self.convert:
-            params |= {"final_ext": self.format}
-
-        postprocessors = []
-        if music_metadata:
-            postprocessors.extend(POST_MUSIC)
-
-        if self.ffmpeg_path:
-            params |= {"ffmpeg_location": str(self.ffmpeg_path)}
-
-            match self.type:
-                case "video":
-                    postprocessors.append(
-                        {
-                            "key": "FFmpegVideoRemuxer",
-                            "preferedformat": self.convert or "webm>mp4",
-                        },
-                    )
-                case "audio":
-                    postprocessors.append(
-                        {
-                            "key": "FFmpegExtractAudio",
-                            "nopostoverwrites": not overwrite,
-                            "preferredcodec": self.convert,
-                            "preferredquality": None,
-                        }
-                    )
-
-                    # Square thumbnail
-                    params |= {
-                        "postprocessor_args": {
-                            "thumbnailsconvertor+ffmpeg_o": [
-                                "-c:v",
-                                "png",
-                                "-vf",
-                                "crop=ih",
-                            ]
-                        },
-                    }
-                case _:
-                    raise TypeError(f"Type '{self.format}' is not 'video' or 'audio'")
-
-            if self.embed_metadata:
-                params |= {
-                    "outtmpl": {
-                        "thumbnail": "",
-                        "pl_thumbnail": "",
-                    },
-                }
-                postprocessors.extend(
-                    [
-                        {
-                            "key": "FFmpegMetadata",
-                            "add_metadata": True,
-                            "add_chapters": True,
-                            "add_infojson": None,
-                        },
-                        {"key": "FFmpegEmbedSubtitle", "already_have_subtitle": False},
-                        {"key": "EmbedThumbnail", "already_have_thumbnail": False},
-                    ]
-                )
-
-        params |= {"postprocessors": postprocessors}
-        return params
