@@ -3,7 +3,7 @@ import time
 from loguru import logger
 from rich.progress import TaskID
 from media_dl.downloader.progress import DownloadProgress
-from media_dl.models.progress.status import ProcessingState, ProgressState
+from media_dl.models.progress.state import ProcessingState, ProgressState
 from media_dl.models.stream import LazyStream
 
 

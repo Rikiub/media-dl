@@ -5,13 +5,13 @@ from typing import cast
 
 from loguru import logger
 from media_dl.downloader.config import FormatConfig
-from media_dl.downloader.status import ProgressCallback
+from media_dl.downloader.state import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.list import BaseList, LazyPlaylist, Playlist
 from media_dl.models.progress.format import FormatState
-from media_dl.models.progress.status import (
+from media_dl.models.progress.state import (
     CompletedState,
     DownloadingState,
     ErrorState,

@@ -11,7 +11,7 @@ from pydantic import (
     PlainSerializer,
 )
 
-from media_dl.models.base import Extract
+from media_dl.models.base import LazyType
 from media_dl.models.formats.list import FormatList
 from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
 from media_dl.types import MUSIC_SITES
@@ -21,7 +21,7 @@ DatetimeTimestamp = Annotated[
 ]
 
 
-class LazyStream(MusicMetadata, Extract):
+class LazyStream(MusicMetadata, LazyType["Stream"]):
     title: str = ""
     uploader: Annotated[
         str,
@@ -42,17 +42,9 @@ class LazyStream(MusicMetadata, Extract):
         else:
             return False
 
-    def resolve(self, use_cache: bool = True) -> Stream:
-        """Get the full Stream.
-
-        Returns:
-            Updated version of the Stream.
-
-        Raises:
-            ExtractError: Something bad happens when extract.
-        """
-
-        return Stream.from_url(self.url, use_cache)
+    @property
+    def _target_class(self):
+        return Stream
 
 
 class Stream(LazyStream):

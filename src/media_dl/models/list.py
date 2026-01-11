@@ -5,7 +5,7 @@ from typing import Annotated
 
 from pydantic import AliasChoices, Field
 
-from media_dl.models.base import URL_CHOICES, Extract, ExtractList, ExtractSearch
+from media_dl.models.base import URL_CHOICES, ExtractList, ExtractSearch, LazyType
 from media_dl.models.metadata import Thumbnail
 from media_dl.models.stream import LazyStream
 
@@ -15,7 +15,7 @@ class BaseList(ABC, ExtractList):
     playlists: LazyPlaylists = []
 
 
-class LazyPlaylist(BaseList, Extract):
+class LazyPlaylist(BaseList, LazyType["Playlist"]):
     url: Annotated[
         str,
         Field(
@@ -41,17 +41,9 @@ class LazyPlaylist(BaseList, Extract):
     uploader: str | None = None
     thumbnails: list[Thumbnail] = []
 
-    def resolve(self, use_cache: bool = True) -> Playlist:
-        """Get the full Playlist.
-
-        Returns:
-            Updated version of the Playlist.
-
-        Raises:
-            ExtractError: Something bad happens when extract.
-        """
-
-        return Playlist.from_url(self.url, use_cache)
+    @property
+    def _target_class(self):
+        return Playlist
 
 
 class Playlist(LazyPlaylist): ...

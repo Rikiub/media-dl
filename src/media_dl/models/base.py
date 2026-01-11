@@ -1,4 +1,5 @@
-from typing import Annotated, Literal, TypeVar
+from abc import ABC, abstractmethod
+from typing import Annotated, Literal, TypeVar, Generic
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self
@@ -85,6 +86,27 @@ class Extract(Serializable):
             save_info(cls.url, cls.to_ydl_json())
 
         return cls
+
+
+T = TypeVar("T", bound=Extract)
+
+
+class LazyType(ABC, Extract, Generic[T]):
+    def resolve(self, use_cache: bool = True) -> T:
+        """Get the full model.
+
+        Returns:
+            Updated version of the model.
+
+        Raises:
+            ExtractError: Something bad happens when extract.
+        """
+
+        return self._target_class.from_url(self.url, use_cache)
+
+    @property
+    @abstractmethod
+    def _target_class(self) -> type[T]: ...
 
 
 # Lists
