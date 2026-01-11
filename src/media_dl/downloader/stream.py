@@ -1,27 +1,26 @@
 import concurrent.futures as cf
 import shutil
-import time
 from pathlib import Path
 from typing import cast
 
 from loguru import logger
 from media_dl.downloader.config import FormatConfig
-from media_dl.downloader.progress import DownloadProgress
+from media_dl.downloader.status import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
-from media_dl.models.list import BaseList, Playlist
+from media_dl.models.list import BaseList, LazyPlaylist, Playlist
 from media_dl.models.progress.format import FormatStatus, VideoFormatStatus
 from media_dl.models.progress.status import (
     CompletedState,
     DownloadingState,
     ErrorState,
     MergingState,
+    ProcessorType,
     ResolvedState,
     ExtractingState,
     ProcessingState,
     ProgressDownloadCallback,
-    ProgressStatus,
     SkippedState,
 )
 from media_dl.models.stream import LazyStream, Stream
@@ -32,47 +31,6 @@ from media_dl.types import FILE_FORMAT, StrPath
 from media_dl.ydl.types import SupportedExtensions
 
 ExtractResult = BaseList | LazyStream
-
-
-class ProgressCallback(DownloadProgress):
-    def __init__(self, disable: bool = False) -> None:
-        super().__init__(disable)
-        self.task_id = self.add_task(
-            description="",
-            status="",
-            step="",
-        )
-
-    def __call__(self, progress: ProgressStatus):
-        match progress.status:
-            case "extracting":
-                self.update(
-                    self.task_id,
-                    description=_stream_display_name(progress.stream)
-                    or "Extracting[blink]...[/]",
-                    status="Extracting[blink]...[/]",
-                )
-            case "resolved":
-                self.update(
-                    self.task_id,
-                    description=_stream_display_name(progress.stream),
-                    status="Ready",
-                )
-            case "downloading":
-                self.update(
-                    self.task_id,
-                    completed=progress.downloaded_bytes,
-                    total=progress.total_bytes,
-                    status="Downloading",
-                )
-            case "processing":
-                self.update(self.task_id, status="Processing[blink]...[/]")
-            case _:
-                self.update(self.task_id, status=progress.status.capitalize())
-
-                self.counter.advance()
-                time.sleep(1.0)
-                self.remove_task(self.task_id)
 
 
 class StreamDownloader:
@@ -127,7 +85,7 @@ class StreamDownloader:
             MediaError: Something bad happens when download.
         """
 
-        playlist = media if isinstance(media, Playlist) else None
+        playlist = media if isinstance(media, LazyPlaylist) else None
         streams = _media_to_list(media)
         paths: list[Path] = []
 
@@ -203,19 +161,27 @@ class StreamDownloader:
         self,
         stream: LazyStream,
         on_progress: ProgressDownloadCallback,
-        playlist: Playlist | None = None,
+        playlist: LazyPlaylist | None = None,
     ) -> Path:
         on_progress(ExtractingState(stream=stream))
         full_stream = stream
 
         try:
-            # Resolve stream
+            # Resolve Stream
             if type(stream) is LazyStream:
                 full_stream = stream.resolve(self.cache)
             elif isinstance(stream, Stream):
                 full_stream = stream
             else:
                 raise TypeError(stream)
+
+            # Resolve Playlist
+            if type(playlist) is LazyPlaylist:
+                full_playlist = playlist.resolve(self.cache)
+            elif isinstance(playlist, Playlist):
+                full_playlist = playlist
+            else:
+                full_playlist = None
 
             on_progress(ResolvedState(stream=full_stream))
 
@@ -235,7 +201,7 @@ class StreamDownloader:
             output = generate_output_template(
                 output=output,
                 stream=full_stream,
-                playlist=playlist,
+                playlist=full_playlist,
                 format=video_format or audio_format,
             )
 
@@ -249,13 +215,6 @@ class StreamDownloader:
                         and meta.suffix[1:] in SupportedExtensions.audio
                     ):
                         on_progress(SkippedState(filepath=meta))
-
-                        logger.info(
-                            'Skipped: "{stream}" (Exists as "{extension}").',
-                            stream=_stream_display_name(full_stream),
-                            extension=meta.suffix[1:],
-                        )
-
                         return meta
 
             # STATUS: Download
@@ -334,9 +293,6 @@ class StreamDownloader:
                 raise DownloadError("Formats not founded.")
 
             # STATUS: Postprocess
-            on_progress(ProcessingState(filepath=downloaded_file))
-            _log_stream(full_stream, "Processing downloaded file.")
-
             # Run postprocessing
             if download_config.ffmpeg_path:
                 pp = PostProcessor(
@@ -344,67 +300,41 @@ class StreamDownloader:
                     download_config.ffmpeg_path,
                 )
 
+                def on_state(type: ProcessorType):
+                    return on_progress(
+                        ProcessingState(
+                            filepath=pp.filepath,
+                            processor=type,
+                        )
+                    )
+
                 if download_config.type == "video" and video_format:
                     pp.remux(download_config.convert or "webm>mp4")
-                    _log_stream(
-                        full_stream,
-                        'Video remuxed as "{extension}"',
-                        extension=pp.extension,
-                    )
+                    on_state("remux")
 
                     if full_stream.subtitles:
                         pp.embed_subtitles(full_stream.subtitles)
-                        _log_stream(
-                            full_stream,
-                            'Subtitles embedded in: "{file}"',
-                            file=pp.filepath,
-                        )
+                        on_state("embed_subtitles")
                 elif download_config.type == "audio" and audio_format:
                     if (
                         download_config.convert
                         and download_config.convert != audio_format.extension
                     ):
                         pp.remux(download_config.convert)
-                        _log_stream(
-                            full_stream,
-                            'Remuxed in audio as "{extension}"',
-                            extension=pp.extension,
-                        )
+                        on_state("remux")
 
                 if full_stream.thumbnails:
                     best_thumb = full_stream.thumbnails[-1]
                     pp.embed_thumbnail(best_thumb, square=full_stream.is_music)
-
-                    _log_stream(
-                        full_stream,
-                        'Thumbnail embedded in: "{file}"',
-                        file=pp.filepath,
-                    )
+                    on_state("embed_thumbnail")
 
                 pp.embed_metadata(full_stream, full_stream.is_music)
-                _log_stream(
-                    full_stream,
-                    'Metadata embedded: "{file}"',
-                    file=pp.filepath,
-                )
+                on_state("embed_metadata")
 
                 downloaded_file = pp.filepath
 
             # Add extension to filepath
             output = output.parent / f"{output.name}{downloaded_file.suffix}"
-            _log_stream(
-                full_stream,
-                'Final filepath will be "{filepath}"',
-                id=full_stream.id,
-                filepath=output,
-            )
-
-            _log_stream(
-                full_stream,
-                'Postprocessing finished, saved as "{extension}".',
-                id=full_stream.id,
-                extension=downloaded_file.suffix[1:],
-            )
 
             # STATUS: Finish
             output.parent.mkdir(parents=True, exist_ok=True)
@@ -412,22 +342,10 @@ class StreamDownloader:
 
             on_progress(CompletedState(filepath=output))
 
-            logger.info(
-                'Completed: "{stream}".',
-                stream=_stream_display_name(full_stream),
-            )
-
             return output
         except ConnectionError as e:
             error = DownloadError(str(e))
-
-            logger.error(
-                'Error: "{stream}": {error}',
-                stream=_stream_display_name(full_stream),
-                error=str(error),
-            )
             on_progress(ErrorState(message=str(error)))
-
             raise error
 
     def _resolve_format(
@@ -511,14 +429,3 @@ def _media_to_list(media: ExtractResult) -> list[LazyStream]:
             raise TypeError(media)
 
     return streams
-
-
-def _stream_display_name(stream: LazyStream) -> str:
-    """Get pretty representation of the stream name."""
-
-    if stream.is_music and stream.uploader and stream.title:
-        return stream.title + " - " + stream.uploader
-    elif stream.title:
-        return stream.title
-    else:
-        return ""

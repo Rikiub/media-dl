@@ -11,11 +11,15 @@ from media_dl.models.progress.format import FormatsContainer
 from media_dl.models.stream import LazyStream, Stream
 
 
-class HasFile(BaseModel):
+class State(BaseModel): ...
+
+
+class HasFile(State):
     filepath: Path
 
-
-class State(BaseModel): ...
+    @property
+    def extension(self) -> str:
+        return self.filepath.suffix[1:]
 
 
 class ExtractingState(State):
@@ -44,19 +48,29 @@ class ErrorState(State):
     message: str
 
 
-class ProcessingState(HasFile, State):
-    status: Literal["processing"] = "processing"
-
-
-class SkippedState(HasFile, State):
+class SkippedState(HasFile):
     status: Literal["skipped"] = "skipped"
 
 
-class CompletedState(HasFile, State):
+class CompletedState(HasFile):
     status: Literal["completed"] = "completed"
 
 
-ProgressStatus = Annotated[
+ProcessorType = Literal[
+    "remux",
+    "merge_formats",
+    "embed_metadata",
+    "embed_thumbnail",
+    "embed_subtitles",
+]
+
+
+class ProcessingState(HasFile):
+    status: Literal["processing"] = "processing"
+    processor: ProcessorType
+
+
+ProgressState = Annotated[
     ExtractingState
     | ResolvedState
     | DownloadingState
@@ -69,4 +83,4 @@ ProgressStatus = Annotated[
 ]
 
 
-ProgressDownloadCallback = Callable[[ProgressStatus], None]
+ProgressDownloadCallback = Callable[[ProgressState], None]

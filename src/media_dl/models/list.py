@@ -41,7 +41,7 @@ class LazyPlaylist(BaseList, Extract):
     uploader: str | None = None
     thumbnails: list[Thumbnail] = []
 
-    def resolve(self) -> Playlist:
+    def resolve(self, use_cache: bool = True) -> Playlist:
         """Get the full Playlist.
 
         Returns:
@@ -51,7 +51,7 @@ class LazyPlaylist(BaseList, Extract):
             ExtractError: Something bad happens when extract.
         """
 
-        return Playlist.from_url(self.url)
+        return Playlist.from_url(self.url, use_cache)
 
 
 class Playlist(LazyPlaylist): ...
