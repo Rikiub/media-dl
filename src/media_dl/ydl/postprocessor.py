@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import TypedDict
 
 from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
 from yt_dlp.postprocessor.ffmpeg import (
@@ -6,10 +7,20 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegExtractAudioPP,
     FFmpegMetadataPP,
     FFmpegVideoRemuxerPP,
+    FFmpegMergerPP,
 )
 
 from media_dl.types import StrPath
 from media_dl.ydl.types import YDLExtractInfo
+
+
+class RequestedFormat(TypedDict):
+    filepath: str
+    vcodec: str
+    acodec: str
+
+
+RequestedFormats = list[RequestedFormat]
 
 
 class YDLPostProcessor:
@@ -20,6 +31,29 @@ class YDLPostProcessor:
     @property
     def extension(self) -> str:
         return self.filepath.suffix[1:]
+
+    @classmethod
+    def from_formats_merge(
+        cls,
+        filepath: StrPath,
+        merge_format: str,
+        formats: RequestedFormats,
+        ffmpeg_path: StrPath | None = None,
+    ):
+        cls = cls(filepath, ffmpeg_path=ffmpeg_path)
+
+        pp = FFmpegMergerPP(None)
+        pp.run(
+            cls.params
+            | {
+                "filepath": filepath,
+                "ext": merge_format,
+                "requested_formats": formats,
+                "__files_to_merge": [item["filepath"] for item in formats],
+            }
+        )
+
+        return cls
 
     def remux(self, format: str):
         pp = FFmpegVideoRemuxerPP(

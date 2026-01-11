@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -25,6 +26,30 @@ def extract_info(query: str) -> YDLExtractInfo:
     except (YDLDownloadError, RequestError) as err:
         msg = format_except_message(err)
         raise ExtractError(msg)
+
+
+def download_format(
+    filepath: StrPath,
+    format_info: YDLExtractInfo,
+    callback: Callable[[dict[str, str | int]], None] | None = None,
+) -> Path:
+    filepath = Path(filepath)
+    params = {}
+
+    if callback:
+        params |= {"progress_hooks": [callback]}
+
+    params |= {"outtmpl": f"{filepath}.%(ext)s"}
+    info = {
+        "extractor": "generic",
+        "extractor_key": "Generic",
+        "title": filepath.stem,
+        "id": filepath.stem,
+        "format_id": format_info["format_id"],
+        "formats": [format_info],
+    }
+
+    return download_from_info(info, params)
 
 
 def download_from_info(info: YDLExtractInfo, params: YDLParams) -> Path:

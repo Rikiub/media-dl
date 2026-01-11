@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from pathlib import Path
 from typing import Annotated
 
 from pydantic import (
@@ -12,6 +13,9 @@ from pydantic import (
 )
 
 from media_dl.models.base import Serializable
+from media_dl.models.progress.format import FormatStatus, FormatDownloadCallback
+from media_dl.types import StrPath
+from media_dl.ydl.helpers import download_format
 from media_dl.ydl.types import SupportedExtensions
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
@@ -39,6 +43,27 @@ class Format(YDLArgs, Serializable):
     @property
     @abstractmethod
     def display_quality(self) -> str: ...
+
+    def download(
+        self,
+        filepath: StrPath,
+        on_progress: FormatDownloadCallback | None = None,
+    ) -> Path:
+        status = FormatStatus(
+            type="video" if isinstance(self, VideoFormat) else "audio",
+        )
+
+        path = download_format(
+            filepath,
+            format_info=self.to_ydl_dict(),
+            callback=lambda data: status._ydl_progress(
+                data,
+                on_progress,
+            )
+            if on_progress
+            else None,
+        )
+        return path
 
 
 class VideoFormat(Format):
