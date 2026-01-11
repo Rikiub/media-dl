@@ -11,7 +11,8 @@ from media_dl.models.progress.format import FormatsContainer
 from media_dl.models.stream import LazyStream, Stream
 
 
-class State(BaseModel): ...
+class State(BaseModel):
+    id: str
 
 
 class HasFile(State):

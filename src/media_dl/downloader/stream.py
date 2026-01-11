@@ -163,7 +163,7 @@ class StreamDownloader:
         on_progress: ProgressDownloadCallback,
         playlist: LazyPlaylist | None = None,
     ) -> Path:
-        on_progress(ExtractingState(stream=stream))
+        on_progress(ExtractingState(id=stream.id, stream=stream))
         full_stream = stream
 
         try:
@@ -183,7 +183,7 @@ class StreamDownloader:
             else:
                 full_playlist = None
 
-            on_progress(ResolvedState(stream=full_stream))
+            on_progress(ResolvedState(id=stream.id, stream=full_stream))
 
             # Resolve formats
             video_format, audio_format, download_config = self._resolve_format(
@@ -214,7 +214,7 @@ class StreamDownloader:
                         or download_config.type == "audio"
                         and meta.suffix[1:] in SupportedExtensions.audio
                     ):
-                        on_progress(SkippedState(filepath=meta))
+                        on_progress(SkippedState(id=stream.id, filepath=meta))
                         return meta
 
             # STATUS: Download
@@ -225,7 +225,7 @@ class StreamDownloader:
                     container.audio_format = format
                 on_progress(container)
 
-            downloaded = DownloadingState(current_step="video")
+            downloaded = DownloadingState(id=stream.id, current_step="video")
 
             if download_config.type == "audio" and audio_format:
                 downloaded.current_step = "audio"
@@ -273,6 +273,7 @@ class StreamDownloader:
                     # Merge
                     on_progress(
                         MergingState(
+                            id=stream.id,
                             video_format=video_format,
                             audio_format=audio_format,
                         )
@@ -303,6 +304,7 @@ class StreamDownloader:
                 def on_state(type: ProcessorType):
                     return on_progress(
                         ProcessingState(
+                            id=stream.id,
                             filepath=pp.filepath,
                             processor=type,
                         )
@@ -340,12 +342,12 @@ class StreamDownloader:
             output.parent.mkdir(parents=True, exist_ok=True)
             output = Path(shutil.move(downloaded_file, output))
 
-            on_progress(CompletedState(filepath=output))
+            on_progress(CompletedState(id=stream.id, filepath=output))
 
             return output
         except ConnectionError as e:
             error = DownloadError(str(e))
-            on_progress(ErrorState(message=str(error)))
+            on_progress(ErrorState(id=stream.id, message=str(error)))
             raise error
 
     def _resolve_format(
