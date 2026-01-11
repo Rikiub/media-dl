@@ -1,6 +1,6 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Generic
 
 from pydantic import (
     AfterValidator,
@@ -13,7 +13,12 @@ from pydantic import (
 )
 
 from media_dl.models.base import Serializable
-from media_dl.models.progress.format import FormatStatus, FormatDownloadCallback
+from media_dl.models.progress.format import (
+    AudioFormatState,
+    FormatCallback,
+    VideoFormatState,
+)
+from media_dl.models.progress.format import FormatStateGeneric as State
 from media_dl.types import StrPath
 from media_dl.ydl.helpers import download_format
 from media_dl.ydl.types import SupportedExtensions
@@ -27,7 +32,7 @@ class YDLArgs(BaseModel):
     cookies: str | None = None
 
 
-class Format(YDLArgs, Serializable):
+class Format(ABC, YDLArgs, Serializable, Generic[State]):
     """Base Format"""
 
     id: Annotated[str, Field(alias="format_id")]
@@ -35,6 +40,23 @@ class Format(YDLArgs, Serializable):
     protocol: str
     filesize: int | None = None
     extension: Annotated[str, Field(alias="ext")]
+
+    def download(
+        self,
+        filepath: StrPath,
+        on_progress: FormatCallback[State] | None = None,
+    ) -> Path:
+        path = download_format(
+            filepath,
+            format_info=self.to_ydl_dict(),
+            callback=lambda data: self._state_class()._ydl_progress(
+                data,
+                on_progress,  # type: ignore
+            )
+            if on_progress
+            else None,
+        )
+        return path
 
     @property
     @abstractmethod
@@ -44,29 +66,12 @@ class Format(YDLArgs, Serializable):
     @abstractmethod
     def display_quality(self) -> str: ...
 
-    def download(
-        self,
-        filepath: StrPath,
-        on_progress: FormatDownloadCallback | None = None,
-    ) -> Path:
-        status = FormatStatus(
-            type="video" if isinstance(self, VideoFormat) else "audio",
-        )
-
-        path = download_format(
-            filepath,
-            format_info=self.to_ydl_dict(),
-            callback=lambda data: status._ydl_progress(
-                data,
-                on_progress,
-            )
-            if on_progress
-            else None,
-        )
-        return path
+    @property
+    @abstractmethod
+    def _state_class(self) -> type[State]: ...
 
 
-class VideoFormat(Format):
+class VideoFormat(Format[VideoFormatState]):
     video_codec: Annotated[Codec, Field(alias="vcodec")]
     audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
     width: int
@@ -85,6 +90,10 @@ class VideoFormat(Format):
     def display_quality(self) -> str:
         return str(self.quality) + "p"
 
+    @property
+    def _state_class(self):
+        return VideoFormatState
+
     @field_validator("extension")
     @classmethod
     def _validate_extension(cls, value) -> str:
@@ -101,7 +110,7 @@ class VideoFormat(Format):
         return value
 
 
-class AudioFormat(Format):
+class AudioFormat(Format[AudioFormatState]):
     codec: Annotated[Codec, Field(alias="acodec")]
     bitrate: Annotated[float, Field(alias="abr")] = 0
 
@@ -112,6 +121,10 @@ class AudioFormat(Format):
     @property
     def display_quality(self) -> str:
         return str(round(self.quality)) + "kbps"
+
+    @property
+    def _state_class(self):
+        return AudioFormatState
 
     @field_validator("extension")
     @classmethod

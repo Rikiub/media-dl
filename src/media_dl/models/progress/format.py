@@ -1,14 +1,12 @@
 from collections.abc import Callable
-from typing import Annotated
-from typing_extensions import Self
+from typing import Annotated, Literal
+from typing_extensions import Self, TypeVar
 from pydantic import BaseModel, Field
 
 from media_dl.types import FORMAT_TYPE
 
 
-class FormatStatus(BaseModel):
-    type: FORMAT_TYPE
-
+class FormatState(BaseModel):
     speed: float = 0
     elapsed: float = 0
 
@@ -40,7 +38,13 @@ class FormatStatus(BaseModel):
         self.elapsed = d.get("elapsed") or 0
 
 
-class VideoFormatStatus(FormatStatus):
+class AudioFormatState(FormatState):
+    type: Literal["audio"] = "audio"
+
+
+class VideoFormatState(FormatState):
+    type: Literal["video"] = "video"
+
     fragments_completed: Annotated[int, Field(alias="fragment_index")] = 0
     """Available if `type` is video."""
     fragments_total: Annotated[int, Field(alias="fragment_count")] = 0
@@ -53,8 +57,8 @@ class VideoFormatStatus(FormatStatus):
 
 
 class FormatsContainer(BaseModel):
-    video_format: VideoFormatStatus | None = None
-    audio_format: FormatStatus | None = None
+    video_format: VideoFormatState | None = None
+    audio_format: AudioFormatState | None = None
 
     current_step: FORMAT_TYPE
     steps_completed: int = 0
@@ -105,4 +109,5 @@ class FormatsContainer(BaseModel):
         return current_bytes
 
 
-FormatDownloadCallback = Callable[[FormatStatus], None]
+FormatStateGeneric = TypeVar("FormatStateGeneric", bound=FormatState)
+FormatCallback = Callable[[FormatStateGeneric], None]

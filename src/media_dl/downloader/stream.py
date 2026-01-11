@@ -10,7 +10,11 @@ from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.list import BaseList, LazyPlaylist, Playlist
-from media_dl.models.progress.format import FormatStatus, VideoFormatStatus
+from media_dl.models.progress.format import (
+    AudioFormatState,
+    FormatState,
+    VideoFormatState,
+)
 from media_dl.models.progress.status import (
     CompletedState,
     DownloadingState,
@@ -218,10 +222,10 @@ class StreamDownloader:
                         return meta
 
             # STATUS: Download
-            def download_callback(format: FormatStatus, container: DownloadingState):
-                if isinstance(format, VideoFormatStatus):
+            def download_callback(format: FormatState, container: DownloadingState):
+                if isinstance(format, VideoFormatState):
                     container.video_format = format
-                else:
+                elif isinstance(format, AudioFormatState):
                     container.audio_format = format
                 on_progress(container)
 
@@ -229,7 +233,7 @@ class StreamDownloader:
 
             if download_config.type == "audio" and audio_format:
                 downloaded.current_step = "audio"
-                downloaded.audio_format = FormatStatus(type="audio")
+                downloaded.audio_format = AudioFormatState(type="audio")
 
                 _log_download(full_stream, audio_format)
 
@@ -248,7 +252,7 @@ class StreamDownloader:
                     _log_download(full_stream, audio_format)
 
                     downloaded.current_step = "audio"
-                    downloaded.audio_format = FormatStatus(type="audio")
+                    downloaded.audio_format = AudioFormatState(type="audio")
 
                     audio_file = audio_format.download(
                         get_tempfile(),
@@ -260,7 +264,7 @@ class StreamDownloader:
                 _log_download(full_stream, video_format)
 
                 downloaded.current_step = "video"
-                downloaded.video_format = VideoFormatStatus(type="video")
+                downloaded.video_format = VideoFormatState(type="video")
                 video_file = video_format.download(
                     get_tempfile(),
                     lambda f, c=downloaded: download_callback(f, c),
