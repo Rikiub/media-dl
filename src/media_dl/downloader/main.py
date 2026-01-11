@@ -99,29 +99,34 @@ class StreamDownloader:
         success = 0
         errors = 0
 
-        with cf.ThreadPoolExecutor(max_workers=self.threads) as executor:
+        with (
+            # Temporal workaround
+            on_progress,  # type: ignore
+            cf.ThreadPoolExecutor(max_workers=self.threads) as executor,
+        ):
             futures = {
                 executor.submit(self.download, stream, on_progress): stream
                 for stream in streams
             }
 
-            for future in cf.as_completed(futures):
-                try:
-                    paths.append(future.result())
-                    success += 1
-                except (ConnectionError, DownloadError) as e:
-                    logger.error(f"Failed to download: {e}")
-                    errors += 1
-                except OutputTemplateError as e:
-                    logger.error(str(e).strip('"'))
-                    raise SystemExit()
-                except (cf.CancelledError, KeyboardInterrupt):
-                    logger.warning(
-                        "❗ Canceling downloads... (press Ctrl+C again to force)"
-                    )
-                    raise KeyboardInterrupt()
-                finally:
-                    executor.shutdown(wait=True, cancel_futures=True)
+            try:
+                for future in cf.as_completed(futures):
+                    try:
+                        paths.append(future.result())
+                        success += 1
+                    except (ConnectionError, DownloadError) as e:
+                        logger.error(f"Failed to download: {e}")
+                        errors += 1
+                    except OutputTemplateError as e:
+                        logger.error(str(e).strip('"'))
+                        executor.shutdown(wait=False, cancel_futures=True)
+                        raise SystemExit()
+            except KeyboardInterrupt:
+                logger.warning(
+                    "❗ Canceling downloads... (press Ctrl+C again to force)"
+                )
+                executor.shutdown(wait=False, cancel_futures=True)
+                raise
 
         logger.debug(
             "{current} of {total} streams completed. {errors} errors.",
@@ -129,9 +134,6 @@ class StreamDownloader:
             total=len(streams),
             errors=errors,
         )
-
-        if on_progress:
-            on_progress.stop()
 
         return paths
 

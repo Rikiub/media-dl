@@ -53,8 +53,11 @@ class ProgressCallback(DownloadProgress):
                 logger.info(
                     'Skipped: "{stream}" (Exists as "{extension}").',
                     stream=self.get(progress).name,
-                    extension=progress.filepath.suffix[1:],
+                    extension=progress.extension,
                 )
+
+                self.update(self.get(progress).task_id, status="Skipped")
+                self.advance_counter(progress, 0.6)
             case "downloading":
                 self.update(
                     self.get(progress).task_id,
@@ -82,12 +85,9 @@ class ProgressCallback(DownloadProgress):
                 )
                 logger.info('Completed: "{stream}".', stream=self.get(progress).name)
 
-        if progress.status in ("error", "skipped", "completed"):
+        if progress.status in ("error", "completed"):
             self.update(self.get(progress).task_id, status=progress.status.capitalize())
-
-            self.counter.advance()
-            time.sleep(1.0)
-            self.remove_task(self.get(progress).task_id)
+            self.advance_counter(progress, 1.0)
 
     def processor_callback(self, progress: ProcessingState):
         match progress.processor:
@@ -118,6 +118,11 @@ class ProgressCallback(DownloadProgress):
 
     def get(self, progress: ProgressState):
         return self.ids[progress.id]
+
+    def advance_counter(self, progress: ProgressState, delay: float):
+        self.counter.advance()
+        time.sleep(delay)
+        self.remove_task(self.get(progress).task_id)
 
     def log_debug(self, id: str, log: str, **kwargs):
         text = f'"{id}": {log}'

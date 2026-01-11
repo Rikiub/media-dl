@@ -88,9 +88,9 @@ class DownloadPipeline:
             format=video_fmt or audio_fmt,
         )
 
-        if self._check_exists(output):
-            self.progress(SkippedState(id=self.id, filepath=output))
-            return output
+        if duplicate := self._check_exists(output):
+            self.progress(SkippedState(id=self.id, filepath=duplicate))
+            return duplicate
 
         # 4. Download
         downloaded_file = self._download_formats(video_fmt, audio_fmt)
@@ -231,7 +231,7 @@ class DownloadPipeline:
 
         return pp.filepath
 
-    def _check_exists(self, output: Path) -> bool:
+    def _check_exists(self, output: Path) -> Path | None:
         for path in output.parent.iterdir():
             if path.is_file() and path.stem == output.name:
                 extension = path.suffix[1:]
@@ -242,8 +242,7 @@ class DownloadPipeline:
                     or self.selector.config.type == "audio"
                     and extension in SupportedExtensions.audio
                 ):
-                    return True
-        return False
+                    return path
 
     def _move_to_final(self, src: Path, dest: Path) -> Path:
         final_path = dest.parent / f"{dest.name}{src.suffix}"
