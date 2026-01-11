@@ -46,7 +46,7 @@ def _load_cache(cls: type[T], url: str):
             return cls.from_ydl_json(info)
         except ValueError:
             raise TypeError(
-                f"'{url}' fetched from cache but data doesn't match with model"
+                f"'{url}' extracted from cache but data doesn't match with model"
             )
 
 
@@ -69,7 +69,7 @@ class Extract(Serializable):
         if info := use_cache and _load_cache(cls, url):
             return info
 
-        # Fetch info
+        # Extract info
         info = extract_url(url)
         isPlaylist = is_playlist(info)
 
@@ -77,7 +77,7 @@ class Extract(Serializable):
             cls = cls(type="playlist" if isPlaylist else "url", **info)
         except ValueError:
             raise TypeError(
-                f"'{url}' fetching was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Stream'}' instead."
+                f"'{url}' extraction was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Stream'}' instead."
             )
 
         # Save to cache
@@ -122,7 +122,7 @@ class ExtractSearch(ExtractList):
         if info := use_cache and _load_cache(cls, query):
             return info
 
-        # Fetch info
+        # Extract info
         info = extract_search(query, provider, limit)
         cls = cls(query=query, provider=provider, **info)
 

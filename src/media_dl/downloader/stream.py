@@ -16,8 +16,9 @@ from media_dl.models.progress.status import (
     CompletedState,
     DownloadingState,
     ErrorState,
-    ReadyState,
-    FetchingState,
+    MergingState,
+    ResolvedState,
+    ExtractingState,
     ProcessingState,
     ProgressDownloadCallback,
     ProgressStatus,
@@ -44,14 +45,14 @@ class ProgressCallback(DownloadProgress):
 
     def __call__(self, progress: ProgressStatus):
         match progress.status:
-            case "fetching":
+            case "extracting":
                 self.update(
                     self.task_id,
                     description=_stream_display_name(progress.stream)
-                    or "Fetching[blink]...[/]",
-                    status="Fetching[blink]...[/]",
+                    or "Extracting[blink]...[/]",
+                    status="Extracting[blink]...[/]",
                 )
-            case "ready":
+            case "resolved":
                 self.update(
                     self.task_id,
                     description=_stream_display_name(progress.stream),
@@ -204,19 +205,19 @@ class StreamDownloader:
         on_progress: ProgressDownloadCallback,
         playlist: Playlist | None = None,
     ) -> Path:
-        on_progress(FetchingState(stream=stream))
+        on_progress(ExtractingState(stream=stream))
         full_stream = stream
 
         try:
             # Resolve stream
             if type(stream) is LazyStream:
-                full_stream = stream.fetch(self.cache)
+                full_stream = stream.resolve(self.cache)
             elif isinstance(stream, Stream):
                 full_stream = stream
             else:
                 raise TypeError(stream)
 
-            on_progress(ReadyState(stream=full_stream))
+            on_progress(ResolvedState(stream=full_stream))
 
             # Resolve formats
             video_format, audio_format, download_config = self._resolve_format(
@@ -247,7 +248,7 @@ class StreamDownloader:
                         or download_config.type == "audio"
                         and meta.suffix[1:] in SupportedExtensions.audio
                     ):
-                        on_progress(SkippedState())
+                        on_progress(SkippedState(filepath=meta))
 
                         logger.info(
                             'Skipped: "{stream}" (Exists as "{extension}").',
@@ -311,7 +312,12 @@ class StreamDownloader:
 
                 if (video_format and video_file) and (audio_format and audio_file):
                     # Merge
-                    on_progress(ProcessingState())
+                    on_progress(
+                        MergingState(
+                            video_format=video_format,
+                            audio_format=audio_format,
+                        )
+                    )
 
                     pp = PostProcessor.from_formats_merge(
                         get_tempfile(),
@@ -328,7 +334,7 @@ class StreamDownloader:
                 raise DownloadError("Formats not founded.")
 
             # STATUS: Postprocess
-            on_progress(ProcessingState())
+            on_progress(ProcessingState(filepath=downloaded_file))
             _log_stream(full_stream, "Processing downloaded file.")
 
             # Run postprocessing

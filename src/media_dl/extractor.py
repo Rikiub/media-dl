@@ -30,14 +30,14 @@ def extract_search(
         provider=provider,
         query=query,
     )
-    return _fetch_query(prov + query)
+    return _extract_from_query(prov + query)
 
 
 def extract_url(url: str) -> YDLExtractInfo:
     """Extract info from URL."""
 
     logger.debug("Extract URL: {url}", url=url)
-    return _fetch_query(url)
+    return _extract_from_query(url)
 
 
 def is_playlist(info: YDLExtractInfo) -> bool:
@@ -64,7 +64,7 @@ def is_stream(info: YDLExtractInfo) -> bool:
     return False
 
 
-def _fetch_query(query: str) -> YDLExtractInfo:
+def _extract_from_query(query: str) -> YDLExtractInfo:
     """Base info dict extractor."""
 
     info = extract_info(query)
@@ -73,7 +73,7 @@ def _fetch_query(query: str) -> YDLExtractInfo:
     # In this case, we need do another request.
     if info.get("extractor_key") == "Generic" and info.get("url") != query:
         if url := info.get("url"):
-            return _fetch_query(url)
+            return _extract_from_query(url)
 
     if not (is_playlist(info) or is_stream(info)):
         raise ExtractError(f"{query} return nothing.")

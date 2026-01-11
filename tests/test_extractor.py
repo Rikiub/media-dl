@@ -61,18 +61,18 @@ class TestSearch:
     def test_ytmusic(self):
         self.search("ytmusic")
 
-    def test_fetch_streams(self):
+    def test_extract_streams(self):
         result = Search.from_query("If Nevermore", "ytmusic")
 
         for entry in result.streams:
-            entry = entry.fetch()
+            entry = entry.resolve()
             print(entry)
 
-    def test_fetch_playlists(self):
+    def test_extract_playlists(self):
         result = Search.from_query("If Nevermore", "ytmusic")
 
         for entry in result.playlists:
-            entry = entry.fetch()
+            entry = entry.resolve()
             print(entry)
 
 

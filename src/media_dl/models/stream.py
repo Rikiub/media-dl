@@ -42,11 +42,11 @@ class LazyStream(MusicMetadata, Extract):
         else:
             return False
 
-    def fetch(self, use_cache: bool = True) -> Stream:
-        """Fetch real stream.
+    def resolve(self, use_cache: bool = True) -> Stream:
+        """Get the full Stream.
 
         Returns:
-            Updated version of self Stream.
+            Updated version of the Stream.
 
         Raises:
             ExtractError: Something bad happens when extract.

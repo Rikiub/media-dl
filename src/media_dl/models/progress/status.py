@@ -4,9 +4,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, Annotated
 
-
 from pydantic import BaseModel, Field
 
+from media_dl.models.formats.types import AudioFormat, VideoFormat
 from media_dl.models.progress.format import FormatsContainer
 from media_dl.models.stream import LazyStream, Stream
 
@@ -18,18 +18,25 @@ class HasFile(BaseModel):
 class State(BaseModel): ...
 
 
-class FetchingState(State):
-    status: Literal["fetching"] = "fetching"
+class ExtractingState(State):
+    status: Literal["extracting"] = "extracting"
     stream: LazyStream
 
 
-class ReadyState(State):
-    status: Literal["ready"] = "ready"
+class ResolvedState(State):
+    status: Literal["resolved"] = "resolved"
     stream: Stream
 
 
 class DownloadingState(FormatsContainer, State):
     status: Literal["downloading"] = "downloading"
+
+
+class MergingState(State):
+    status: Literal["merging"] = "merging"
+
+    video_format: VideoFormat
+    audio_format: AudioFormat
 
 
 class ErrorState(State):
@@ -50,9 +57,10 @@ class CompletedState(HasFile, State):
 
 
 ProgressStatus = Annotated[
-    FetchingState
-    | ReadyState
+    ExtractingState
+    | ResolvedState
     | DownloadingState
+    | MergingState
     | ProcessingState
     | ErrorState
     | SkippedState

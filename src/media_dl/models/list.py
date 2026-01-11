@@ -41,11 +41,11 @@ class LazyPlaylist(BaseList, Extract):
     uploader: str | None = None
     thumbnails: list[Thumbnail] = []
 
-    def fetch(self) -> Playlist:
-        """Fetch real playlist.
+    def resolve(self) -> Playlist:
+        """Get the full Playlist.
 
         Returns:
-            Updated version of self Playlist.
+            Updated version of the Playlist.
 
         Raises:
             ExtractError: Something bad happens when extract.
