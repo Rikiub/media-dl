@@ -212,7 +212,7 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]", disable=quiet):
-        from media_dl.downloader.stream import StreamDownloader
+        from media_dl.downloader.main import StreamDownloader
         from media_dl.exceptions import DownloadError, ExtractError
         from media_dl.models.list import Playlist, Search
         from media_dl.models.stream import Stream
@@ -226,7 +226,6 @@ What format you want request?
             threads=threads,
             use_cache=cache,
             ffmpeg_path=ffmpeg_path,
-            show_progress=not quiet,
         )
     except FileNotFoundError as err:
         raise BadParameter(str(err))
@@ -259,7 +258,11 @@ What format you want request?
                         use_cache=cache,
                     ).streams[0]
 
-            downloader.download_all(result)
+            if quiet:
+                downloader.download_all(result, None)
+            else:
+                downloader.download_all(result)
+
             logger.info("✅ Download Finished.")
         except (ExtractError, DownloadError) as err:
             logger.error("❌ {error}", error=str(err))

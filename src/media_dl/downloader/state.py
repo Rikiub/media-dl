@@ -7,8 +7,8 @@ from media_dl.models.progress.state import ProcessingState, ProgressState
 from media_dl.models.stream import LazyStream
 
 
-@dataclass
-class Item:
+@dataclass(slots=True)
+class Task:
     task_id: TaskID
     id: str
     name: str
@@ -17,12 +17,12 @@ class Item:
 class ProgressCallback(DownloadProgress):
     def __init__(self, disable: bool = False) -> None:
         super().__init__(disable)
-        self.ids: dict[str, Item] = {}
+        self.ids: dict[str, Task] = {}
 
     def __call__(self, progress: ProgressState):
         match progress.status:
             case "extracting":
-                item = self.ids[progress.id] = Item(
+                item = self.ids[progress.id] = Task(
                     task_id=self.add_task(
                         description="",
                         status="",
