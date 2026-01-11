@@ -10,11 +10,7 @@ from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.list import BaseList, LazyPlaylist, Playlist
-from media_dl.models.progress.format import (
-    AudioFormatState,
-    FormatState,
-    VideoFormatState,
-)
+from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.status import (
     CompletedState,
     DownloadingState,
@@ -31,7 +27,7 @@ from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
 from media_dl.postprocessor import PostProcessor
 from media_dl.template.parser import generate_output_template
-from media_dl.types import FILE_FORMAT, StrPath
+from media_dl.types import FILE_FORMAT, FORMAT_TYPE, StrPath
 from media_dl.ydl.types import SupportedExtensions
 
 ExtractResult = BaseList | LazyStream
@@ -222,55 +218,63 @@ class StreamDownloader:
                         return meta
 
             # STATUS: Download
-            def download_callback(format: FormatState, container: DownloadingState):
-                if isinstance(format, VideoFormatState):
-                    container.video_format = format
-                elif isinstance(format, AudioFormatState):
-                    container.audio_format = format
-                on_progress(container)
+            downloaded = DownloadingState(id=stream.id)
+            downloaded.total_bytes += sum(
+                f.filesize or 0 for f in (video_format, audio_format) if f
+            )
 
-            downloaded = DownloadingState(id=stream.id, current_step="video")
+            current_step: FORMAT_TYPE = "audio"
+            audio_downloaded_bytes = 0
+            video_downloaded_bytes = 0
+
+            def download_callback(format: FormatState):
+                nonlocal audio_downloaded_bytes, video_downloaded_bytes
+
+                if current_step == "audio":
+                    audio_downloaded_bytes = format.downloaded_bytes
+                elif current_step == "video":
+                    video_downloaded_bytes = format.downloaded_bytes
+
+                downloaded.downloaded_bytes = (
+                    audio_downloaded_bytes + video_downloaded_bytes
+                )
+
+                downloaded.speed = format.speed
+                downloaded.elapsed = format.elapsed
+
+                on_progress(downloaded)
 
             if download_config.type == "audio" and audio_format:
-                downloaded.current_step = "audio"
-                downloaded.audio_format = AudioFormatState(type="audio")
-
+                current_step = "audio"
                 _log_download(full_stream, audio_format)
 
                 downloaded_file = audio_format.download(
                     get_tempfile(),
-                    lambda f, c=downloaded: download_callback(f, c),
+                    download_callback,
                 )
-                downloaded.steps_completed += 1
                 on_progress(downloaded)
             elif video_format:
                 video_file = None
                 audio_file = None
 
                 if audio_format:
-                    downloaded.steps_total = 2
+                    current_step = "audio"
                     _log_download(full_stream, audio_format)
-
-                    downloaded.current_step = "audio"
-                    downloaded.audio_format = AudioFormatState(type="audio")
 
                     audio_file = audio_format.download(
                         get_tempfile(),
-                        lambda f, c=downloaded: download_callback(f, c),
+                        download_callback,
                     )
-                    downloaded.steps_completed += 1
 
                 # Video
+                current_step = "video"
                 _log_download(full_stream, video_format)
 
-                downloaded.current_step = "video"
-                downloaded.video_format = VideoFormatState(type="video")
                 video_file = video_format.download(
                     get_tempfile(),
-                    lambda f, c=downloaded: download_callback(f, c),
+                    download_callback,
                 )
 
-                downloaded.steps_completed += 1
                 on_progress(downloaded)
 
                 if (video_format and video_file) and (audio_format and audio_file):
@@ -355,25 +359,20 @@ class StreamDownloader:
             raise error
 
     def _resolve_format(
-        self,
-        stream: Stream,
-        video: VideoFormat | None = None,
-        audio: AudioFormat | None = None,
+        self, stream: Stream
     ) -> tuple[VideoFormat | None, AudioFormat | None, FormatConfig]:
         config = self.config
         selected_format = config.format
 
-        if not video:
-            config.format = "video"
-            video = cast(
-                VideoFormat | None, self._extract_best_format(stream.formats, config)
-            )
+        config.format = "video"
+        video = cast(
+            VideoFormat | None, self._extract_best_format(stream.formats, config)
+        )
 
-        if not audio:
-            config.format = "audio"
-            audio = cast(
-                AudioFormat | None, self._extract_best_format(stream.formats, config)
-            )
+        config.format = "audio"
+        audio = cast(
+            AudioFormat | None, self._extract_best_format(stream.formats, config)
+        )
 
         config.format = selected_format
 

@@ -7,7 +7,7 @@ from typing import Literal, Annotated
 from pydantic import BaseModel, Field
 
 from media_dl.models.formats.types import AudioFormat, VideoFormat
-from media_dl.models.progress.format import FormatsContainer
+from media_dl.models.progress.format import FormatState
 from media_dl.models.stream import LazyStream, Stream
 
 
@@ -33,7 +33,7 @@ class ResolvedState(State):
     stream: Stream
 
 
-class DownloadingState(FormatsContainer, State):
+class DownloadingState(FormatState, State):
     status: Literal["downloading"] = "downloading"
 
 

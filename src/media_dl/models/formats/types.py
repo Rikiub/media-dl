@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Annotated, Generic
+from typing import Annotated
 
 from pydantic import (
     AfterValidator,
@@ -13,12 +13,7 @@ from pydantic import (
 )
 
 from media_dl.models.base import Serializable
-from media_dl.models.progress.format import (
-    AudioFormatState,
-    FormatCallback,
-    VideoFormatState,
-)
-from media_dl.models.progress.format import FormatStateGeneric as State
+from media_dl.models.progress.format import FormatCallback, FormatState
 from media_dl.types import StrPath
 from media_dl.ydl.helpers import download_format
 from media_dl.ydl.types import SupportedExtensions
@@ -32,7 +27,7 @@ class YDLArgs(BaseModel):
     cookies: str | None = None
 
 
-class Format(ABC, YDLArgs, Serializable, Generic[State]):
+class Format(ABC, YDLArgs, Serializable):
     """Base Format"""
 
     id: Annotated[str, Field(alias="format_id")]
@@ -44,12 +39,13 @@ class Format(ABC, YDLArgs, Serializable, Generic[State]):
     def download(
         self,
         filepath: StrPath,
-        on_progress: FormatCallback[State] | None = None,
+        on_progress: FormatCallback | None = None,
     ) -> Path:
+        state = FormatState()
         path = download_format(
             filepath,
             format_info=self.to_ydl_dict(),
-            callback=lambda data: self._state_class()._ydl_progress(
+            callback=lambda data: state._ydl_progress(
                 data,
                 on_progress,  # type: ignore
             )
@@ -66,12 +62,8 @@ class Format(ABC, YDLArgs, Serializable, Generic[State]):
     @abstractmethod
     def display_quality(self) -> str: ...
 
-    @property
-    @abstractmethod
-    def _state_class(self) -> type[State]: ...
 
-
-class VideoFormat(Format[VideoFormatState]):
+class VideoFormat(Format):
     video_codec: Annotated[Codec, Field(alias="vcodec")]
     audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
     width: int
@@ -90,10 +82,6 @@ class VideoFormat(Format[VideoFormatState]):
     def display_quality(self) -> str:
         return str(self.quality) + "p"
 
-    @property
-    def _state_class(self):
-        return VideoFormatState
-
     @field_validator("extension")
     @classmethod
     def _validate_extension(cls, value) -> str:
@@ -110,7 +98,7 @@ class VideoFormat(Format[VideoFormatState]):
         return value
 
 
-class AudioFormat(Format[AudioFormatState]):
+class AudioFormat(Format):
     codec: Annotated[Codec, Field(alias="acodec")]
     bitrate: Annotated[float, Field(alias="abr")] = 0
 
@@ -121,10 +109,6 @@ class AudioFormat(Format[AudioFormatState]):
     @property
     def display_quality(self) -> str:
         return str(round(self.quality)) + "kbps"
-
-    @property
-    def _state_class(self):
-        return AudioFormatState
 
     @field_validator("extension")
     @classmethod
