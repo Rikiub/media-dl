@@ -1,11 +1,11 @@
 from loguru import logger
 
-from media_dl.models.progress.states import ProcessingState, ProgressState
+from media_dl.models.progress.media import ProcessingState, MediaDownloadState
 
 
-def debug_callback(progress: ProgressState):
+def debug_callback(progress: MediaDownloadState):
     match progress.status:
-        case "extracting":
+        case "resolving":
             _log_debug(progress.id, "Resolving Media")
         case "resolved":
             _log_debug(progress.id, "Media resolved")

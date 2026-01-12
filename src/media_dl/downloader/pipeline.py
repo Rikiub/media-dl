@@ -13,15 +13,15 @@ from media_dl.models.content.list import LazyPlaylist
 from media_dl.models.content.media import LazyMedia, Media
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.progress.format import FormatState
-from media_dl.models.progress.processor import ProcessorType
-from media_dl.models.progress.states import (
+from media_dl.models.progress.processor import ProcessorStateType
+from media_dl.models.progress.media import (
     CompletedState,
     DownloadingState,
     ErrorState,
-    ExtractingState,
+    ResolvingState,
     MergingState,
     ProcessingState,
-    ProgressDownloadCallback,
+    MediaDownloadCallback,
     ResolvedState,
     SkippedState,
 )
@@ -39,7 +39,7 @@ class DownloadPipeline:
         config: FormatConfig,
         media: LazyMedia,
         playlist: LazyPlaylist | None = None,
-        on_progress: ProgressDownloadCallback | None = None,
+        on_progress: MediaDownloadCallback | None = None,
         cache: bool = True,
     ):
         self.id = media.id
@@ -69,7 +69,7 @@ class DownloadPipeline:
             raise DownloadError(str(e))
 
     def _worker(self):
-        self.progress(ExtractingState(id=self.id, media=self.media))
+        self.progress(ResolvingState(id=self.id, media=self.media))
 
         # 1. Resolve Data
         media = self.media.resolve(self.cache)
@@ -102,7 +102,7 @@ class DownloadPipeline:
         downloaded_file = self._download_formats(video_fmt, audio_fmt)
 
         # 5. Post-Process
-        downloaded_file = self._postprocess(
+        downloaded_file = self._process(
             media,
             downloaded_file,
             video_fmt or audio_fmt,
@@ -195,7 +195,7 @@ class DownloadPipeline:
         else:
             raise DownloadError("Formats not founded.")
 
-    def _postprocess(
+    def _process(
         self,
         media: Media,
         filepath: Path,
@@ -204,13 +204,13 @@ class DownloadPipeline:
         if not self.config.ffmpeg_path:
             return filepath
 
-        pp = MediaProcessor(filepath, self.config.ffmpeg_path)
+        prc = MediaProcessor(filepath, self.config.ffmpeg_path)
 
         @contextmanager
-        def track_pp(name: ProcessorType):
+        def track_prc(name: ProcessorStateType):
             state = ProcessingState(
                 id=self.id,
-                filepath=pp.filepath,
+                filepath=prc.filepath,
                 stage="started",
                 processor=name,
             )
@@ -220,41 +220,41 @@ class DownloadPipeline:
                 yield
             finally:
                 state.stage = "completed"
-                state.filepath = pp.filepath
+                state.filepath = prc.filepath
                 self.progress(state)
 
-        with track_pp("starting"):
+        with track_prc("starting"):
             pass
 
         # Remuxing
         if isinstance(format, VideoFormat):
-            with track_pp("change_container"):
-                pp.change_container(self.config.convert or "mp4")
+            with track_prc("change_container"):
+                prc.change_container(self.config.convert or "mp4")
 
             if media.subtitles:
-                with track_pp("embed_subtitles"):
-                    pp.embed_subtitles(media.subtitles)
+                with track_prc("embed_subtitles"):
+                    prc.embed_subtitles(media.subtitles)
 
         elif isinstance(format, AudioFormat):
             if self.config.convert and self.config.convert != format.extension:
                 try:
-                    with track_pp("change_container"):
-                        pp.change_container(self.config.convert)
+                    with track_prc("change_container"):
+                        prc.change_container(self.config.convert)
                 except FFmpegPostProcessorError:
-                    with track_pp("convert_audio"):
-                        pp.convert_audio(self.config.convert)
+                    with track_prc("convert_audio"):
+                        prc.convert_audio(self.config.convert)
 
         # Metadata
         if media.thumbnails:
-            if pp.filepath.suffix[1:] in ThumbnailSupport:
-                with track_pp("embed_thumbnail"):
-                    pp.embed_thumbnail(media.thumbnails[-1], square=media.is_music)
+            if prc.filepath.suffix[1:] in ThumbnailSupport:
+                with track_prc("embed_thumbnail"):
+                    prc.embed_thumbnail(media.thumbnails[-1], square=media.is_music)
 
         if self.config.embed_metadata:
-            with track_pp("embed_metadata"):
-                pp.embed_metadata(media, media.is_music)
+            with track_prc("embed_metadata"):
+                prc.embed_metadata(media, media.is_music)
 
-        return pp.filepath
+        return prc.filepath
 
     def _check_exists(self, output: Path) -> Path | None:
         for path in output.parent.iterdir():

@@ -12,8 +12,8 @@ from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessingState
 
 
-class ExtractingState(State):
-    status: Literal["extracting"] = "extracting"
+class ResolvingState(State):
+    status: Literal["resolving"] = "resolving"
     media: LazyMedia
 
 
@@ -46,8 +46,8 @@ class CompletedState(HasFile):
     status: Literal["completed"] = "completed"
 
 
-ProgressState = Annotated[
-    ExtractingState
+MediaDownloadState = Annotated[
+    ResolvingState
     | ResolvedState
     | DownloadingState
     | MergingState
@@ -59,4 +59,4 @@ ProgressState = Annotated[
 ]
 
 
-ProgressDownloadCallback = Callable[[ProgressState], None]
+MediaDownloadCallback = Callable[[MediaDownloadState], None]

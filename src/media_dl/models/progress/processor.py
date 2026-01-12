@@ -1,20 +1,13 @@
 from typing import Literal
 
 from media_dl.models.progress.base import HasFile
+from media_dl.processor import ProcessorType
 
-ProcessorType = Literal[
-    "starting",
-    "change_container",
-    "convert_audio",
-    "merge_formats",
-    "embed_metadata",
-    "embed_thumbnail",
-    "embed_subtitles",
-]
-ProcessorStage = Literal["started", "completed"]
+ProcessorStateType = Literal["starting", ProcessorType]
+ProcessorStateStage = Literal["started", "completed"]
 
 
 class ProcessingState(HasFile):
     status: Literal["processing"] = "processing"
-    stage: ProcessorStage
-    processor: ProcessorType = "starting"
+    stage: ProcessorStateStage
+    processor: ProcessorStateType = "starting"

@@ -9,10 +9,10 @@ from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.content.list import MediaList
 from media_dl.models.content.media import LazyMedia
-from media_dl.models.progress.states import ProgressDownloadCallback
+from media_dl.models.progress.media import MediaDownloadCallback
 from media_dl.types import FILE_FORMAT, StrPath
 
-ExtractResult = MediaList | LazyMedia
+MediaResult = MediaList | LazyMedia
 
 
 class MediaDownloader:
@@ -57,7 +57,7 @@ class MediaDownloader:
     def download(
         self,
         media: LazyMedia,
-        on_progress: ProgressDownloadCallback | None = ProgressCallback(),
+        on_progress: MediaDownloadCallback | None = ProgressCallback(),
     ) -> Path:
         """Single download a `Media` result.
 
@@ -79,8 +79,8 @@ class MediaDownloader:
 
     def download_all(
         self,
-        data: ExtractResult,
-        on_progress: ProgressDownloadCallback | None = ProgressCallback(),
+        data: MediaResult,
+        on_progress: MediaDownloadCallback | None = ProgressCallback(),
     ) -> list[Path]:
         """Batch download any result.
 
@@ -137,7 +137,7 @@ class MediaDownloader:
 
         return paths
 
-    def _data_to_list(self, data: ExtractResult) -> list[LazyMedia]:
+    def _data_to_list(self, data: MediaResult) -> list[LazyMedia]:
         medias = []
 
         match data:

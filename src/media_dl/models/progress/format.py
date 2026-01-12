@@ -35,4 +35,4 @@ class FormatState(BaseModel):
         callback(self)
 
 
-FormatCallback = Callable[[FormatState], None]
+FormatDownloadCallback = Callable[[FormatState], None]

@@ -6,7 +6,7 @@ from rich.progress import TaskID
 
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.models.content.media import LazyMedia
-from media_dl.models.progress.states import ProcessingState, ProgressState
+from media_dl.models.progress.media import ProcessingState, MediaDownloadState
 
 
 @dataclass(slots=True)
@@ -21,9 +21,9 @@ class ProgressCallback(DownloadProgress):
         super().__init__(disable)
         self.ids: dict[str, Task] = {}
 
-    def __call__(self, progress: ProgressState):
+    def __call__(self, progress: MediaDownloadState):
         match progress.status:
-            case "extracting":
+            case "resolving":
                 item = self.ids[progress.id] = Task(
                     task_id=self.add_task(
                         description="",
@@ -95,10 +95,10 @@ class ProgressCallback(DownloadProgress):
                         status="Converting[blink]...[/]",
                     )
 
-    def get(self, progress: ProgressState):
+    def get(self, progress: MediaDownloadState):
         return self.ids[progress.id]
 
-    def advance_counter(self, progress: ProgressState, delay: float):
+    def advance_counter(self, progress: MediaDownloadState, delay: float):
         self.counter.advance()
         time.sleep(delay)
         self.remove_task(self.get(progress).task_id)

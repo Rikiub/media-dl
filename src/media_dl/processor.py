@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from media_dl.models.content.media import Media
 from media_dl.models.content.metadata import Subtitles, Thumbnail
@@ -12,6 +13,14 @@ from media_dl.ydl.processor import (
 from media_dl.ydl.types import YDLExtractInfo
 
 FormatPaths = list[tuple[Format, Path]]
+ProcessorType = Literal[
+    "change_container",
+    "convert_audio",
+    "merge_formats",
+    "embed_metadata",
+    "embed_thumbnail",
+    "embed_subtitles",
+]
 
 
 class MediaProcessor(YDLProcessor):

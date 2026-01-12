@@ -13,7 +13,7 @@ from pydantic import (
 )
 
 from media_dl.models.base import Serializable
-from media_dl.models.progress.format import FormatCallback, FormatState
+from media_dl.models.progress.format import FormatDownloadCallback, FormatState
 from media_dl.types import StrPath
 from media_dl.ydl.downloader import download_format
 from media_dl.ydl.types import SupportedExtensions, YDLFormatInfo
@@ -39,7 +39,7 @@ class Format(ABC, YDLArgs, Serializable):
     def download(
         self,
         filepath: StrPath,
-        on_progress: FormatCallback | None = None,
+        on_progress: FormatDownloadCallback | None = None,
     ) -> Path:
         state = FormatState()
         path = download_format(
