@@ -13,7 +13,7 @@ class DownloadError(MediaError, ConnectionError):
     """Download error."""
 
 
-class PostProcessingError(MediaError):
+class ProcessingError(MediaError):
     """Postprocessing error."""
 
 

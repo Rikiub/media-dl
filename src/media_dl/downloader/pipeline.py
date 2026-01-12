@@ -11,7 +11,7 @@ from media_dl.downloader.states.debug import debug_callback
 from media_dl.exceptions import DownloadError
 from media_dl.models.content.list import LazyPlaylist
 from media_dl.models.content.media import LazyMedia, Media
-from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
+from media_dl.models.format.types import AudioFormat, Format, VideoFormat
 from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessorStateType
 from media_dl.models.progress.media import (

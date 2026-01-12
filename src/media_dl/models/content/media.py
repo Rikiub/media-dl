@@ -18,7 +18,7 @@ from media_dl.models.content.metadata import (
     Subtitles,
     Thumbnail,
 )
-from media_dl.models.formats.list import FormatList
+from media_dl.models.format.list import FormatList
 from media_dl.types import MUSIC_SITES
 
 DatetimeTimestamp = Annotated[

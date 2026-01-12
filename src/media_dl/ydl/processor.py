@@ -10,7 +10,7 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegVideoRemuxerPP,
 )
 
-from media_dl.exceptions import PostProcessingError
+from media_dl.exceptions import ProcessingError
 from media_dl.path import get_ffmpeg
 from media_dl.types import StrPath
 from media_dl.ydl.types import YDLExtractInfo
@@ -34,7 +34,7 @@ class YDLProcessor:
 
         self.ffmpeg_path = get_ffmpeg(ffmpeg_path)
         if not self.ffmpeg_path:
-            raise PostProcessingError("FFmpeg is needed for use postprocessors.")
+            raise ProcessingError("FFmpeg is needed for use postprocessors.")
 
     @property
     def extension(self) -> str:

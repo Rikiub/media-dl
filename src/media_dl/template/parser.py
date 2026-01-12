@@ -7,7 +7,7 @@ from pathvalidate import sanitize_filepath
 from media_dl.exceptions import OutputTemplateError
 from media_dl.models.content.list import Playlist
 from media_dl.models.content.media import Media
-from media_dl.models.formats.types import Format
+from media_dl.models.format.types import Format
 from media_dl.template.keys import OUTPUT_TEMPLATES
 from media_dl.types import StrPath
 

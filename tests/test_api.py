@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from media_dl import AudioFormat, Media, MediaDownloader, Playlist, VideoFormat
-from media_dl.models.formats.list import FormatList
+from media_dl.models.format.list import FormatList
 
 try:
     from rich import print

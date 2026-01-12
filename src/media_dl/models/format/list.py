@@ -7,8 +7,8 @@ from typing import Generic, Literal, overload
 from pydantic import OnErrorOmit, RootModel
 from typing_extensions import Self, TypeVar
 
-from media_dl.models.formats.codecs import get_codec_rank
-from media_dl.models.formats.types import AudioFormat, Format, FormatType, VideoFormat
+from media_dl.models.format.codecs import get_codec_rank
+from media_dl.models.format.types import AudioFormat, Format, FormatType, VideoFormat
 from media_dl.types import FORMAT_TYPE
 
 F = TypeVar("F", default=Format)

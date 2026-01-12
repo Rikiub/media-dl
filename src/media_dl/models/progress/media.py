@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from media_dl.models.content.media import LazyMedia, Media
-from media_dl.models.formats.types import AudioFormat, VideoFormat
+from media_dl.models.format.types import AudioFormat, VideoFormat
 from media_dl.models.progress.base import HasFile, State
 from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessingState
