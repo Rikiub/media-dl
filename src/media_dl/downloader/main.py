@@ -4,11 +4,11 @@ from pathlib import Path
 from loguru import logger
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.pipeline import DownloadPipeline
-from media_dl.downloader.state import ProgressCallback
+from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
 
 from media_dl.models.list import BaseList
-from media_dl.models.progress.state import ProgressDownloadCallback
+from media_dl.models.progress.states import ProgressDownloadCallback
 from media_dl.models.stream import LazyStream
 from media_dl.types import FILE_FORMAT, StrPath
 

@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from pathlib import Path
 import shutil
 
@@ -6,18 +7,19 @@ from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessorError
 
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.selector import FormatSelector
+from media_dl.downloader.states.debug import debug_callback
 from media_dl.exceptions import DownloadError
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.list import LazyPlaylist
 from media_dl.models.progress.format import FormatState
-from media_dl.models.progress.state import (
+from media_dl.models.progress.processor import ProcessorType
+from media_dl.models.progress.states import (
     CompletedState,
     DownloadingState,
     ErrorState,
     ExtractingState,
     MergingState,
     ProcessingState,
-    ProcessorType,
     ProgressDownloadCallback,
     ResolvedState,
     SkippedState,
@@ -45,10 +47,11 @@ class DownloadPipeline:
         self.playlist = playlist
         self.config = config
         self.cache = cache
-        self.selector = FormatSelector(config)
 
         if on_progress:
-            self.progress = on_progress
+            self.progress = lambda state: [
+                f(state) for f in (on_progress, debug_callback)
+            ]
         else:
             self.progress = lambda d: None
 
@@ -75,7 +78,7 @@ class DownloadPipeline:
         self.progress(ResolvedState(id=self.id, stream=stream))
 
         # 2. Select Formats
-        video_fmt, audio_fmt = self.selector.resolve(stream)
+        video_fmt, audio_fmt = FormatSelector(self.config).resolve(stream)
 
         # 3. Calculate Path & Check Existence
         output = str(self.config.output)
@@ -168,6 +171,14 @@ class DownloadPipeline:
             and (video_file and video_fmt)
             and (audio_file and audio_fmt)
         ):
+            extension = self.config.convert or "mp4"
+
+            pp = PostProcessor.from_formats_merge(
+                f"{get_tempfile()}.{extension}",
+                formats=[(video_fmt, video_file), (audio_fmt, audio_file)],
+                ffmpeg_path=self.config.ffmpeg_path,
+            )
+
             self.progress(
                 MergingState(
                     id=self.id,
@@ -176,13 +187,6 @@ class DownloadPipeline:
                 )
             )
 
-            extension = self.selector.config.convert or "mp4"
-
-            pp = PostProcessor.from_formats_merge(
-                f"{get_tempfile()}.{extension}",
-                formats=[(video_fmt, video_file), (audio_fmt, audio_file)],
-                ffmpeg_path=self.config.ffmpeg_path,
-            )
             return pp.filepath
         elif video_file:
             return video_file
@@ -202,43 +206,53 @@ class DownloadPipeline:
 
         pp = PostProcessor(filepath, self.config.ffmpeg_path)
 
-        def notify(type: ProcessorType):
-            self.progress(
-                ProcessingState(
-                    id=self.id,
-                    filepath=pp.filepath,
-                    processor=type,
-                )
+        @contextmanager
+        def track_pp(name: ProcessorType):
+            state = ProcessingState(
+                id=self.id,
+                filepath=pp.filepath,
+                stage="started",
+                processor=name,
             )
+            self.progress(state)
 
-        notify("start")
+            try:
+                yield
+            finally:
+                state.stage = "completed"
+                state.filepath = pp.filepath
+                self.progress(state)
+
+        with track_pp("starting"):
+            pass
 
         # Remuxing
         if isinstance(format, VideoFormat):
-            pp.change_container(self.config.convert or "mp4")
-            notify("change_container")
+            with track_pp("change_container"):
+                pp.change_container(self.config.convert or "mp4")
 
             if stream.subtitles:
-                pp.embed_subtitles(stream.subtitles)
-                notify("embed_subtitles")
+                with track_pp("embed_subtitles"):
+                    pp.embed_subtitles(stream.subtitles)
 
         elif isinstance(format, AudioFormat):
             if self.config.convert and self.config.convert != format.extension:
                 try:
-                    pp.change_container(self.config.convert)
+                    with track_pp("change_container"):
+                        pp.change_container(self.config.convert)
                 except FFmpegPostProcessorError:
-                    pp.convert_audio(self.config.convert)
-                notify("change_container")
+                    with track_pp("convert_audio"):
+                        pp.convert_audio(self.config.convert)
 
         # Metadata
         if stream.thumbnails:
             if pp.filepath.suffix[1:] in ThumbnailSupport:
-                pp.embed_thumbnail(stream.thumbnails[-1], square=stream.is_music)
-                notify("embed_thumbnail")
+                with track_pp("embed_thumbnail"):
+                    pp.embed_thumbnail(stream.thumbnails[-1], square=stream.is_music)
 
         if self.config.embed_metadata:
-            pp.embed_metadata(stream, stream.is_music)
-            notify("embed_metadata")
+            with track_pp("embed_metadata"):
+                pp.embed_metadata(stream, stream.is_music)
 
         return pp.filepath
 
@@ -248,9 +262,9 @@ class DownloadPipeline:
                 extension = path.suffix[1:]
 
                 if (
-                    self.selector.config.type == "video"
+                    self.config.type == "video"
                     and extension in SupportedExtensions.video
-                    or self.selector.config.type == "audio"
+                    or self.config.type == "audio"
                     and extension in SupportedExtensions.audio
                 ):
                     return path

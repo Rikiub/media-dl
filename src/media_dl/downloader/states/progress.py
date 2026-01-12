@@ -3,7 +3,7 @@ import time
 from loguru import logger
 from rich.progress import TaskID
 from media_dl.downloader.progress import DownloadProgress
-from media_dl.models.progress.state import ProcessingState, ProgressState
+from media_dl.models.progress.states import ProcessingState, ProgressState
 from media_dl.models.stream import LazyStream
 
 
@@ -37,7 +37,6 @@ class ProgressCallback(DownloadProgress):
                     description=item.name or "Extracting[blink]...[/]",
                     status="Extracting[blink]...[/]",
                 )
-                self.log_debug(progress.id, "Resolving Stream")
             case "resolved":
                 name = self.ids[progress.id].name = self._stream_display_name(
                     progress.stream
@@ -48,7 +47,6 @@ class ProgressCallback(DownloadProgress):
                     description=name,
                     status="Ready",
                 )
-                self.log_debug(progress.id, "Stream resolved")
             case "skipped":
                 logger.info(
                     'Skipped: "{stream}" (Exists as "{extension}").',
@@ -66,10 +64,6 @@ class ProgressCallback(DownloadProgress):
                     status="Downloading",
                 )
             case "processing":
-                self.update(
-                    self.get(progress).task_id,
-                    status="Processing[blink]...[/]",
-                )
                 self.processor_callback(progress)
             case "error":
                 logger.error(
@@ -78,11 +72,6 @@ class ProgressCallback(DownloadProgress):
                     error=progress.message,
                 )
             case "completed":
-                self.log_debug(
-                    self.get(progress).id,
-                    'Final file saved in: "{filepath}"',
-                    filepath=progress.filepath,
-                )
                 logger.info('Completed: "{stream}".', stream=self.get(progress).name)
 
         if progress.status in ("error", "completed"):
@@ -90,37 +79,19 @@ class ProgressCallback(DownloadProgress):
             self.advance_counter(progress, 1.0)
 
     def processor_callback(self, progress: ProcessingState):
+        if progress.processor == "starting":
+            self.update(
+                self.get(progress).task_id,
+                status="Processing[blink]...[/]",
+            )
+
         match progress.processor:
-            case "change_container":
-                self.log_debug(
-                    progress.id,
-                    'File container changed to "{extension}"',
-                    extension=progress.extension,
-                )
             case "convert_audio":
-                self.log_debug(
-                    progress.id,
-                    'File converted to "{extension}"',
-                    extension=progress.extension,
-                )
-            case "embed_subtitles":
-                self.log_debug(
-                    progress.id,
-                    'Subtitles embedded in "{file}"',
-                    file=progress.filepath,
-                )
-            case "embed_thumbnail":
-                self.log_debug(
-                    progress.id,
-                    'Thumbnail embedded in "{file}"',
-                    file=progress.filepath,
-                )
-            case "embed_metadata":
-                self.log_debug(
-                    progress.id,
-                    'Metadata embedded in "{file}"',
-                    file=progress.filepath,
-                )
+                if progress.stage == "started":
+                    self.update(
+                        self.get(progress).task_id,
+                        status="Converting[blink]...[/]",
+                    )
 
     def get(self, progress: ProgressState):
         return self.ids[progress.id]

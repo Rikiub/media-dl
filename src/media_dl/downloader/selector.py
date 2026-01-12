@@ -11,13 +11,13 @@ class FormatSelector:
     """Responsible for selecting the best video/audio formats based on config."""
 
     def __init__(self, config: FormatConfig):
-        self.config = config
+        self._config = config
 
     def resolve(self, stream: Stream) -> tuple[VideoFormat | None, AudioFormat | None]:
         """Resolves the final pair of formats to be downloaded."""
         audio = self.extract_best(stream.formats, AudioFormat)
 
-        if audio and (stream.is_music or self.config.type == "audio"):
+        if audio and (stream.is_music or self._config.type == "audio"):
             return None, audio
 
         video = self.extract_best(stream.formats, VideoFormat)
@@ -35,13 +35,13 @@ class FormatSelector:
             return None
 
         # Filter by extension
-        if self.config.convert:
-            if filtered := candidates.filter(extension=self.config.convert):
+        if self._config.convert:
+            if filtered := candidates.filter(extension=self._config.convert):
                 candidates = filtered
 
-        if self.config.quality:
+        if self._config.quality:
             # Resolve Quality
-            result = candidates.get_closest_quality(self.config.quality)
+            result = candidates.get_closest_quality(self._config.quality)
         else:
             result = candidates[0]
 
