@@ -1,5 +1,5 @@
-from typing_extensions import Self
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from media_dl.ydl.types import YDLExtractInfo
 

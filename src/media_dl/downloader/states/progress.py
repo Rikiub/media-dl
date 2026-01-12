@@ -5,8 +5,8 @@ from loguru import logger
 from rich.progress import TaskID
 
 from media_dl.downloader.progress import DownloadProgress
-from media_dl.models.progress.states import ProcessingState, ProgressState
 from media_dl.models.content.media import LazyMedia
+from media_dl.models.progress.states import ProcessingState, ProgressState
 
 
 @dataclass(slots=True)

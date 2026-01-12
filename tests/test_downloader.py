@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import Playlist, Media, MediaDownloader
+from media_dl import Media, MediaDownloader, Playlist
 
 TEMPDIR = TemporaryDirectory()
 

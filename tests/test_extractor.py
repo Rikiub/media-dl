@@ -1,7 +1,7 @@
 import pytest
 from rich import print
 
-from media_dl import Playlist, Search, Media
+from media_dl import Media, Playlist, Search
 from media_dl.exceptions import ExtractError
 from media_dl.ydl.extractor import SEARCH_SERVICE
 

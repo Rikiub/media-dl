@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from yt_dlp.utils import DownloadError as YDLDownloadError
 from yt_dlp.networking.exceptions import RequestError
+from yt_dlp.utils import DownloadError as YDLDownloadError
 
 from media_dl.exceptions import ExtractError
 from media_dl.ydl.messages import format_except_message

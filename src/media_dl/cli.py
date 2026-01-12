@@ -214,12 +214,12 @@ What format you want request?
     # Lazy Import
     with Status("Starting[blink]...[/]", disable=quiet):
         from media_dl import (
-            Playlist,
-            Search,
-            Media,
             DownloadError,
             ExtractError,
+            Media,
             MediaDownloader,
+            Playlist,
+            Search,
         )
 
     # Initialize Downloader

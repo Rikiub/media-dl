@@ -11,9 +11,9 @@ def _gen_keys() -> list[str]:
 
     from pydantic import BaseModel
 
-    from media_dl.models.formats.types import AudioFormat, Format, VideoFormat, YDLArgs
     from media_dl.models.content.list import Playlist
     from media_dl.models.content.media import Media
+    from media_dl.models.formats.types import AudioFormat, Format, VideoFormat, YDLArgs
 
     def extract(model: type[BaseModel], by_alias: bool = False) -> list[str]:
         keys: list[str] = []

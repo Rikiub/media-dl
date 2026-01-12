@@ -5,10 +5,9 @@ from pydantic import AliasChoices, Field, field_validator
 from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
-from media_dl.extractor import extract_search, extract_url, is_playlist, is_media
+from media_dl.extractor import extract_search, extract_url, is_media, is_playlist
 from media_dl.models.base import Serializable
 from media_dl.ydl.extractor import SEARCH_SERVICE
-
 
 # Types
 URL_CHOICES = ["original_url", "url"]

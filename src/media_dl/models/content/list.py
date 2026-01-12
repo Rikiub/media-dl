@@ -11,8 +11,8 @@ from media_dl.models.content.base import (
     ExtractSearch,
     LazyType,
 )
-from media_dl.models.content.metadata import Thumbnail
 from media_dl.models.content.media import LazyMedia
+from media_dl.models.content.metadata import Thumbnail
 
 
 class BaseList(ABC, ExtractList):

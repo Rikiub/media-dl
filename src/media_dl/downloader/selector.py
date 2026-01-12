@@ -1,9 +1,9 @@
 from typing import TypeVar, cast
 
 from media_dl.downloader.config import FormatConfig
+from media_dl.models.content.media import Media
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
-from media_dl.models.content.media import Media
 
 T = TypeVar("T", bound=Format)
 

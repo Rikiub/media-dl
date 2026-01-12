@@ -9,8 +9,9 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.selector import FormatSelector
 from media_dl.downloader.states.debug import debug_callback
 from media_dl.exceptions import DownloadError
-from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.content.list import LazyPlaylist
+from media_dl.models.content.media import LazyMedia, Media
+from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
 from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessorType
 from media_dl.models.progress.states import (
@@ -24,7 +25,6 @@ from media_dl.models.progress.states import (
     ResolvedState,
     SkippedState,
 )
-from media_dl.models.content.media import LazyMedia, Media
 from media_dl.path import get_tempfile
 from media_dl.processor import MediaProcessor
 from media_dl.template.parser import generate_output_template

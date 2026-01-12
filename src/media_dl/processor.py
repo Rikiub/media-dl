@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from media_dl.models.formats.types import Format
-from media_dl.models.content.metadata import Subtitles, Thumbnail
 from media_dl.models.content.media import Media
+from media_dl.models.content.metadata import Subtitles, Thumbnail
+from media_dl.models.formats.types import Format
 from media_dl.types import AUDIO_EXTENSION, EXTENSION, StrPath
 from media_dl.ydl.processor import (
     RequestedFormat,

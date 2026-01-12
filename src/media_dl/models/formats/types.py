@@ -1,5 +1,3 @@
-from media_dl.models.base import Serializable
-from media_dl.ydl.types import YDLFormatInfo
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Annotated
@@ -14,10 +12,11 @@ from pydantic import (
     model_serializer,
 )
 
+from media_dl.models.base import Serializable
 from media_dl.models.progress.format import FormatCallback, FormatState
 from media_dl.types import StrPath
 from media_dl.ydl.downloader import download_format
-from media_dl.ydl.types import SupportedExtensions
+from media_dl.ydl.types import SupportedExtensions, YDLFormatInfo
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 

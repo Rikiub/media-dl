@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import AudioFormat, Playlist, Media, MediaDownloader, VideoFormat
+from media_dl import AudioFormat, Media, MediaDownloader, Playlist, VideoFormat
 from media_dl.models.formats.list import FormatList
 
 try:
