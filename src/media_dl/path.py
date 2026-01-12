@@ -1,8 +1,11 @@
 import atexit
+from functools import cache
 import os
 import shutil
 import tempfile
 from pathlib import Path
+
+from media_dl.types import StrPath
 
 # Constants
 CACHE_DIR = Path(tempfile.gettempdir(), "media-dl")
@@ -17,6 +20,16 @@ def get_tempfile() -> Path:
         return Path(file.name)
 
 
+def get_ffmpeg(ffmpeg_path: StrPath | None = None) -> Path | None:
+    ffmpeg_path = Path(ffmpeg_path) if ffmpeg_path else get_global_ffmpeg()
+
+    if ffmpeg_path and not check_executable_exists(ffmpeg_path):
+        raise FileNotFoundError(f"'{ffmpeg_path.name}' is not a FFmpeg executable.")
+
+    return ffmpeg_path
+
+
+@cache
 def get_global_ffmpeg() -> Path | None:
     if path := shutil.which("ffmpeg"):
         return Path(path)
@@ -24,7 +37,9 @@ def get_global_ffmpeg() -> Path | None:
         return None
 
 
-def check_executable_exists(file: Path) -> bool:
+def check_executable_exists(file: StrPath) -> bool:
+    file = Path(file)
+
     if file.is_file() and os.access(file, os.X_OK):
         return True
     else:

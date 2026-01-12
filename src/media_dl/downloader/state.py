@@ -91,28 +91,34 @@ class ProgressCallback(DownloadProgress):
 
     def processor_callback(self, progress: ProcessingState):
         match progress.processor:
-            case "remux":
+            case "change_container":
                 self.log_debug(
                     progress.id,
-                    'File remuxed as "{extension}"',
+                    'File container changed to "{extension}"',
+                    extension=progress.extension,
+                )
+            case "convert_audio":
+                self.log_debug(
+                    progress.id,
+                    'File converted to "{extension}"',
                     extension=progress.extension,
                 )
             case "embed_subtitles":
                 self.log_debug(
                     progress.id,
-                    'Subtitles embedded in: "{file}"',
+                    'Subtitles embedded in "{file}"',
                     file=progress.filepath,
                 )
             case "embed_thumbnail":
                 self.log_debug(
                     progress.id,
-                    'Thumbnail embedded in: "{file}"',
+                    'Thumbnail embedded in "{file}"',
                     file=progress.filepath,
                 )
             case "embed_metadata":
                 self.log_debug(
                     progress.id,
-                    'Metadata embedded in: "{file}"',
+                    'Metadata embedded in "{file}"',
                     file=progress.filepath,
                 )
 

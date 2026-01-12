@@ -3,7 +3,7 @@ from pathlib import Path
 from media_dl.models.formats.types import Format
 from media_dl.models.metadata import Subtitles, Thumbnail
 from media_dl.models.stream import Stream
-from media_dl.types import EXTENSION, StrPath
+from media_dl.types import AUDIO_EXTENSION, EXTENSION, StrPath
 from media_dl.ydl.postprocessor import (
     RequestedFormat,
     RequestedFormats,
@@ -15,38 +15,15 @@ FormatPaths = list[tuple[Format, Path]]
 
 
 class PostProcessor(YDLPostProcessor):
-    @classmethod
-    def from_formats_merge(
-        cls,
-        filepath: StrPath,
-        merge_format: str | EXTENSION,
-        formats: RequestedFormats | FormatPaths,
-        ffmpeg_path: StrPath | None = None,
+    def change_container(self, format: str | EXTENSION):
+        return super().change_container(format)
+
+    def convert_audio(
+        self,
+        format: str | AUDIO_EXTENSION = "",
+        quality: int | None = None,
     ):
-        real_formats: list[RequestedFormat] = []
-
-        for fmt in formats:
-            if isinstance(fmt, tuple):
-                format, path = fmt
-                format: Format
-                path: Path
-
-                fmt = {}
-                fmt |= {
-                    "filepath": str(path),
-                    "vcodec": "none",
-                    "acodec": "none",
-                }
-                fmt |= format.to_ydl_dict()
-            real_formats.append(fmt)  # type: ignore
-
-        cls = super().from_formats_merge(
-            filepath,
-            merge_format,
-            formats=real_formats,
-            ffmpeg_path=ffmpeg_path,
-        )
-        return cls
+        return super().convert_audio(format, quality)
 
     def embed_metadata(
         self,
@@ -93,6 +70,37 @@ class PostProcessor(YDLPostProcessor):
 
         super().embed_subtitles(new_subtitles)  # type: ignore
         return self
+
+    @classmethod
+    def from_formats_merge(
+        cls,
+        filepath: StrPath,
+        formats: RequestedFormats | FormatPaths,
+        ffmpeg_path: StrPath | None = None,
+    ):
+        real_formats: list[RequestedFormat] = []
+
+        for fmt in formats:
+            if isinstance(fmt, tuple):
+                format, path = fmt
+                format: Format
+                path: Path
+
+                fmt = {}
+                fmt |= {
+                    "filepath": str(path),
+                    "vcodec": "none",
+                    "acodec": "none",
+                }
+                fmt |= format.to_ydl_dict()
+            real_formats.append(fmt)  # type: ignore
+
+        cls = super().from_formats_merge(
+            filepath,
+            formats=real_formats,
+            ffmpeg_path=ffmpeg_path,
+        )
+        return cls
 
 
 def _stream_to_music_metadata(stream: Stream) -> YDLExtractInfo:

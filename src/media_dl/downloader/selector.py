@@ -15,16 +15,12 @@ class FormatSelector:
 
     def resolve(self, stream: Stream) -> tuple[VideoFormat | None, AudioFormat | None]:
         """Resolves the final pair of formats to be downloaded."""
-        video = self.extract_best(stream.formats, VideoFormat)
         audio = self.extract_best(stream.formats, AudioFormat)
 
-        if not self.config.convert:
-            if audio and (stream.is_music or self.config.format == "audio"):
-                self.config.format = "audio"
-                return None, audio
-            elif video:
-                self.config.format = "video"
+        if audio and (stream.is_music or self.config.type == "audio"):
+            return None, audio
 
+        video = self.extract_best(stream.formats, VideoFormat)
         return video, audio
 
     def extract_best(self, formats: FormatList, type: type[T]) -> T | None:

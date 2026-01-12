@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 
 from loguru import logger
+from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessorError
 
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.selector import FormatSelector
@@ -25,7 +26,7 @@ from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
 from media_dl.postprocessor import PostProcessor
 from media_dl.template.parser import generate_output_template
-from media_dl.ydl.types import SupportedExtensions
+from media_dl.ydl.types import SupportedExtensions, ThumbnailSupport
 
 
 class DownloadPipeline:
@@ -54,6 +55,8 @@ class DownloadPipeline:
         # Internal State
         self.audio_bytes = 0
         self.video_bytes = 0
+
+        logger.debug(self.config)
 
     def run(self) -> Path:
         try:
@@ -99,8 +102,7 @@ class DownloadPipeline:
         downloaded_file = self._postprocess(
             stream,
             downloaded_file,
-            video_fmt,
-            audio_fmt,
+            video_fmt or audio_fmt,
         )
 
         # 6. Finalize (Move to target)
@@ -153,7 +155,7 @@ class DownloadPipeline:
             )
 
         # Download Video
-        if self.selector.config.type == "video" and video_fmt:
+        if video_fmt:
             _log(video_fmt)
             video_file = video_fmt.download(
                 get_tempfile(),
@@ -161,7 +163,11 @@ class DownloadPipeline:
             )
 
         # Merge if necessary
-        if (video_file and video_fmt) and (audio_file and audio_fmt):
+        if (
+            self.config.ffmpeg_path
+            and (video_file and video_fmt)
+            and (audio_file and audio_fmt)
+        ):
             self.progress(
                 MergingState(
                     id=self.id,
@@ -170,10 +176,12 @@ class DownloadPipeline:
                 )
             )
 
+            extension = self.selector.config.convert or "mp4"
+
             pp = PostProcessor.from_formats_merge(
-                get_tempfile(),
-                merge_format=self.selector.config.convert or "mp4",
+                f"{get_tempfile()}.{extension}",
                 formats=[(video_fmt, video_file), (audio_fmt, audio_file)],
+                ffmpeg_path=self.config.ffmpeg_path,
             )
             return pp.filepath
         elif video_file:
@@ -187,8 +195,7 @@ class DownloadPipeline:
         self,
         stream: Stream,
         filepath: Path,
-        video_fmt: VideoFormat | None = None,
-        audio_fmt: AudioFormat | None = None,
+        format: Format | None = None,
     ):
         if not self.config.ffmpeg_path:
             return filepath
@@ -204,30 +211,34 @@ class DownloadPipeline:
                 )
             )
 
+        notify("start")
+
         # Remuxing
-        if self.selector.config.type == "video" and video_fmt:
-            pp.remux(self.selector.config.convert or "webm>mp4")
-            notify("remux")
+        if isinstance(format, VideoFormat):
+            pp.change_container(self.config.convert or "mp4")
+            notify("change_container")
 
             if stream.subtitles:
                 pp.embed_subtitles(stream.subtitles)
                 notify("embed_subtitles")
 
-        elif self.selector.config.type == "audio" and audio_fmt:
-            if (
-                self.selector.config.convert
-                and self.selector.config.convert != audio_fmt.extension
-            ):
-                pp.remux(self.selector.config.convert)
-                notify("remux")
+        elif isinstance(format, AudioFormat):
+            if self.config.convert and self.config.convert != format.extension:
+                try:
+                    pp.change_container(self.config.convert)
+                except FFmpegPostProcessorError:
+                    pp.convert_audio(self.config.convert)
+                notify("change_container")
 
         # Metadata
         if stream.thumbnails:
-            pp.embed_thumbnail(stream.thumbnails[-1], square=stream.is_music)
-            notify("embed_thumbnail")
+            if pp.filepath.suffix[1:] in ThumbnailSupport:
+                pp.embed_thumbnail(stream.thumbnails[-1], square=stream.is_music)
+                notify("embed_thumbnail")
 
-        pp.embed_metadata(stream, stream.is_music)
-        notify("embed_metadata")
+        if self.config.embed_metadata:
+            pp.embed_metadata(stream, stream.is_music)
+            notify("embed_metadata")
 
         return pp.filepath
 

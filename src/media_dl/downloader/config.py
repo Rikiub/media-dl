@@ -2,7 +2,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast, get_args
 
-from media_dl.path import check_executable_exists, get_global_ffmpeg
+from media_dl.path import get_ffmpeg
 from media_dl.types import (
     AUDIO_EXTENSION,
     EXTENSION,
@@ -33,12 +33,7 @@ class FormatConfig:
     embed_metadata: bool = True
 
     def __post_init__(self):
-        if self.ffmpeg_path and not check_executable_exists(self.ffmpeg_path):
-            raise FileNotFoundError(
-                f"'{self.ffmpeg_path.name}' is not a FFmpeg executable."
-            )
-        else:
-            self.ffmpeg_path = get_global_ffmpeg() or None
+        self.ffmpeg_path = get_ffmpeg(self.ffmpeg_path)
 
     @property
     def type(self) -> FORMAT_TYPE:

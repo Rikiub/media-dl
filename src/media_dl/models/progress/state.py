@@ -58,7 +58,9 @@ class CompletedState(HasFile):
 
 
 ProcessorType = Literal[
-    "remux",
+    "start",
+    "change_container",
+    "convert_audio",
     "merge_formats",
     "embed_metadata",
     "embed_thumbnail",
@@ -68,7 +70,7 @@ ProcessorType = Literal[
 
 class ProcessingState(HasFile):
     status: Literal["processing"] = "processing"
-    processor: ProcessorType
+    processor: ProcessorType = "start"
 
 
 ProgressState = Annotated[

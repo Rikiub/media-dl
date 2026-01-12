@@ -10,6 +10,8 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegMergerPP,
 )
 
+from media_dl.exceptions import PostProcessingError
+from media_dl.path import get_ffmpeg
 from media_dl.types import StrPath
 from media_dl.ydl.types import YDLExtractInfo
 
@@ -26,58 +28,41 @@ RequestedFormats = list[RequestedFormat]
 class YDLPostProcessor:
     def __init__(self, filepath: StrPath, ffmpeg_path: StrPath | None = None) -> None:
         self.filepath = Path(filepath)
-        self.ffmpeg_path = ffmpeg_path
+
+        if not self.extension:
+            raise ValueError(f'"{self.filepath}" must have a file extension.')
+
+        self.ffmpeg_path = get_ffmpeg(ffmpeg_path)
+        if not self.ffmpeg_path:
+            raise PostProcessingError("FFmpeg is needed for use postprocessors.")
 
     @property
     def extension(self) -> str:
         return self.filepath.suffix[1:]
 
-    @classmethod
-    def from_formats_merge(
-        cls,
-        filepath: StrPath,
-        merge_format: str,
-        formats: RequestedFormats,
-        ffmpeg_path: StrPath | None = None,
-    ):
-        cls = cls(filepath, ffmpeg_path=ffmpeg_path)
-
-        pp = FFmpegMergerPP(None)
-        pp.run(
-            cls.params
-            | {
-                "filepath": filepath,
-                "ext": merge_format,
-                "requested_formats": formats,
-                "__files_to_merge": [item["filepath"] for item in formats],
-            }
-        )
-
-        return cls
-
-    def remux(self, format: str):
+    def change_container(self, format: str):
         pp = FFmpegVideoRemuxerPP(
             None,
             preferedformat=format,
         )
         _, data = pp.run(self.params)
-        self.filepath = self._get_file(data)
+        self._update_filepath(data)
         return self
 
-    def extract_audio(
+    def convert_audio(
         self,
-        codec: str = "",
+        format: str = "",
         quality: int | None = None,
     ):
         pp = FFmpegExtractAudioPP(
             None,
             nopostoverwrites=False,
-            preferredcodec=codec,
+            preferredcodec=format,
             preferredquality=quality,
         )
 
         _, data = pp.run(self.params)
-        self.filepath = self._get_file(data)
+        self._update_filepath(data)
         return self
 
     def embed_metadata(self, data: YDLExtractInfo):
@@ -133,6 +118,26 @@ class YDLPostProcessor:
         pp.run(self.params | {"requested_subtitles": dict_subs})
         return self
 
+    @classmethod
+    def from_formats_merge(
+        cls,
+        filepath: StrPath,
+        formats: RequestedFormats,
+        ffmpeg_path: StrPath | None = None,
+    ):
+        cls = cls(filepath, ffmpeg_path=ffmpeg_path)
+
+        pp = FFmpegMergerPP()
+        _, data = pp.run(
+            cls.params
+            | {
+                "requested_formats": formats,
+                "__files_to_merge": [item["filepath"] for item in formats],
+            }
+        )
+        cls._update_filepath(data)
+        return cls
+
     @property
     def params(self):
         info = {
@@ -145,5 +150,5 @@ class YDLPostProcessor:
 
         return info
 
-    def _get_file(self, data: YDLExtractInfo) -> Path:
-        return Path(data["filepath"])
+    def _update_filepath(self, data: YDLExtractInfo) -> None:
+        self.filepath = Path(data["filepath"])
