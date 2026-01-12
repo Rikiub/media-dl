@@ -6,7 +6,7 @@ from rich.progress import TaskID
 
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.models.content.media import LazyMedia
-from media_dl.models.progress.media import ProcessingState, MediaDownloadState
+from media_dl.models.progress.media import MediaDownloadState, ProcessingState
 
 
 @dataclass(slots=True)
