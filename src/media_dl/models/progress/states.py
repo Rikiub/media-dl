@@ -9,17 +9,17 @@ from media_dl.models.formats.types import AudioFormat, VideoFormat
 from media_dl.models.progress.base import HasFile, State
 from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessingState
-from media_dl.models.stream import LazyStream, Stream
+from media_dl.models.content.media import LazyMedia, Media
 
 
 class ExtractingState(State):
     status: Literal["extracting"] = "extracting"
-    stream: LazyStream
+    media: LazyMedia
 
 
 class ResolvedState(State):
     status: Literal["resolved"] = "resolved"
-    stream: Stream
+    media: Media
 
 
 class DownloadingState(FormatState, State):

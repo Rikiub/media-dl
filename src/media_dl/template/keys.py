@@ -12,8 +12,8 @@ def _gen_keys() -> list[str]:
     from pydantic import BaseModel
 
     from media_dl.models.formats.types import AudioFormat, Format, VideoFormat, YDLArgs
-    from media_dl.models.list import Playlist
-    from media_dl.models.stream import Stream
+    from media_dl.models.content.list import Playlist
+    from media_dl.models.content.media import Media
 
     def extract(model: type[BaseModel], by_alias: bool = False) -> list[str]:
         keys: list[str] = []
@@ -30,7 +30,7 @@ def _gen_keys() -> list[str]:
         *extract(YDLArgs),
         "extractor_key",
         "_type",
-        "streams",
+        "medias",
         "playlists",
         "formats",
         "subtitles",
@@ -43,7 +43,7 @@ def _gen_keys() -> list[str]:
 
     templates = {
         *extract(Playlist, True),
-        *extract(Stream),
+        *extract(Media),
         *extract(Format),
         *extract(VideoFormat),
         *extract(AudioFormat),

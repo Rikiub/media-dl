@@ -3,7 +3,7 @@ from typing import TypeVar, cast
 from media_dl.downloader.config import FormatConfig
 from media_dl.models.formats.list import FormatList
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
-from media_dl.models.stream import Stream
+from media_dl.models.content.media import Media
 
 T = TypeVar("T", bound=Format)
 
@@ -14,14 +14,14 @@ class FormatSelector:
     def __init__(self, config: FormatConfig):
         self._config = config
 
-    def resolve(self, stream: Stream) -> tuple[VideoFormat | None, AudioFormat | None]:
+    def resolve(self, media: Media) -> tuple[VideoFormat | None, AudioFormat | None]:
         """Resolves the final pair of formats to be downloaded."""
-        audio = self.extract_best(stream.formats, AudioFormat)
+        audio = self.extract_best(media.formats, AudioFormat)
 
-        if audio and (stream.is_music or self._config.type == "audio"):
+        if audio and (media.is_music or self._config.type == "audio"):
             return None, audio
 
-        video = self.extract_best(stream.formats, VideoFormat)
+        video = self.extract_best(media.formats, VideoFormat)
         return video, audio
 
     def extract_best(self, formats: FormatList, type: type[T]) -> T | None:

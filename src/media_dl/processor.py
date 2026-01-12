@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from media_dl.models.formats.types import Format
-from media_dl.models.metadata import Subtitles, Thumbnail
-from media_dl.models.stream import Stream
+from media_dl.models.content.metadata import Subtitles, Thumbnail
+from media_dl.models.content.media import Media
 from media_dl.types import AUDIO_EXTENSION, EXTENSION, StrPath
 from media_dl.ydl.processor import (
     RequestedFormat,
@@ -27,13 +27,13 @@ class MediaProcessor(YDLProcessor):
 
     def embed_metadata(
         self,
-        data: YDLExtractInfo | Stream,
+        data: YDLExtractInfo | Media,
         include_music: bool = False,
     ):
-        if isinstance(data, Stream):
+        if isinstance(data, Media):
             info = data.to_ydl_dict()
             if include_music:
-                info |= _stream_to_music_metadata(data)
+                info |= _media_to_music_metadata(data)
         else:
             info = data
 
@@ -103,10 +103,10 @@ class MediaProcessor(YDLProcessor):
         return cls
 
 
-def _stream_to_music_metadata(stream: Stream) -> YDLExtractInfo:
+def _media_to_music_metadata(media: Media) -> YDLExtractInfo:
     return {
-        "meta_track": stream.track or stream.title,
-        "meta_artist": ", ".join(stream.artists) if stream.artists else stream.uploader,
-        "meta_album_artist": stream.album_artist or stream.uploader,
-        "meta_date": str(stream.datetime.year) if stream.datetime else "",
+        "meta_track": media.track or media.title,
+        "meta_artist": ", ".join(media.artists) if media.artists else media.uploader,
+        "meta_album_artist": media.album_artist or media.uploader,
+        "meta_date": str(media.datetime.year) if media.datetime else "",
     }

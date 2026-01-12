@@ -1,14 +1,14 @@
 import pytest
 from rich import print
 
-from media_dl import Playlist, Search, Stream
+from media_dl import Playlist, Search, Media
 from media_dl.exceptions import ExtractError
-from media_dl.types import SEARCH_PROVIDER
+from media_dl.ydl.extractor import SEARCH_SERVICE
 
 
-def extract_url(url: str) -> Stream | Playlist:
+def extract_url(url: str) -> Media | Playlist:
     try:
-        result = Stream.from_url(url)
+        result = Media.from_url(url)
     except TypeError:
         result = Playlist.from_url(url)
 
@@ -31,9 +31,9 @@ def test_exceptions():
 
 
 class TestBase:
-    def test_stream(self):
+    def test_media(self):
         result = extract_url("https://youtube.com/watch?v=Kx7B-XvmFtE")
-        assert isinstance(result, Stream)
+        assert isinstance(result, Media)
 
     def test_playlist(self):
         result = extract_url(
@@ -45,12 +45,12 @@ class TestBase:
 class TestSearch:
     QUERY = "Sub Urban - Rabbit Hole"
 
-    def search(self, provider: SEARCH_PROVIDER):
+    def search(self, provider: SEARCH_SERVICE):
         search = Search.from_query(self.QUERY, provider)
-        streams = search.streams
+        medias = search.medias
 
-        assert isinstance(streams, list) and len(streams) > 0
-        print(streams)
+        assert isinstance(medias, list) and len(medias) > 0
+        print(medias)
 
     def test_youtube(self):
         self.search("youtube")
@@ -61,10 +61,10 @@ class TestSearch:
     def test_ytmusic(self):
         self.search("ytmusic")
 
-    def test_extract_streams(self):
+    def test_extract_medias(self):
         result = Search.from_query("If Nevermore", "ytmusic")
 
-        for entry in result.streams:
+        for entry in result.medias:
             entry = entry.resolve()
             print(entry)
 

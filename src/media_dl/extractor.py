@@ -50,8 +50,8 @@ def is_playlist(info: YDLExtractInfo) -> bool:
         return False
 
 
-def is_stream(info: YDLExtractInfo) -> bool:
-    """Check if info is a single Stream."""
+def is_media(info: YDLExtractInfo) -> bool:
+    """Check if info is a single media."""
 
     if info.get("ie_key", info.get("extractor_key")) in PLAYLISTS_EXTRACTORS:
         return False
@@ -64,7 +64,7 @@ def is_stream(info: YDLExtractInfo) -> bool:
 def _validate_info(info: YDLExtractInfo) -> YDLExtractInfo:
     """Base info dict extractor."""
 
-    if not (is_playlist(info) or is_stream(info)):
+    if not (is_playlist(info) or is_media(info)):
         raise ExtractError(f"{info['url']} returned nothing.")
 
     return info

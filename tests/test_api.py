@@ -2,7 +2,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import AudioFormat, Playlist, Stream, StreamDownloader, VideoFormat
+from media_dl import AudioFormat, Playlist, Media, MediaDownloader, VideoFormat
 from media_dl.models.formats.list import FormatList
 
 try:
@@ -25,20 +25,20 @@ PLAYLIST = (
 
 def test_simple():
     with TEMPDIR:
-        stream = Stream.from_url(URL)
-        path = StreamDownloader("audio", quality=1, output=TEMPDIR.name).download_all(
-            stream
-        )
+        media = Media.from_url(URL)
+
+        downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
+        path = downloader.download_all(media)
 
         pprint(path)
 
 
 def test_advanced():
     with TEMPDIR:
-        downloader = StreamDownloader("audio", quality=1, output=TEMPDIR.name)
+        downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
 
         try:
-            result = Stream.from_url(URL)
+            result = Media.from_url(URL)
             paths = downloader.download(
                 result,
                 on_progress=lambda *args: pprint(*args),
@@ -52,7 +52,7 @@ def test_advanced():
 
 @pytest.fixture(scope="session")
 def formats():
-    return Stream.from_url(URL).formats
+    return Media.from_url(URL).formats
 
 
 class TestFormatsFilter:

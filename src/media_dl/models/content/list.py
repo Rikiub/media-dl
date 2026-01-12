@@ -5,13 +5,18 @@ from typing import Annotated
 
 from pydantic import AliasChoices, Field
 
-from media_dl.models.base import URL_CHOICES, ExtractList, ExtractSearch, LazyType
-from media_dl.models.metadata import Thumbnail
-from media_dl.models.stream import LazyStream
+from media_dl.models.content.base import (
+    URL_CHOICES,
+    ExtractList,
+    ExtractSearch,
+    LazyType,
+)
+from media_dl.models.content.metadata import Thumbnail
+from media_dl.models.content.media import LazyMedia
 
 
 class BaseList(ABC, ExtractList):
-    streams: LazyStreams = []
+    medias: LazyMedias = []
     playlists: LazyPlaylists = []
 
 
@@ -59,10 +64,10 @@ LazyPlaylists = Annotated[
         validation_alias=AliasChoices("playlists", "entries"),
     ),
 ]
-LazyStreams = Annotated[
-    list[LazyStream],
+LazyMedias = Annotated[
+    list[LazyMedia],
     Field(
-        alias="streams",
-        validation_alias=AliasChoices("streams", "entries"),
+        alias="medias",
+        validation_alias=AliasChoices("medias", "entries"),
     ),
 ]

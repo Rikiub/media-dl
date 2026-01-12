@@ -1,4 +1,4 @@
-"""Media-DL API. Handler for URLs extraction, serialization and streams download."""
+"""Media-DL API. Handler for URLs extraction, serialization and medias download."""
 
 from typing import TYPE_CHECKING
 

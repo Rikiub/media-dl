@@ -213,14 +213,18 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]", disable=quiet):
-        from media_dl.downloader.main import StreamDownloader
-        from media_dl.exceptions import DownloadError, ExtractError
-        from media_dl.models.list import Playlist, Search
-        from media_dl.models.stream import Stream
+        from media_dl import (
+            Playlist,
+            Search,
+            Media,
+            DownloadError,
+            ExtractError,
+            MediaDownloader,
+        )
 
     # Initialize Downloader
     try:
-        downloader = StreamDownloader(
+        downloader = MediaDownloader(
             format=format,
             quality=quality,
             output=output,
@@ -243,7 +247,7 @@ What format you want request?
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
 
                     try:
-                        result = Stream.from_url(entry, cache)
+                        result = Media.from_url(entry, cache)
                     except TypeError:
                         result = Playlist.from_url(entry, cache)
                         logger.info('🔎 Playlist title: "{title}".', title=result.title)
@@ -257,7 +261,7 @@ What format you want request?
                         entry,
                         target,
                         use_cache=cache,
-                    ).streams[0]
+                    ).medias[0]
 
             if quiet:
                 downloader.download_all(result, None)

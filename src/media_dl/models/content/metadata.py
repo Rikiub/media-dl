@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import BeforeValidator, Field, RootModel
 
-from media_dl.models.base import Serializable
+from media_dl.models.content.base import Serializable
 from media_dl.types import StrPath
 from media_dl.ydl.downloader import download_subtitles, download_thumbnail
 

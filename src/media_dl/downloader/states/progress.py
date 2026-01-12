@@ -6,7 +6,7 @@ from rich.progress import TaskID
 
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.models.progress.states import ProcessingState, ProgressState
-from media_dl.models.stream import LazyStream
+from media_dl.models.content.media import LazyMedia
 
 
 @dataclass(slots=True)
@@ -31,7 +31,7 @@ class ProgressCallback(DownloadProgress):
                         step="",
                     ),
                     id=progress.id,
-                    name=self._stream_display_name(progress.stream),
+                    name=self._media_display_name(progress.media),
                 )
 
                 self.update(
@@ -40,8 +40,8 @@ class ProgressCallback(DownloadProgress):
                     status="Extracting[blink]...[/]",
                 )
             case "resolved":
-                name = self.ids[progress.id].name = self._stream_display_name(
-                    progress.stream
+                name = self.ids[progress.id].name = self._media_display_name(
+                    progress.media
                 )
 
                 self.update(
@@ -51,8 +51,8 @@ class ProgressCallback(DownloadProgress):
                 )
             case "skipped":
                 logger.info(
-                    'Skipped: "{stream}" (Exists as "{extension}").',
-                    stream=self.get(progress).name,
+                    'Skipped: "{media}" (Exists as "{extension}").',
+                    media=self.get(progress).name,
                     extension=progress.extension,
                 )
 
@@ -69,12 +69,12 @@ class ProgressCallback(DownloadProgress):
                 self.processor_callback(progress)
             case "error":
                 logger.error(
-                    'Error: "{stream}": {error}',
-                    stream=self.get(progress).name,
+                    'Error: "{media}": {error}',
+                    media=self.get(progress).name,
                     error=progress.message,
                 )
             case "completed":
-                logger.info('Completed: "{stream}".', stream=self.get(progress).name)
+                logger.info('Completed: "{media}".', media=self.get(progress).name)
 
         if progress.status in ("error", "completed"):
             self.update(self.get(progress).task_id, status=progress.status.capitalize())
@@ -107,12 +107,12 @@ class ProgressCallback(DownloadProgress):
         text = f'"{id}": {log}'
         logger.debug(text, **kwargs)
 
-    def _stream_display_name(self, stream: LazyStream) -> str:
-        """Get pretty representation of stream name."""
+    def _media_display_name(self, media: LazyMedia) -> str:
+        """Get pretty representation of media name."""
 
-        if stream.is_music and stream.uploader and stream.title:
-            return stream.title + " - " + stream.uploader
-        elif stream.title:
-            return stream.title
+        if media.is_music and media.uploader and media.title:
+            return media.title + " - " + media.uploader
+        elif media.title:
+            return media.title
         else:
             return ""

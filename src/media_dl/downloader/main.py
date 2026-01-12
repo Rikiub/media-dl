@@ -7,15 +7,15 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.pipeline import DownloadPipeline
 from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
-from media_dl.models.list import BaseList
+from media_dl.models.content.list import BaseList
+from media_dl.models.content.media import LazyMedia
 from media_dl.models.progress.states import ProgressDownloadCallback
-from media_dl.models.stream import LazyStream
 from media_dl.types import FILE_FORMAT, StrPath
 
-ExtractResult = BaseList | LazyStream
+ExtractResult = BaseList | LazyMedia
 
 
-class StreamDownloader:
+class MediaDownloader:
     def __init__(
         self,
         format: FILE_FORMAT = "video",
@@ -26,7 +26,7 @@ class StreamDownloader:
         ffmpeg_path: StrPath | None = None,
         embed_metadata: bool = True,
     ):
-        """Multi-thread stream downloader.
+        """Multi-thread media downloader.
 
         If FFmpeg is not installed, options marked with (FFmpeg) will not be available.
 
@@ -35,7 +35,7 @@ class StreamDownloader:
             quality: Quality to filter.
             output: Directory where to save files.
             threads: Maximum processes to execute.
-            use_cache: Extract/save stream results from cache.
+            use_cache: Extract/save media results from cache.
             ffmpeg_path: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
             embed_metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
             show_progress: Choice if render download progress.
@@ -56,13 +56,13 @@ class StreamDownloader:
 
     def download(
         self,
-        stream: LazyStream,
+        media: LazyMedia,
         on_progress: ProgressDownloadCallback | None = ProgressCallback(),
     ) -> Path:
-        """Single download a `Stream` result.
+        """Single download a `Media` result.
 
         Args:
-            stream: Target `Stream` to download.
+            media: Target `Media` to download.
             on_progress: Callback function to get progress information.
 
         Returns:
@@ -71,7 +71,7 @@ class StreamDownloader:
 
         pipeline = DownloadPipeline(
             self.config,
-            stream,
+            media,
             cache=self.use_cache,
             on_progress=on_progress,
         )
@@ -88,12 +88,12 @@ class StreamDownloader:
             List of paths to downloaded files.
         """
 
-        streams = self._data_to_list(data)
+        medias = self._data_to_list(data)
         paths: list[Path] = []
 
         if on_progress:
             on_progress = ProgressCallback()
-            on_progress.counter.reset(total=len(streams))
+            on_progress.counter.reset(total=len(medias))
             on_progress.start()
 
         success = 0
@@ -105,8 +105,8 @@ class StreamDownloader:
             cf.ThreadPoolExecutor(max_workers=self.threads) as executor,
         ):
             futures = {
-                executor.submit(self.download, stream, on_progress): stream
-                for stream in streams
+                executor.submit(self.download, media, on_progress): media
+                for media in medias
             }
 
             try:
@@ -129,23 +129,23 @@ class StreamDownloader:
                 raise
 
         logger.debug(
-            "{current} of {total} streams completed. {errors} errors.",
+            "{current} of {total} medias completed. {errors} errors.",
             current=success,
-            total=len(streams),
+            total=len(medias),
             errors=errors,
         )
 
         return paths
 
-    def _data_to_list(self, data: ExtractResult) -> list[LazyStream]:
-        streams = []
+    def _data_to_list(self, data: ExtractResult) -> list[LazyMedia]:
+        medias = []
 
         match data:
-            case LazyStream():
-                streams = [data]
+            case LazyMedia():
+                medias = [data]
             case BaseList():
-                streams = data.streams
+                medias = data.medias
             case _:
                 raise TypeError(data)
 
-        return streams
+        return medias

@@ -2,12 +2,12 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
-from media_dl import Playlist, Stream, StreamDownloader
+from media_dl import Playlist, Media, MediaDownloader
 
 TEMPDIR = TemporaryDirectory()
 
 
-downloader = StreamDownloader(
+downloader = MediaDownloader(
     quality=1,
     output=TEMPDIR.name,
     use_cache=True,
@@ -16,7 +16,7 @@ downloader = StreamDownloader(
 
 def download(url):
     try:
-        result = Stream.from_url(url)
+        result = Media.from_url(url)
     except TypeError:
         result = Playlist.from_url(url)
 
@@ -29,10 +29,10 @@ def download(url):
 
 def test_ffmpeg_not_exists():
     with pytest.raises(FileNotFoundError):
-        StreamDownloader(ffmpeg_path="./unkdown_path/")
+        MediaDownloader(ffmpeg_path="./unkdown_path/")
 
 
-def test_stream():
+def test_media():
     download("https://youtube.com/watch?v=Kx7B-XvmFtE")
 
 

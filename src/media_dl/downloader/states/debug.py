@@ -6,9 +6,9 @@ from media_dl.models.progress.states import ProcessingState, ProgressState
 def debug_callback(progress: ProgressState):
     match progress.status:
         case "extracting":
-            _log_debug(progress.id, "Resolving Stream")
+            _log_debug(progress.id, "Resolving Media")
         case "resolved":
-            _log_debug(progress.id, "Stream resolved")
+            _log_debug(progress.id, "Media resolved")
         case "merging":
             _log_debug(
                 progress.id,

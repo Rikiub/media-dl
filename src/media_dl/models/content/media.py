@@ -11,9 +11,14 @@ from pydantic import (
     PlainSerializer,
 )
 
-from media_dl.models.base import LazyType
+from media_dl.models.content.base import LazyType
+from media_dl.models.content.metadata import (
+    Chapter,
+    MusicMetadata,
+    Subtitles,
+    Thumbnail,
+)
 from media_dl.models.formats.list import FormatList
-from media_dl.models.metadata import Chapter, MusicMetadata, Subtitles, Thumbnail
 from media_dl.types import MUSIC_SITES
 
 DatetimeTimestamp = Annotated[
@@ -21,7 +26,7 @@ DatetimeTimestamp = Annotated[
 ]
 
 
-class LazyStream(MusicMetadata, LazyType["Stream"]):
+class LazyMedia(MusicMetadata, LazyType["Media"]):
     title: str = ""
     uploader: Annotated[
         str,
@@ -44,11 +49,11 @@ class LazyStream(MusicMetadata, LazyType["Stream"]):
 
     @property
     def _target_class(self):
-        return Stream
+        return Media
 
 
-class Stream(LazyStream):
-    """Online media stream representation."""
+class Media(LazyMedia):
+    """Online media representation."""
 
     chapters: list[Chapter] | None = None
     subtitles: Subtitles | None = None

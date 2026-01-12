@@ -6,15 +6,15 @@ from pathvalidate import sanitize_filepath
 
 from media_dl.exceptions import OutputTemplateError
 from media_dl.models.formats.types import Format
-from media_dl.models.list import Playlist
-from media_dl.models.stream import Stream
+from media_dl.models.content.list import Playlist
+from media_dl.models.content.media import Media
 from media_dl.template.keys import OUTPUT_TEMPLATES
 from media_dl.types import StrPath
 
 
 def generate_output_template(
     output: StrPath,
-    stream: Stream,
+    media: Media,
     playlist: Playlist | None = None,
     format: Format | None = None,
 ) -> Path:
@@ -27,8 +27,8 @@ def generate_output_template(
         data |= format.model_dump(by_alias=True)
     if playlist:
         data |= playlist.model_dump(by_alias=True)
-    if stream:
-        data |= stream.model_dump()
+    if media:
+        data |= media.model_dump()
 
     template = str(output).format(**data)
     path = Path(sanitize_filepath(template, max_len=250))

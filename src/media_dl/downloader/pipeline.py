@@ -10,7 +10,7 @@ from media_dl.downloader.selector import FormatSelector
 from media_dl.downloader.states.debug import debug_callback
 from media_dl.exceptions import DownloadError
 from media_dl.models.formats.types import AudioFormat, Format, VideoFormat
-from media_dl.models.list import LazyPlaylist
+from media_dl.models.content.list import LazyPlaylist
 from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessorType
 from media_dl.models.progress.states import (
@@ -24,7 +24,7 @@ from media_dl.models.progress.states import (
     ResolvedState,
     SkippedState,
 )
-from media_dl.models.stream import LazyStream, Stream
+from media_dl.models.content.media import LazyMedia, Media
 from media_dl.path import get_tempfile
 from media_dl.processor import MediaProcessor
 from media_dl.template.parser import generate_output_template
@@ -32,18 +32,18 @@ from media_dl.ydl.types import SupportedExtensions, ThumbnailSupport
 
 
 class DownloadPipeline:
-    """Handles the lifecycle of a single stream download."""
+    """Handles the lifecycle of a single media download."""
 
     def __init__(
         self,
         config: FormatConfig,
-        stream: LazyStream,
+        media: LazyMedia,
         playlist: LazyPlaylist | None = None,
         on_progress: ProgressDownloadCallback | None = None,
         cache: bool = True,
     ):
-        self.id = stream.id
-        self.stream = stream
+        self.id = media.id
+        self.media = media
         self.playlist = playlist
         self.config = config
         self.cache = cache
@@ -69,16 +69,16 @@ class DownloadPipeline:
             raise DownloadError(str(e))
 
     def _worker(self):
-        self.progress(ExtractingState(id=self.id, stream=self.stream))
+        self.progress(ExtractingState(id=self.id, media=self.media))
 
         # 1. Resolve Data
-        stream = self.stream.resolve(self.cache)
+        media = self.media.resolve(self.cache)
         playlist = self.playlist.resolve() if self.playlist else None
 
-        self.progress(ResolvedState(id=self.id, stream=stream))
+        self.progress(ResolvedState(id=self.id, media=media))
 
         # 2. Select Formats
-        video_fmt, audio_fmt = FormatSelector(self.config).resolve(stream)
+        video_fmt, audio_fmt = FormatSelector(self.config).resolve(media)
 
         # 3. Calculate Path & Check Existence
         output = str(self.config.output)
@@ -89,7 +89,7 @@ class DownloadPipeline:
 
         output = generate_output_template(
             output,
-            stream=stream,
+            media=media,
             playlist=playlist,
             format=video_fmt or audio_fmt,
         )
@@ -103,7 +103,7 @@ class DownloadPipeline:
 
         # 5. Post-Process
         downloaded_file = self._postprocess(
-            stream,
+            media,
             downloaded_file,
             video_fmt or audio_fmt,
         )
@@ -197,7 +197,7 @@ class DownloadPipeline:
 
     def _postprocess(
         self,
-        stream: Stream,
+        media: Media,
         filepath: Path,
         format: Format | None = None,
     ):
@@ -231,9 +231,9 @@ class DownloadPipeline:
             with track_pp("change_container"):
                 pp.change_container(self.config.convert or "mp4")
 
-            if stream.subtitles:
+            if media.subtitles:
                 with track_pp("embed_subtitles"):
-                    pp.embed_subtitles(stream.subtitles)
+                    pp.embed_subtitles(media.subtitles)
 
         elif isinstance(format, AudioFormat):
             if self.config.convert and self.config.convert != format.extension:
@@ -245,14 +245,14 @@ class DownloadPipeline:
                         pp.convert_audio(self.config.convert)
 
         # Metadata
-        if stream.thumbnails:
+        if media.thumbnails:
             if pp.filepath.suffix[1:] in ThumbnailSupport:
                 with track_pp("embed_thumbnail"):
-                    pp.embed_thumbnail(stream.thumbnails[-1], square=stream.is_music)
+                    pp.embed_thumbnail(media.thumbnails[-1], square=media.is_music)
 
         if self.config.embed_metadata:
             with track_pp("embed_metadata"):
-                pp.embed_metadata(stream, stream.is_music)
+                pp.embed_metadata(media, media.is_music)
 
         return pp.filepath
 

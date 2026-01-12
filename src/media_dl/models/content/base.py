@@ -5,7 +5,7 @@ from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
-from media_dl.extractor import extract_search, extract_url, is_playlist, is_stream
+from media_dl.extractor import extract_search, extract_url, is_playlist, is_media
 from media_dl.ydl.extractor import SEARCH_SERVICE
 from media_dl.ydl.types import YDLExtractInfo
 
@@ -78,7 +78,7 @@ class Extract(Serializable):
             cls = cls(type="playlist" if isPlaylist else "url", **info)
         except ValueError:
             raise TypeError(
-                f"'{url}' extraction was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Stream'}' instead."
+                f"'{url}' extraction was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Media'}' instead."
             )
 
         # Save to cache
@@ -112,13 +112,13 @@ class LazyType(ABC, Extract, Generic[T]):
 # Lists
 class ExtractList(Serializable):
     type: TypeField = "playlist"
-    streams: list
+    medias: list
     playlists: list
 
-    @field_validator("streams", mode="before")
-    def _validate_streams(cls, data):
+    @field_validator("medias", mode="before")
+    def _validate_medias(cls, data):
         if isinstance(data, list):
-            return [item for item in data if is_stream(item)]
+            return [item for item in data if is_media(item)]
 
     @field_validator("playlists", mode="before")
     def _validate_playlists(cls, data):
