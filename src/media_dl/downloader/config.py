@@ -22,7 +22,7 @@ class FormatConfig:
         format: Target file format to search or convert if is a extension.
         quality: Target quality to try filter.
         output: Directory where to save files.
-        ffmpeg: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
+        ffmpeg_path: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
         embed_metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
     """
 
