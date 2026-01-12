@@ -38,7 +38,7 @@ def _load_cache(cls: type[T], url: str):
             )
 
 
-# Identifier
+# Items
 class Extract(Serializable):
     """Base identifier for media objects."""
 
@@ -78,7 +78,7 @@ class Extract(Serializable):
 T = TypeVar("T", bound=Extract)
 
 
-class LazyType(ABC, Extract, Generic[T]):
+class LazyExtract(ABC, Extract, Generic[T]):
     def resolve(self, use_cache: bool = True) -> T:
         """Get the full model.
 

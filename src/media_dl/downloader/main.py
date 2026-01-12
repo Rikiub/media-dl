@@ -7,12 +7,12 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.pipeline import DownloadPipeline
 from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
-from media_dl.models.content.list import BaseList
+from media_dl.models.content.list import MediaList
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.progress.states import ProgressDownloadCallback
 from media_dl.types import FILE_FORMAT, StrPath
 
-ExtractResult = BaseList | LazyMedia
+ExtractResult = MediaList | LazyMedia
 
 
 class MediaDownloader:
@@ -143,7 +143,7 @@ class MediaDownloader:
         match data:
             case LazyMedia():
                 medias = [data]
-            case BaseList():
+            case MediaList():
                 medias = data.medias
             case _:
                 raise TypeError(data)

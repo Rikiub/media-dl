@@ -11,7 +11,7 @@ from pydantic import (
     PlainSerializer,
 )
 
-from media_dl.models.content.base import LazyType
+from media_dl.models.content.base import LazyExtract
 from media_dl.models.content.metadata import (
     Chapter,
     MusicMetadata,
@@ -26,7 +26,7 @@ DatetimeTimestamp = Annotated[
 ]
 
 
-class LazyMedia(MusicMetadata, LazyType["Media"]):
+class LazyMedia(MusicMetadata, LazyExtract["Media"]):
     title: str = ""
     uploader: Annotated[
         str,

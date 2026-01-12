@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC
 from typing import Annotated
 
 from pydantic import AliasChoices, Field
@@ -9,18 +8,18 @@ from media_dl.models.content.base import (
     URL_CHOICES,
     ExtractList,
     ExtractSearch,
-    LazyType,
+    LazyExtract,
 )
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.metadata import Thumbnail
 
 
-class BaseList(ABC, ExtractList):
+class MediaList(ExtractList):
     medias: LazyMedias = []
     playlists: LazyPlaylists = []
 
 
-class LazyPlaylist(BaseList, LazyType["Playlist"]):
+class LazyPlaylist(MediaList, LazyExtract["Playlist"]):
     url: Annotated[
         str,
         Field(
@@ -54,7 +53,7 @@ class LazyPlaylist(BaseList, LazyType["Playlist"]):
 class Playlist(LazyPlaylist): ...
 
 
-class Search(BaseList, ExtractSearch): ...
+class Search(MediaList, ExtractSearch): ...
 
 
 LazyPlaylists = Annotated[
