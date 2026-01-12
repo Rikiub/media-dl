@@ -25,7 +25,7 @@ class RequestedFormat(TypedDict):
 RequestedFormats = list[RequestedFormat]
 
 
-class YDLPostProcessor:
+class YDLProcessor:
     def __init__(self, filepath: StrPath, ffmpeg_path: StrPath | None = None) -> None:
         self.filepath = Path(filepath)
 

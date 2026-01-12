@@ -5,7 +5,7 @@ from pydantic import BeforeValidator, Field, RootModel
 
 from media_dl.models.base import Serializable
 from media_dl.types import StrPath
-from media_dl.ydl.helpers import download_subtitles, download_thumbnail
+from media_dl.ydl.downloader import download_subtitles, download_thumbnail
 
 
 def _validate_artists(value: list[str]) -> list[str]:

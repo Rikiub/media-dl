@@ -6,7 +6,7 @@ from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
 from media_dl.extractor import extract_search, extract_url, is_playlist, is_stream
-from media_dl.types import SEARCH_PROVIDER
+from media_dl.ydl.extractor import SEARCH_SERVICE
 from media_dl.ydl.types import YDLExtractInfo
 
 # Types
@@ -130,13 +130,13 @@ class ExtractSearch(ExtractList):
     extractor: ExtractorField
 
     query: str = ""
-    provider: str = ""
+    service: str = ""
 
     @classmethod
     def from_query(
         cls,
         query: str,
-        provider: SEARCH_PROVIDER,
+        service: SEARCH_SERVICE,
         limit: int = 20,
         use_cache: bool = True,
     ) -> Self:
@@ -145,8 +145,8 @@ class ExtractSearch(ExtractList):
             return info
 
         # Extract info
-        info = extract_search(query, provider, limit)
-        cls = cls(query=query, provider=provider, **info)
+        info = extract_search(query, service, limit)
+        cls = cls(query=query, service=service, **info)
 
         # Save to cache
         if use_cache:

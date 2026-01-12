@@ -3,41 +3,38 @@
 from loguru import logger
 
 from media_dl.exceptions import ExtractError
-from media_dl.types import SEARCH_PROVIDER
-from media_dl.ydl.helpers import extract_info
+from media_dl.ydl.extractor import SEARCH_SERVICE, extract_info, extract_query
 from media_dl.ydl.types import YDLExtractInfo
 
 PLAYLISTS_EXTRACTORS = ["YoutubeTab"]
 
 
 def extract_search(
-    query: str, provider: SEARCH_PROVIDER, limit: int = 20
+    query: str,
+    service: SEARCH_SERVICE,
+    limit: int = 20,
 ) -> YDLExtractInfo:
     """Extract info from search provider."""
 
-    match provider:
-        case "youtube":
-            prov = f"ytsearch{limit}:"
-        case "ytmusic":
-            prov = "https://music.youtube.com/search?q="
-        case "soundcloud":
-            prov = f"scsearch{limit}:"
-        case _:
-            raise ValueError(f"{provider} is invalid. Should be: {SEARCH_PROVIDER}")
-
     logger.debug(
-        'Search from "{provider}": "{query}".',
-        provider=provider,
+        'Search from "{service}": "{query}".',
+        service=service,
         query=query,
     )
-    return _extract_from_query(prov + query)
+
+    info = extract_query(query, service, limit)
+    info = _validate_info(info)
+    return info
 
 
 def extract_url(url: str) -> YDLExtractInfo:
     """Extract info from URL."""
 
     logger.debug("Extract URL: {url}", url=url)
-    return _extract_from_query(url)
+
+    info = extract_info(url)
+    info = _validate_info(info)
+    return info
 
 
 def is_playlist(info: YDLExtractInfo) -> bool:
@@ -64,18 +61,10 @@ def is_stream(info: YDLExtractInfo) -> bool:
     return False
 
 
-def _extract_from_query(query: str) -> YDLExtractInfo:
+def _validate_info(info: YDLExtractInfo) -> YDLExtractInfo:
     """Base info dict extractor."""
 
-    info = extract_info(query)
-
-    # Some extractors need redirect to "real URL" (Example: Pinterest)
-    # In this case, we need do another request.
-    if info.get("extractor_key") == "Generic" and info.get("url") != query:
-        if url := info.get("url"):
-            return _extract_from_query(url)
-
     if not (is_playlist(info) or is_stream(info)):
-        raise ExtractError(f"{query} return nothing.")
+        raise ExtractError(f"{info['url']} returned nothing.")
 
     return info

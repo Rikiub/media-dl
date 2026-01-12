@@ -1,36 +1,18 @@
 from collections.abc import Callable
 from pathlib import Path
-from typing import cast
 
-from yt_dlp.networking.exceptions import RequestError
 from yt_dlp.utils import DownloadError as YDLDownloadError
 
-from media_dl.exceptions import DownloadError, ExtractError, PostProcessingError
+from media_dl.exceptions import DownloadError
 from media_dl.types import StrPath
 from media_dl.ydl.messages import format_except_message
-from media_dl.ydl.types import YDLExtractInfo, YDLParams
-from media_dl.ydl.wrapper import YTDLP
-
-
-def extract_info(query: str) -> YDLExtractInfo:
-    try:
-        ydl = YTDLP(
-            params={
-                "extract_flat": "in_playlist",
-                "skip_download": True,
-            },
-            auto_init=True,
-        )
-        info = ydl.extract_info(query, download=False)
-        return cast(YDLExtractInfo, info)
-    except (YDLDownloadError, RequestError) as err:
-        msg = format_except_message(err)
-        raise ExtractError(msg)
+from media_dl.ydl.types import YDLExtractInfo, YDLFormatInfo, YDLParams
+from media_dl.ydl.wrapper import YDL
 
 
 def download_format(
     filepath: StrPath,
-    format_info: YDLExtractInfo,
+    format_info: YDLFormatInfo,
     callback: Callable[[dict[str, str | int]], None] | None = None,
 ) -> Path:
     filepath = Path(filepath)
@@ -56,7 +38,7 @@ def download_from_info(info: YDLExtractInfo, params: YDLParams) -> Path:
     retries: YDLParams = {"retries": 0, "fragment_retries": 0}
 
     try:
-        result = YTDLP(
+        result = YDL(
             params=retries | params,
             auto_init=True,
         ).process_ie_result(
@@ -67,24 +49,11 @@ def download_from_info(info: YDLExtractInfo, params: YDLParams) -> Path:
         return Path(filepath)
     except YDLDownloadError as err:
         msg = format_except_message(err)
-
-        if "Postprocessing:" in msg:
-            raise PostProcessingError(msg)
-        else:
-            raise DownloadError(msg)
-
-
-def parse_output_template(info: YDLExtractInfo, template: str) -> str:
-    """Get a custom filename by output template."""
-
-    return YTDLP().prepare_filename(
-        info,  # type: ignore
-        outtmpl=template,
-    )
+        raise DownloadError(msg)
 
 
 def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
-    ydl = YTDLP(
+    ydl = YDL(
         {
             "writethumbnail": True,
             "outtmpl": {
@@ -107,7 +76,7 @@ def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
 
 
 def download_subtitles(filepath: StrPath, info: YDLExtractInfo) -> list[Path] | None:
-    ydl = YTDLP({"writesubtitles": True, "allsubtitles": True})
+    ydl = YDL({"writesubtitles": True, "allsubtitles": True})
 
     subs = ydl.process_subtitles(
         str(filepath),

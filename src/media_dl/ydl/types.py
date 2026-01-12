@@ -16,16 +16,18 @@ ThumbnailSupport = frozenset(
         "mp3",
         "mkv",
         "mka",
+        "mp4",
+        "m4a",
+        "m4v",
+        "mov",
         "ogg",
         "opus",
         "flac",
-        "m4a",
-        "mp4",
-        "m4v",
-        "mov",
     }
 )
 
 
+YDLDict = dict[str, Any]
 YDLExtractInfo = dict[str, Any]
+YDLFormatInfo = dict[str, Any]
 YDLParams = dict[str, Any]

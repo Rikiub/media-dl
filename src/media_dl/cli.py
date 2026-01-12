@@ -1,8 +1,3 @@
-try:
-    from typer import Argument, BadParameter, Option, Typer
-except ImportError:
-    raise ImportError("Typer is required to use CLI features.")
-
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Generator, Literal, get_args
@@ -11,13 +6,19 @@ from loguru import logger
 
 from media_dl.logging import LOGGING_LEVELS, init_logging
 from media_dl.rich import Status
-from media_dl.types import APPNAME, FILE_FORMAT, SEARCH_PROVIDER, VIDEO_RES
+from media_dl.types import APPNAME, FILE_FORMAT, VIDEO_RES
+from media_dl.ydl.extractor import SEARCH_SERVICE
+
+try:
+    from typer import Argument, BadParameter, Option, Typer
+except ImportError:
+    raise ImportError("Typer is required to use CLI features.")
 
 app = Typer(rich_markup_mode="rich")
 
 
 # Typer: types
-SEARCH_TARGET = Literal["url", SEARCH_PROVIDER]
+SEARCH_TARGET = Literal["url", SEARCH_SERVICE]
 
 
 # Typer: helpers

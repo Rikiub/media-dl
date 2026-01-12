@@ -4,17 +4,17 @@ from media_dl.models.formats.types import Format
 from media_dl.models.metadata import Subtitles, Thumbnail
 from media_dl.models.stream import Stream
 from media_dl.types import AUDIO_EXTENSION, EXTENSION, StrPath
-from media_dl.ydl.postprocessor import (
+from media_dl.ydl.processor import (
     RequestedFormat,
     RequestedFormats,
-    YDLPostProcessor,
+    YDLProcessor,
 )
 from media_dl.ydl.types import YDLExtractInfo
 
 FormatPaths = list[tuple[Format, Path]]
 
 
-class PostProcessor(YDLPostProcessor):
+class MediaProcessor(YDLProcessor):
     def change_container(self, format: str | EXTENSION):
         return super().change_container(format)
 

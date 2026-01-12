@@ -26,7 +26,7 @@ from media_dl.models.progress.states import (
 )
 from media_dl.models.stream import LazyStream, Stream
 from media_dl.path import get_tempfile
-from media_dl.postprocessor import PostProcessor
+from media_dl.processor import MediaProcessor
 from media_dl.template.parser import generate_output_template
 from media_dl.ydl.types import SupportedExtensions, ThumbnailSupport
 
@@ -173,7 +173,7 @@ class DownloadPipeline:
         ):
             extension = self.config.convert or "mp4"
 
-            pp = PostProcessor.from_formats_merge(
+            pp = MediaProcessor.from_formats_merge(
                 f"{get_tempfile()}.{extension}",
                 formats=[(video_fmt, video_file), (audio_fmt, audio_file)],
                 ffmpeg_path=self.config.ffmpeg_path,
@@ -204,7 +204,7 @@ class DownloadPipeline:
         if not self.config.ffmpeg_path:
             return filepath
 
-        pp = PostProcessor(filepath, self.config.ffmpeg_path)
+        pp = MediaProcessor(filepath, self.config.ffmpeg_path)
 
         @contextmanager
         def track_pp(name: ProcessorType):
