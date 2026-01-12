@@ -29,6 +29,24 @@ class Subtitle(Serializable):
     language: Annotated[str, Field(alias="name")] = ""
 
 
+class Chapter(Serializable):
+    start_time: int
+    end_time: int
+    title: str
+
+
+class Thumbnail(Serializable):
+    id: str = ""
+    url: str
+    width: int = 0
+    height: int = 0
+
+    def download(self, filepath: StrPath) -> Path | None:
+        info = {"thumbnails": [self.to_ydl_dict()]}
+        path = download_thumbnail(filepath, info)
+        return path
+
+
 class Subtitles(Serializable, RootModel[dict[str, list[Subtitle]]]):
     def download(self, filepath: StrPath) -> list[Path] | None:
         info = {"subtitles": self.to_ydl_dict()}
@@ -46,21 +64,3 @@ class Subtitles(Serializable, RootModel[dict[str, list[Subtitle]]]):
 
     def __bool__(self) -> bool:
         return bool(self.root)
-
-
-class Thumbnail(Serializable):
-    id: str = ""
-    url: str
-    width: int = 0
-    height: int = 0
-
-    def download(self, filepath: StrPath) -> Path | None:
-        info = {"thumbnails": [self.to_ydl_dict()]}
-        path = download_thumbnail(filepath, info)
-        return path
-
-
-class Chapter(Serializable):
-    start_time: int
-    end_time: int
-    title: str

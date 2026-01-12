@@ -1,13 +1,14 @@
 from abc import ABC, abstractmethod
 from typing import Annotated, Generic, Literal, TypeVar
 
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
 from media_dl.extractor import extract_search, extract_url, is_playlist, is_media
+from media_dl.models.base import Serializable
 from media_dl.ydl.extractor import SEARCH_SERVICE
-from media_dl.ydl.types import YDLExtractInfo
+
 
 # Types
 URL_CHOICES = ["original_url", "url"]
@@ -22,19 +23,6 @@ TypeField = Annotated[
     Literal["url", "playlist"],
     Field(alias="_type"),
 ]
-
-
-# Interfaces
-class Serializable(BaseModel):
-    def to_ydl_dict(self) -> YDLExtractInfo:
-        return self.model_dump(by_alias=True)
-
-    def to_ydl_json(self) -> str:
-        return self.model_dump_json(by_alias=True)
-
-    @classmethod
-    def from_ydl_json(cls, data: str) -> Self:
-        return cls.model_validate_json(data, by_alias=True)
 
 
 # Helpers

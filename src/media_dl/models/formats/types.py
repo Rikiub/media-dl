@@ -1,3 +1,4 @@
+from media_dl.models.base import Serializable
 from media_dl.ydl.types import YDLFormatInfo
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -13,7 +14,6 @@ from pydantic import (
     model_serializer,
 )
 
-from media_dl.models.base import Serializable
 from media_dl.models.progress.format import FormatCallback, FormatState
 from media_dl.types import StrPath
 from media_dl.ydl.downloader import download_format
