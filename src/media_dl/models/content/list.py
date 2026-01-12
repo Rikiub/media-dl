@@ -56,17 +56,17 @@ class Playlist(LazyPlaylist): ...
 class Search(MediaList, ExtractSearch): ...
 
 
-LazyPlaylists = Annotated[
-    list[LazyPlaylist],
-    Field(
-        alias="playlists",
-        validation_alias=AliasChoices("playlists", "entries"),
-    ),
-]
 LazyMedias = Annotated[
     list[LazyMedia],
     Field(
         alias="medias",
         validation_alias=AliasChoices("medias", "entries"),
+    ),
+]
+LazyPlaylists = Annotated[
+    list[LazyPlaylist],
+    Field(
+        alias="playlists",
+        validation_alias=AliasChoices("playlists", "entries"),
     ),
 ]
