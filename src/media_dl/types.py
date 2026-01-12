@@ -9,7 +9,7 @@ EXTENSION = Literal[VIDEO_EXTENSION, AUDIO_EXTENSION]
 
 FORMAT_TYPE = Literal["video", "audio"]
 FILE_FORMAT = Literal[FORMAT_TYPE, EXTENSION]
-VIDEO_RES = Literal[144, 240, 360, 480, 720, 1080]
+VIDEO_RESOLUTION = Literal[144, 240, 360, 480, 720, 1080]
 
 # SEARCH
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})

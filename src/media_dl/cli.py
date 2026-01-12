@@ -6,7 +6,7 @@ from loguru import logger
 
 from media_dl.logging import LOGGING_LEVELS, init_logging
 from media_dl.rich import Status
-from media_dl.types import APPNAME, FILE_FORMAT, VIDEO_RES
+from media_dl.types import APPNAME, FILE_FORMAT, VIDEO_RESOLUTION
 from media_dl.ydl.extractor import SEARCH_SERVICE
 
 try:
@@ -45,7 +45,7 @@ def complete_query(incomplete: str) -> Generator[str, None, None]:
 
 
 def complete_resolution() -> Generator[str, None, None]:
-    for name in get_args(VIDEO_RES):
+    for name in get_args(VIDEO_RESOLUTION):
         yield str(name)
 
 
