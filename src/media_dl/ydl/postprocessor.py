@@ -5,9 +5,9 @@ from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
 from yt_dlp.postprocessor.ffmpeg import (
     FFmpegEmbedSubtitlePP,
     FFmpegExtractAudioPP,
+    FFmpegMergerPP,
     FFmpegMetadataPP,
     FFmpegVideoRemuxerPP,
-    FFmpegMergerPP,
 )
 
 from media_dl.exceptions import PostProcessingError

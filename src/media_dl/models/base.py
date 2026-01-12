@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Annotated, Literal, TypeVar, Generic
+from typing import Annotated, Generic, Literal, TypeVar
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
 from typing_extensions import Self

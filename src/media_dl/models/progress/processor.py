@@ -2,7 +2,6 @@ from typing import Literal
 
 from media_dl.models.progress.base import HasFile
 
-
 ProcessorType = Literal[
     "starting",
     "change_container",

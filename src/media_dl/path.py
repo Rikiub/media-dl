@@ -1,8 +1,8 @@
 import atexit
-from functools import cache
 import os
 import shutil
 import tempfile
+from functools import cache
 from pathlib import Path
 
 from media_dl.types import StrPath

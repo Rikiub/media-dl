@@ -1,7 +1,9 @@
-from dataclasses import dataclass
 import time
+from dataclasses import dataclass
+
 from loguru import logger
 from rich.progress import TaskID
+
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.models.progress.states import ProcessingState, ProgressState
 from media_dl.models.stream import LazyStream

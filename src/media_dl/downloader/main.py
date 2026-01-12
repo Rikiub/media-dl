@@ -2,11 +2,11 @@ import concurrent.futures as cf
 from pathlib import Path
 
 from loguru import logger
+
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.pipeline import DownloadPipeline
 from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
-
 from media_dl.models.list import BaseList
 from media_dl.models.progress.states import ProgressDownloadCallback
 from media_dl.models.stream import LazyStream

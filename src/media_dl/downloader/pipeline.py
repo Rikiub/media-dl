@@ -1,6 +1,6 @@
+import shutil
 from contextlib import contextmanager
 from pathlib import Path
-import shutil
 
 from loguru import logger
 from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessorError

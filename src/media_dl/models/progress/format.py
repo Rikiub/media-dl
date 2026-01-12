@@ -1,6 +1,7 @@
 from collections.abc import Callable
-from typing_extensions import Self
+
 from pydantic import BaseModel
+from typing_extensions import Self
 
 
 class FormatState(BaseModel):
