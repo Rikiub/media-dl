@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rich.console import Console, Group, RenderableType
+from rich.console import Group, RenderableType
 from rich.progress import (
     BarColumn,
     FileSizeColumn,
@@ -11,7 +11,7 @@ from rich.progress import (
 )
 from rich.table import Column
 
-CONSOLE = Console(stderr=True)
+from media_dl.rich import CONSOLE
 
 
 class CounterProgress:

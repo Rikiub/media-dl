@@ -96,11 +96,7 @@ class MediaProcessor(YDLProcessor):
                 path: Path
 
                 fmt = {}
-                fmt |= {
-                    "filepath": str(path),
-                    "vcodec": "none",
-                    "acodec": "none",
-                }
+                fmt |= {"filepath": str(path)}
                 fmt |= format.to_ydl_dict()
             real_formats.append(fmt)  # type: ignore
 
