@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import bisect
 from functools import cached_property
-from typing import Generic, Literal, overload
+from typing import Generic, Literal
 
-from pydantic import OnErrorOmit, RootModel
+from pydantic import OnErrorOmit
 from typing_extensions import Self, TypeVar
 
+from media_dl.models.base import BaseList
 from media_dl.models.format.codecs import get_codec_rank
-from media_dl.models.format.types import AudioFormat, Format, FormatType, VideoFormat
+from media_dl.models.format.types import AudioFormat, Format, VideoFormat
 from media_dl.types import FORMAT_TYPE
 
-F = TypeVar("F", default=Format)
 
-
-def format_sort(format: FormatType):
+def format_sort(format: Format):
     filesize = format.filesize or 0
 
     if isinstance(format, VideoFormat):
@@ -49,7 +48,11 @@ def format_sort(format: FormatType):
         )
 
 
-class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
+FormatType = OnErrorOmit[VideoFormat | AudioFormat]
+F = TypeVar("F", bound=Format)
+
+
+class FormatList(BaseList[FormatType], Generic[F]):
     """List of formats which can be filtered."""
 
     def filter(
@@ -73,13 +76,17 @@ class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
             if value:
                 formats = [f for f in formats if condition(f)]
 
-        return FormatList(formats)  # type: ignore
+        return self.__class__(formats)
 
     def only_video(self) -> FormatList[VideoFormat]:
-        return FormatList([f for f in self.root if isinstance(f, VideoFormat)])
+        return FormatList[VideoFormat](
+            [f for f in self.root if isinstance(f, VideoFormat)]
+        )
 
     def only_audio(self) -> FormatList[AudioFormat]:
-        return FormatList([f for f in self.root if isinstance(f, AudioFormat)])
+        return FormatList[AudioFormat](
+            [f for f in self.root if isinstance(f, AudioFormat)]
+        )
 
     @cached_property
     def type(self) -> FORMAT_TYPE:
@@ -104,13 +111,15 @@ class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
 
         if attribute == "best":
             filter = format_sort
+        elif attribute == "codec":
+            filter = lambda codec: get_codec_rank(codec, self.type)  # noqa: E731
         else:
             filter = lambda f: getattr(f, attribute)  # noqa: E731
 
         return self.__class__(
             sorted(
                 self.root,
-                key=filter,
+                key=filter,  # type: ignore
                 reverse=reverse,
             )
         )
@@ -133,16 +142,16 @@ class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
         pos = bisect.bisect_left(qualities, quality)
 
         if pos == 0:
-            return items[0]
+            return items[0]  # type: ignore
         if pos == len(items):
-            return items[-1]
+            return items[-1]  # type: ignore
 
         before = items[pos - 1]
         after = items[pos]
 
-        if (after.quality - quality) <= (quality - before.quality):  # type: ignore
-            return after
-        return before
+        if (after.quality - quality) <= (quality - before.quality):
+            return after  # type: ignore
+        return before  # type: ignore
 
     def __contains__(self, other) -> bool:
         if isinstance(other, Format):
@@ -153,27 +162,3 @@ class FormatList(RootModel[list[OnErrorOmit[FormatType]]], Generic[F]):
                 return False
         else:
             return False
-
-    def __iter__(self):  # type: ignore
-        return iter(self.root)
-
-    def __len__(self) -> int:
-        return len(self.root)
-
-    def __bool__(self) -> bool:
-        return bool(self.root)
-
-    @overload
-    def __getitem__(self, index: int) -> F: ...
-
-    @overload
-    def __getitem__(self, index: slice) -> Self: ...
-
-    def __getitem__(self, index) -> F | Self:
-        match index:
-            case int():
-                return self.root[index]  # type: ignore
-            case slice():
-                return self.__class__(self.root[index])
-            case _:
-                raise TypeError(index)

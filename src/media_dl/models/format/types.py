@@ -126,6 +126,3 @@ class AudioFormat(Format):
         result: dict = handler(self)
         result |= {"vcodec": "none"}
         return result
-
-
-FormatType = VideoFormat | AudioFormat
