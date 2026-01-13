@@ -1,12 +1,10 @@
 import logging
-from typing import Literal
 
 from loguru import logger
 from rich.logging import RichHandler
 
-from media_dl.rich import CONSOLE
-
-LOGGING_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+from media_dl.cli.rich import CONSOLE
+from media_dl.types import LOGGING_LEVELS
 
 
 class ColorFormatter(logging.Formatter):
@@ -30,7 +28,7 @@ class ColorFormatter(logging.Formatter):
         return color + message
 
 
-def init_logging(level: LOGGING_LEVELS):
+def start_logger(level: LOGGING_LEVELS):
     if level == "INFO":
         verbose = False
     else:

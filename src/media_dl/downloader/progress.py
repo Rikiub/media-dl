@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from rich.console import Group, RenderableType
+from rich.console import Console, Group, RenderableType
 from rich.progress import (
     BarColumn,
     FileSizeColumn,
@@ -11,12 +11,15 @@ from rich.progress import (
 )
 from rich.table import Column
 
-from media_dl.rich import CONSOLE
+CONSOLE = Console(stderr=True)
 
 
 class CounterProgress:
     def __init__(
-        self, total: int = 1, disable: bool = False, visible: bool = True
+        self,
+        total: int = 1,
+        disable: bool = False,
+        visible: bool = True,
     ) -> None:
         self._progress = Progress(
             TextColumn("Total:"),
@@ -26,8 +29,12 @@ class CounterProgress:
             disable=disable,
             console=CONSOLE,
         )
+
         self._task_id = self._progress.add_task(
-            "", visible=visible, completed=0, total=total
+            "",
+            visible=visible,
+            completed=0,
+            total=total,
         )
 
     def reset(self, total: int = 1, visible: bool = True):

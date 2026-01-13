@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, cast
+from typing import cast
 
 from yt_dlp.networking.exceptions import RequestError
 from yt_dlp.utils import DownloadError as YDLDownloadError
 
 from media_dl.exceptions import ExtractError
+from media_dl.types import SEARCH_SERVICE
 from media_dl.ydl.messages import format_except_message
 from media_dl.ydl.types import YDLExtractInfo
 from media_dl.ydl.wrapper import YDL
@@ -21,11 +22,6 @@ class SearchQuery:
         return self.template.format(limit=limit) + query
 
 
-SEARCH_SERVICE = Literal[
-    "soundcloud",
-    "youtube",
-    "ytmusic",
-]
 SEARCH_QUERIES = [
     SearchQuery("soundcloud", "scsearch{limit}:"),
     SearchQuery("youtube", "ytsearch{limit}:"),

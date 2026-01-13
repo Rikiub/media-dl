@@ -1,90 +1,30 @@
 from enum import Enum
 from pathlib import Path
-from typing import Annotated, Generator, Literal, get_args
+from typing import Annotated
 
 from loguru import logger
+from typer import Argument, BadParameter, Option, Typer
 
-from media_dl.logging import LOGGING_LEVELS, init_logging
-from media_dl.rich import Status
-from media_dl.types import APPNAME, FILE_FORMAT, VIDEO_RESOLUTION
-from media_dl.ydl.extractor import SEARCH_SERVICE
-
-try:
-    from typer import Argument, BadParameter, Option, Typer
-except ImportError:
-    raise ImportError("Typer is required to use CLI features.")
-
-app = Typer(rich_markup_mode="rich")
-
-
-# Typer: types
-SEARCH_TARGET = Literal["url", SEARCH_SERVICE]
+from media_dl.cli.completions import (
+    complete_output,
+    complete_query,
+    complete_resolution,
+    parse_queries,
+)
+from media_dl.cli.config import CONFIG
+from media_dl.cli.rich import Status
+from media_dl.types import FILE_FORMAT
 
 
-# Typer: helpers
 class HelpPanel(str, Enum):
     file = "File"
     downloader = "Downloader"
     other = "Other"
 
 
-def show_version(show: bool) -> None:
-    if show:
-        from importlib.metadata import version
-
-        print(version(Path(__file__).parent.name))
-
-        raise SystemExit()
+app = Typer()
 
 
-# Typer: completions
-def complete_query(incomplete: str) -> Generator[str, None, None]:
-    for name in get_args(SEARCH_TARGET):
-        if name.startswith(incomplete):
-            yield name + ":"
-
-
-def complete_resolution() -> Generator[str, None, None]:
-    for name in get_args(VIDEO_RESOLUTION):
-        yield str(name)
-
-
-def complete_output(incomplete: str) -> Generator[str, None, None]:
-    if incomplete.endswith("{"):
-        from media_dl.template.keys import OUTPUT_TEMPLATES
-
-        for key in OUTPUT_TEMPLATES:
-            yield incomplete + key + "}"
-
-
-def parse_queries(
-    queries: list[str],
-) -> Generator[tuple[SEARCH_TARGET, str], None, None]:
-    providers: list[SEARCH_TARGET] = [entry for entry in get_args(SEARCH_TARGET)]
-    target: SEARCH_TARGET
-
-    for entry in queries:
-        selection = entry.split(":")[0]
-
-        if entry.startswith(("http://", "https://")):
-            target = "url"
-        elif selection in providers:
-            target = selection  # type: ignore
-            entry = entry.split(":")[1].strip()
-        else:
-            completed = [i for i in complete_query(selection)]
-
-            if completed:
-                msg = f"Did you mean '{completed[0]}'?"
-            else:
-                msg = "Should be URL or search PROVIDER."
-
-            raise BadParameter(f"'{selection}' is invalid. {msg}")
-
-        yield target, entry
-
-
-# Typer: app
 @app.command(no_args_is_help=True)
 def download(
     query: Annotated[
@@ -93,11 +33,11 @@ def download(
             help="""[green]URLs[/] and [green]queries[/] to process.
             \n
             - Insert a [green]URL[/] to download [grey62](Default)[/].\n
-            - Select a [green]PROVIDER[/] to search and download.
+            - Select a [green]SERVICE[/] to search and download.
             """,
             show_default=False,
             autocompletion=complete_query,
-            metavar="URL | PROVIDER",
+            metavar="URL | SERVICE",
         ),
     ],
     format: Annotated[
@@ -173,46 +113,11 @@ What format you want request?
             hidden=True,
         ),
     ] = False,
-    quiet: Annotated[
-        bool,
-        Option(
-            "--quiet",
-            help="Supress screen information.",
-            rich_help_panel=HelpPanel.other,
-        ),
-    ] = False,
-    verbose: Annotated[
-        bool,
-        Option(
-            "--verbose",
-            help="Display more information on screen.",
-            rich_help_panel=HelpPanel.other,
-        ),
-    ] = False,
-    version: Annotated[
-        bool,
-        Option(
-            "--version",
-            help="Show current version and exit.",
-            rich_help_panel=HelpPanel.other,
-            callback=show_version,
-        ),
-    ] = False,
 ):
-    """Download any video/audio you want from a simple URL ✨"""
-
-    log_level: LOGGING_LEVELS
-    if quiet:
-        log_level = "CRITICAL"
-    elif verbose:
-        log_level = "DEBUG"
-    else:
-        log_level = "INFO"
-
-    init_logging(log_level)
+    """Download video/audio from [green]URL[/] or search [green]SERVICE[/]."""
 
     # Lazy Import
-    with Status("Starting[blink]...[/]", disable=quiet):
+    with Status("Starting[blink]...[/]"):
         from media_dl import (
             DownloadError,
             ExtractError,
@@ -242,7 +147,7 @@ What format you want request?
 
     for target, entry in parse_queries(query):
         try:
-            with Status("Please wait[blink]...[/]", disable=quiet):
+            with Status("Please wait[blink]...[/]"):
                 if target == "url":
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
 
@@ -263,7 +168,7 @@ What format you want request?
                         use_cache=cache,
                     ).medias[0]
 
-            if quiet:
+            if CONFIG.quiet:
                 downloader.download_all(result, None)
             else:
                 downloader.download_all(result)
@@ -273,11 +178,3 @@ What format you want request?
             logger.error("❌ {error}", error=str(err))
         finally:
             logger.info("")
-
-
-def run():
-    app(prog_name=APPNAME)
-
-
-if __name__ == "__main__":
-    run()

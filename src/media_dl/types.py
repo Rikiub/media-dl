@@ -12,8 +12,10 @@ FILE_FORMAT = Literal[FORMAT_TYPE, EXTENSION]
 VIDEO_RESOLUTION = Literal[144, 240, 360, 480, 720, 1080]
 
 # SEARCH
+SEARCH_SERVICE = Literal["soundcloud", "youtube", "ytmusic"]
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 
 # Extra
 APPNAME = "media-dl"
+LOGGING_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 StrPath = str | PathLike[str]
