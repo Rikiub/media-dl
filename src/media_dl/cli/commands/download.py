@@ -19,7 +19,6 @@ from media_dl.types import FILE_FORMAT
 class HelpPanel(str, Enum):
     file = "File"
     downloader = "Downloader"
-    other = "Other"
 
 
 app = Typer()
@@ -108,7 +107,6 @@ What format you want request?
         bool,
         Option(
             help="Process without use the cache.",
-            rich_help_panel=HelpPanel.other,
             show_default=False,
             hidden=True,
         ),
