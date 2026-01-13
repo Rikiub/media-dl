@@ -77,8 +77,9 @@ class DownloadPipeline:
             # Download File
             downloaded_file = self.download_formats(video_fmt, audio_fmt)
 
-            # Process File
-            downloaded_file = self.process(downloaded_file, media, format)
+            if self.config.ffmpeg_path:
+                # Process File
+                downloaded_file = self.process(downloaded_file, media, format)
         except ConnectionError as e:
             self.progress(ErrorState(id=self.id, message=str(e)))
             raise DownloadError(str(e))
@@ -221,10 +222,7 @@ class DownloadPipeline:
         filepath: Path,
         media: Media,
         format: Format | None = None,
-    ):
-        if not self.config.ffmpeg_path:
-            return filepath
-
+    ) -> Path:
         prc = MediaProcessor(filepath, self.config.ffmpeg_path)
 
         @contextmanager
