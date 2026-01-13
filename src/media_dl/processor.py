@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Literal
 
 from media_dl.models.content.media import Media
-from media_dl.models.content.metadata import Subtitles, Thumbnail
 from media_dl.models.format.types import Format
 from media_dl.types import AUDIO_EXTENSION, EXTENSION, StrPath
 from media_dl.ydl.processor import (
@@ -49,37 +48,6 @@ class MediaProcessor(YDLProcessor):
         super().embed_metadata(info)
         return self
 
-    def embed_thumbnail(
-        self,
-        thumbnail: StrPath | Thumbnail,
-        square: bool = False,
-    ):
-        if isinstance(thumbnail, Thumbnail):
-            new_thumbnail = thumbnail.download(self.filepath)
-
-            if not new_thumbnail:
-                raise ValueError("Invalid thumbnail.")
-        else:
-            new_thumbnail = Path(thumbnail)
-
-        super().embed_thumbnail(new_thumbnail, square)
-        return self
-
-    def embed_subtitles(
-        self,
-        subtitles: list[StrPath] | Subtitles,
-    ):
-        if isinstance(subtitles, Subtitles):
-            new_subtitles = subtitles.download(self.filepath)
-
-            if not new_subtitles:
-                raise ValueError("Invalid subtitles.")
-        else:
-            new_subtitles = subtitles
-
-        super().embed_subtitles(new_subtitles)  # type: ignore
-        return self
-
     @classmethod
     def from_formats_merge(
         cls,
@@ -95,9 +63,7 @@ class MediaProcessor(YDLProcessor):
                 format: Format
                 path: Path
 
-                fmt = {}
-                fmt |= {"filepath": str(path)}
-                fmt |= format.to_ydl_dict()
+                fmt = {"filepath": str(path)} | format.to_ydl_dict()
             real_formats.append(fmt)  # type: ignore
 
         cls = super().from_formats_merge(
