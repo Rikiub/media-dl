@@ -9,13 +9,6 @@ def debug_callback(progress: MediaDownloadState):
             _log_debug(progress.id, "Resolving Media")
         case "resolved":
             _log_debug(progress.id, "Media resolved")
-        case "merging":
-            _log_debug(
-                progress.id,
-                'Merged video "{video}" and audio "{audio}" formats.',
-                video=progress.video_format.extension,
-                audio=progress.audio_format.extension,
-            )
         case "processing":
             _processor_callback(progress)
         case "completed":
@@ -40,6 +33,13 @@ def _processor_callback(progress: ProcessingState):
                     progress.id,
                     'File converted to "{extension}".',
                     extension=progress.extension,
+                )
+            case "merge_formats":
+                _log_debug(
+                    progress.id,
+                    'Merged video "{video}" and audio "{audio}" formats.',
+                    video=progress.video_format.extension,
+                    audio=progress.audio_format.extension,
                 )
             case "embed_subtitles":
                 _log_debug(

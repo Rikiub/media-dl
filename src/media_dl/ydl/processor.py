@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import TypedDict
+from typing import Sequence, TypedDict
+from typing_extensions import Self
 
 from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
 from yt_dlp.postprocessor.ffmpeg import (
@@ -40,7 +41,7 @@ class YDLProcessor:
     def extension(self) -> str:
         return self.filepath.suffix[1:]
 
-    def change_container(self, format: str):
+    def change_container(self, format: str) -> Self:
         pp = FFmpegVideoRemuxerPP(
             None,
             preferedformat=format,
@@ -53,7 +54,7 @@ class YDLProcessor:
         self,
         format: str = "",
         quality: int | None = None,
-    ):
+    ) -> Self:
         pp = FFmpegExtractAudioPP(
             None,
             nopostoverwrites=False,
@@ -74,7 +75,7 @@ class YDLProcessor:
         pp.run(self.params | data)
         return self
 
-    def embed_thumbnail(self, thumbnail: StrPath, square: bool = False):
+    def embed_thumbnail(self, thumbnail: StrPath, square: bool = False) -> Self:
         pp = EmbedThumbnailPP()
 
         info = self.params | {
@@ -98,7 +99,7 @@ class YDLProcessor:
         pp.run(info)
         return self
 
-    def embed_subtitles(self, subtitles: list[StrPath]):
+    def embed_subtitles(self, subtitles: Sequence[StrPath]) -> Self:
         pp = FFmpegEmbedSubtitlePP()
 
         dict_subs: dict[str, dict] = {}
@@ -124,7 +125,7 @@ class YDLProcessor:
         filepath: StrPath,
         formats: RequestedFormats,
         ffmpeg_path: StrPath | None = None,
-    ):
+    ) -> Self:
         cls = cls(filepath, ffmpeg_path=ffmpeg_path)
 
         pp = FFmpegMergerPP()

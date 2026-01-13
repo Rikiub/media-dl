@@ -65,8 +65,6 @@ class ProgressCallback(DownloadProgress):
                     total=progress.total_bytes,
                     status="Downloading",
                 )
-            case "processing":
-                self.processor_callback(progress)
             case "error":
                 logger.error(
                     'Error: "{media}": {error}',
@@ -75,18 +73,14 @@ class ProgressCallback(DownloadProgress):
                 )
             case "completed":
                 logger.info('Completed: "{media}".', media=self.get(progress).name)
+            case "processing":
+                self.processor_callback(progress)
 
         if progress.status in ("error", "completed"):
             self.update(self.get(progress).task_id, status=progress.status.capitalize())
             self.advance_counter(progress, 1.0)
 
     def processor_callback(self, progress: ProcessingState):
-        if progress.processor == "starting":
-            self.update(
-                self.get(progress).task_id,
-                status="Processing[blink]...[/]",
-            )
-
         match progress.processor:
             case "convert_audio":
                 if progress.stage == "started":
@@ -94,6 +88,17 @@ class ProgressCallback(DownloadProgress):
                         self.get(progress).task_id,
                         status="Converting[blink]...[/]",
                     )
+            case "merge_formats":
+                if progress.stage == "started":
+                    self.update(
+                        self.get(progress).task_id,
+                        status="Merging[blink]...[/]",
+                    )
+            case _:
+                self.update(
+                    self.get(progress).task_id,
+                    status="Processing[blink]...[/]",
+                )
 
     def get(self, progress: MediaDownloadState):
         return self.ids[progress.id]

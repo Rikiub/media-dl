@@ -52,7 +52,7 @@ def download_from_info(info: YDLExtractInfo, params: YDLParams) -> Path:
         raise DownloadError(msg)
 
 
-def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
+def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path:
     ydl = YDL(
         {
             "writethumbnail": True,
@@ -72,10 +72,10 @@ def download_thumbnail(filepath: StrPath, info: YDLExtractInfo) -> Path | None:
     if final:
         return Path(final[0][0])
     else:
-        return None
+        raise DownloadError("Unable to download thumbnail.")
 
 
-def download_subtitles(filepath: StrPath, info: YDLExtractInfo) -> list[Path] | None:
+def download_subtitles(filepath: StrPath, info: YDLExtractInfo) -> list[Path]:
     ydl = YDL({"writesubtitles": True, "allsubtitles": True})
 
     subs = ydl.process_subtitles(
@@ -94,4 +94,4 @@ def download_subtitles(filepath: StrPath, info: YDLExtractInfo) -> list[Path] | 
         result = [Path(entry[0]) for entry in final]
         return result
     else:
-        return None
+        raise DownloadError("Unable to download subtitles.")
