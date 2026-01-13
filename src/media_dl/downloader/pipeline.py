@@ -154,7 +154,7 @@ class DownloadPipeline:
             downloading.speed = fmt_state.speed
             downloading.elapsed = fmt_state.elapsed
 
-            self.progress(merging)
+            self.progress(downloading)
 
         def _log(format: Format):
             type = "video" if isinstance(format, VideoFormat) else "audio"
@@ -199,7 +199,7 @@ class DownloadPipeline:
                 audio_format=audio_fmt,
             )
 
-            pp = MediaProcessor.from_formats_merge(
+            prc = MediaProcessor.from_formats_merge(
                 filepath,
                 formats=[(video_fmt, video_file), (audio_fmt, audio_file)],
                 ffmpeg_path=self.config.ffmpeg_path,
@@ -208,7 +208,7 @@ class DownloadPipeline:
             merging.stage = "completed"
             self.progress(merging)
 
-            return pp.filepath
+            return prc.filepath
         elif video_file:
             return video_file
         elif audio_file:
