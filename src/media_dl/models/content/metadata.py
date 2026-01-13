@@ -3,8 +3,8 @@ from typing import Annotated
 
 from pydantic import BeforeValidator, Field, RootModel
 
-from media_dl.models.content.base import Serializable
 from media_dl.types import StrPath
+from media_dl.models.content.base import Serializable
 from media_dl.ydl.downloader import download_subtitles, download_thumbnail
 
 
@@ -23,16 +23,16 @@ class MusicMetadata(Serializable):
     genres: list[str] | None = None
 
 
-class Subtitle(Serializable):
-    url: str
-    extension: Annotated[str, Field(alias="ext")]
-    language: Annotated[str, Field(alias="name")] = ""
-
-
 class Chapter(Serializable):
     start_time: int
     end_time: int
     title: str
+
+
+class Subtitle(Serializable):
+    url: str
+    extension: Annotated[str, Field(alias="ext")]
+    language: Annotated[str, Field(alias="name")] = ""
 
 
 class Thumbnail(Serializable):
@@ -41,14 +41,14 @@ class Thumbnail(Serializable):
     width: int = 0
     height: int = 0
 
-    def download(self, filepath: StrPath) -> Path | None:
+    def download(self, filepath: StrPath) -> Path:
         info = {"thumbnails": [self.to_ydl_dict()]}
         path = download_thumbnail(filepath, info)
         return path
 
 
 class Subtitles(Serializable, RootModel[dict[str, list[Subtitle]]]):
-    def download(self, filepath: StrPath) -> list[Path] | None:
+    def download(self, filepath: StrPath) -> list[Path]:
         info = {"subtitles": self.to_ydl_dict()}
         paths = download_subtitles(filepath, info)
         return paths
