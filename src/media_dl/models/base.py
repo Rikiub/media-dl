@@ -1,4 +1,5 @@
 from typing import Generic, TypeVar, overload
+
 from pydantic import BaseModel, RootModel
 from typing_extensions import Self
 

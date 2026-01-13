@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import Annotated
-from typing_extensions import Self
 
 from pydantic import AliasChoices, Field, model_validator
+from typing_extensions import Self
 
 from media_dl.models.content.base import (
     URL_CHOICES,
