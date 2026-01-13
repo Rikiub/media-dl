@@ -33,19 +33,28 @@ def test_simple():
         pprint(path)
 
 
-def test_advanced():
+def test_media():
     with TEMPDIR:
         downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
 
-        try:
-            result = Media.from_url(URL)
-            paths = downloader.download(
-                result,
-                on_progress=lambda *args: pprint(*args),
-            )
-        except TypeError:
-            result = Playlist.from_url(PLAYLIST)
-            paths = downloader.download_all(result)
+        result = Media.from_url(URL)
+        paths = downloader.download(
+            result,
+            on_progress=lambda state: pprint(state.id),
+        )
+
+        pprint(paths)
+
+
+def test_playlist():
+    with TEMPDIR:
+        downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
+
+        result = Playlist.from_url(PLAYLIST)
+        paths = downloader.download_all(
+            result,
+            on_progress=lambda state: pprint(state.id),
+        )
 
         pprint(paths)
 
@@ -71,6 +80,10 @@ class TestFormatsFilter:
     def test_closest_quality(self, formats: FormatList):
         fmt = formats.get_closest_quality(600)
         assert fmt.quality == 720
+
+    def test_filter(self, formats: FormatList):
+        fmt = formats.filter(quality=720)
+        assert all(f.quality == 720 for f in fmt)
 
     def test_get_by_id(self, formats: FormatList):
         ID = "137"

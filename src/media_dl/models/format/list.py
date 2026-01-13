@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import bisect
 from functools import cached_property
-from typing import Generic, Literal
+from typing import Generic, Iterator, Literal, overload
 
 from pydantic import OnErrorOmit
 from typing_extensions import Self, TypeVar
@@ -49,7 +49,7 @@ def format_sort(format: Format):
 
 
 FormatType = OnErrorOmit[VideoFormat | AudioFormat]
-F = TypeVar("F", bound=Format)
+F = TypeVar("F", default=Format, bound=Format)
 
 
 class FormatList(BaseList[FormatType], Generic[F]):
@@ -64,19 +64,18 @@ class FormatList(BaseList[FormatType], Generic[F]):
     ) -> Self:
         """Get filtered formats by options."""
 
-        formats = self.root
-        filters = [
-            (extension, lambda f: f.extension == extension),
-            (quality, lambda f: f.quality == quality),
-            (codec, lambda f: f.codec.startswith(codec)),
-            (protocol, lambda f: f.protocol == protocol),
-        ]
+        items = (f for f in self.root)
 
-        for value, condition in filters:
-            if value:
-                formats = [f for f in formats if condition(f)]
+        if extension:
+            items = (f for f in items if f.extension == extension)
+        if quality:
+            items = (f for f in items if f.quality == quality)
+        if codec:
+            items = (f for f in items if f.codec.startswith(codec))
+        if protocol:
+            items = (f for f in items if f.protocol == protocol)
 
-        return self.__class__(formats)
+        return self.__class__(list(items))
 
     def only_video(self) -> FormatList[VideoFormat]:
         return FormatList[VideoFormat](
@@ -131,9 +130,10 @@ class FormatList(BaseList[FormatType], Generic[F]):
             IndexError: Provided id has not been founded.
         """
 
-        if result := [f for f in self if f.id == id]:
-            return result[0]  # type: ignore
-        else:
+        try:
+            format = next(f for f in self if f.id == id)
+            return format
+        except StopIteration:
             raise IndexError(f"Format with id '{id}' has not been founded")
 
     def get_closest_quality(self, quality: int) -> F:
@@ -142,23 +142,25 @@ class FormatList(BaseList[FormatType], Generic[F]):
         pos = bisect.bisect_left(qualities, quality)
 
         if pos == 0:
-            return items[0]  # type: ignore
+            return items[0]
         if pos == len(items):
-            return items[-1]  # type: ignore
+            return items[-1]
 
-        before = items[pos - 1]
-        after = items[pos]
+        before, after = items[pos - 1], items[pos]
 
         if (after.quality - quality) <= (quality - before.quality):
-            return after  # type: ignore
-        return before  # type: ignore
-
-    def __contains__(self, other) -> bool:
-        if isinstance(other, Format):
-            try:
-                self.get_by_id(other.id)
-                return True
-            except IndexError:
-                return False
+            return after
         else:
-            return False
+            return before
+
+    def __iter__(self) -> Iterator[F]:  # type: ignore
+        return super().__iter__()  # type: ignore
+
+    @overload
+    def __getitem__(self, index: int) -> F: ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Self: ...
+
+    def __getitem__(self, index) -> F | Self:  # type: ignore
+        return super().__getitem__(index)

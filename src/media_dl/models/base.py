@@ -24,14 +24,14 @@ class BaseList(RootModel[list[T]], Generic[T]):
     def __contains__(self, other) -> bool:
         return other in self.root
 
-    def __iter__(self):  # type: ignore
-        return iter(self.root)
-
     def __len__(self) -> int:
         return len(self.root)
 
     def __bool__(self) -> bool:
         return bool(self.root)
+
+    def __iter__(self):  # type: ignore
+        return iter(self.root)
 
     @overload
     def __getitem__(self, index: int) -> T: ...
