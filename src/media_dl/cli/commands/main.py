@@ -16,7 +16,7 @@ def show_version(show: bool) -> None:
 
 
 app = Typer()
-PANEL = "Others"
+PANEL = "Display"
 
 
 @app.command()
