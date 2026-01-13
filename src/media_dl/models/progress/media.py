@@ -6,7 +6,6 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from media_dl.models.content.media import LazyMedia, Media
-from media_dl.models.format.types import AudioFormat, VideoFormat
 from media_dl.models.progress.base import HasFile, State
 from media_dl.models.progress.format import FormatState
 from media_dl.models.progress.processor import ProcessingState
@@ -26,13 +25,6 @@ class DownloadingState(FormatState, State):
     status: Literal["downloading"] = "downloading"
 
 
-class MergingState(State):
-    status: Literal["merging"] = "merging"
-
-    video_format: VideoFormat
-    audio_format: AudioFormat
-
-
 class ErrorState(State):
     status: Literal["error"] = "error"
     message: str
@@ -50,7 +42,6 @@ MediaDownloadState = Annotated[
     ResolvingState
     | ResolvedState
     | DownloadingState
-    | MergingState
     | ProcessingState
     | ErrorState
     | SkippedState
