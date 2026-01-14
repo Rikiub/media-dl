@@ -62,14 +62,14 @@ class TestSearch:
         self.search("ytmusic")
 
     def test_extract_medias(self):
-        result = Search.from_query("If Nevermore", "ytmusic")
+        result = Search.from_query("If Nevermore", "ytmusic", use_cache=False)
 
         for entry in result.medias:
             entry = entry.resolve()
             print(entry)
 
     def test_extract_playlists(self):
-        result = Search.from_query("If Nevermore", "ytmusic")
+        result = Search.from_query("If Nevermore", "ytmusic", use_cache=False)
 
         for entry in result.playlists:
             entry = entry.resolve()

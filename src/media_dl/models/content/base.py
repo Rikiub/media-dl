@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Annotated, Generic, Literal, TypeVar
+from typing import Annotated, Any, Generic, Literal, TypeVar
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, model_validator
 from typing_extensions import Self
 
 from media_dl.cache import load_info, save_info
@@ -102,15 +102,27 @@ class ExtractList(Serializable):
     medias: list
     playlists: list
 
-    @field_validator("medias", mode="before")
-    def _validate_medias(cls, data):
-        if isinstance(data, list):
-            return [item for item in data if is_media(item)]
+    @model_validator(mode="before")
+    @classmethod
+    def _split_entries(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
 
-    @field_validator("playlists", mode="before")
-    def _validate_playlists(cls, data):
-        if isinstance(data, list):
-            return [item for item in data if is_playlist(item)]
+        entries = data.pop("entries", None)
+
+        if entries:
+            data |= {
+                "medias": [],
+                "playlists": [],
+            }
+
+            for item in entries:
+                if is_media(item):
+                    data["medias"].append(item)
+                elif is_playlist(item):
+                    data["playlists"].append(item)
+
+        return data
 
 
 class ExtractSearch(ExtractList):

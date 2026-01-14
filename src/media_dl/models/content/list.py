@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import AliasChoices, Field, model_validator
-from typing_extensions import Self
+from pydantic import AliasChoices, Field
 
 from media_dl.models.content.base import (
     URL_CHOICES,
@@ -18,12 +17,6 @@ from media_dl.models.content.metadata import Thumbnail
 class MediaList(ExtractList):
     medias: LazyMedias = []
     playlists: LazyPlaylists = []
-
-    @model_validator(mode="after")
-    def _validate_lists(self) -> Self:
-        if not self.medias and not self.playlists:
-            raise ValueError("Must contain at least one Media or Playlist.")
-        return self
 
 
 class LazyPlaylist(MediaList, LazyExtract["Playlist"]):
