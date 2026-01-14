@@ -19,6 +19,7 @@ from media_dl.ydl.downloader import download_format
 from media_dl.ydl.types import SupportedExtensions, YDLFormatInfo
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
+AudioCodecField = Field(alias="acodec")
 
 
 class YDLArgs(BaseModel):
@@ -33,8 +34,10 @@ class Format(ABC, YDLArgs, Serializable):
     id: Annotated[str, Field(alias="format_id")]
     url: str
     protocol: str
-    filesize: int | None = None
     extension: Annotated[str, Field(alias="ext")]
+    filesize: int | None = None
+    bitrate: Annotated[float, Field(alias="tbr")] = 0
+    audio_codec: Annotated[Codec | None, AudioCodecField] = None
 
     def download(
         self,
@@ -54,6 +57,9 @@ class Format(ABC, YDLArgs, Serializable):
         )
         return path
 
+    def to_ydl_dict(self) -> YDLFormatInfo:
+        return super().to_ydl_dict()
+
     @property
     @abstractmethod
     def quality(self) -> int: ...
@@ -62,13 +68,50 @@ class Format(ABC, YDLArgs, Serializable):
     @abstractmethod
     def display_quality(self) -> str: ...
 
-    def to_ydl_dict(self) -> YDLFormatInfo:
-        return super().to_ydl_dict()
+    @property
+    def has_audio(self) -> bool:
+        return bool(self.audio_codec)
+
+    @field_serializer("audio_codec")
+    def _serialize_acodec(self, value) -> str:
+        if not value:
+            return "none"
+        return value
+
+
+class AudioFormat(Format):
+    audio_codec: Annotated[  # type: ignore
+        Codec, AudioCodecField
+    ]
+
+    @property
+    def codec(self) -> str:
+        return self.audio_codec
+
+    @property
+    def quality(self) -> int:
+        return int(self.bitrate)
+
+    @property
+    def display_quality(self) -> str:
+        return str(round(self.quality)) + "kbps"
+
+    @model_serializer(mode="wrap")
+    def _serialize_model(self, handler: SerializerFunctionWrapHandler):
+        result: dict = handler(self)
+        result |= {"vcodec": "none"}
+        return result
+
+    @field_validator("extension")
+    @classmethod
+    def _validate_extension(cls, value) -> str:
+        if value not in SupportedExtensions.audio:
+            raise ValueError(f"{value} not is a valid extension.")
+        return value
 
 
 class VideoFormat(Format):
     video_codec: Annotated[Codec, Field(alias="vcodec")]
-    audio_codec: Annotated[Codec | None, Field(alias="acodec")] = None
     width: int
     height: int
     fps: float | None = None
@@ -90,39 +133,4 @@ class VideoFormat(Format):
     def _validate_extension(cls, value) -> str:
         if value not in SupportedExtensions.video:
             raise ValueError(f"{value} not is a valid extension.")
-
         return value
-
-    @field_serializer("audio_codec")
-    def _none_to_str(self, value) -> str:
-        if not value:
-            return "none"
-
-        return value
-
-
-class AudioFormat(Format):
-    codec: Annotated[Codec, Field(alias="acodec")]
-    bitrate: Annotated[float, Field(alias="abr")] = 0
-
-    @property
-    def quality(self) -> int:
-        return int(self.bitrate)
-
-    @property
-    def display_quality(self) -> str:
-        return str(round(self.quality)) + "kbps"
-
-    @field_validator("extension")
-    @classmethod
-    def _validate_extension(cls, value) -> str:
-        if value not in SupportedExtensions.audio:
-            raise ValueError(f"{value} not is a valid extension.")
-
-        return value
-
-    @model_serializer(mode="wrap")
-    def _serialize_model(self, handler: SerializerFunctionWrapHandler):
-        result: dict = handler(self)
-        result |= {"vcodec": "none"}
-        return result

@@ -237,10 +237,11 @@ class DownloadPipeline:
 
             try:
                 yield
-            finally:
                 state.stage = "completed"
                 state.filepath = prc.filepath
                 self.progress(state)
+            except Exception:
+                raise
 
         # Remuxing
         if isinstance(format, VideoFormat):
