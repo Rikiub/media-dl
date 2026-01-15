@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import datetime
 from typing import Annotated, Literal
 
@@ -26,7 +24,7 @@ DatetimeTimestamp = Annotated[
 ]
 
 
-class LazyMedia(MusicMetadata, LazyExtract["Media"]):
+class LazyMedia(MusicMetadata, LazyExtract):
     type: Annotated[Literal["url"], TypeField] = "url"
     title: str = ""
     uploader: Annotated[
@@ -43,14 +41,12 @@ class LazyMedia(MusicMetadata, LazyExtract["Media"]):
 
     @property
     def is_music(self) -> bool:
-        if any(s in self.url for s in MUSIC_SITES):
+        url = str(self.url)
+
+        if any(s in url for s in MUSIC_SITES):
             return True
         else:
             return False
-
-    @property
-    def _resolve_class(self):
-        return Media
 
     @field_validator("extractor")
     @classmethod

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from media_dl import AudioFormat, MediaDownloader, VideoFormat
-from media_dl.extractor import extract_url
+from media_dl.extractor import MediaExtractor
 from media_dl.models.format.list import FormatList
 
 URL = "https://youtube.com/watch?v=Kx7B-XvmFtE"
@@ -13,7 +13,7 @@ PLAYLIST = (
 
 
 def test_single(tmp_path: Path):
-    result = extract_url(URL)
+    result = MediaExtractor().extract_url(URL)
 
     assert result.type == "url"
 
@@ -28,7 +28,7 @@ def test_single(tmp_path: Path):
 
 
 def test_list(tmp_path: Path):
-    result = extract_url(PLAYLIST)
+    result = MediaExtractor().extract_url(PLAYLIST)
 
     assert result.type == "playlist"
 
@@ -44,8 +44,9 @@ def test_list(tmp_path: Path):
 
 @pytest.fixture(scope="session")
 def formats():
-    result = extract_url(URL)
+    result = MediaExtractor().extract_url(URL)
     assert result.type == "url"
+    assert len(result.formats) >= 1
     return result.formats
 
 

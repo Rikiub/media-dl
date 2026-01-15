@@ -1,14 +1,16 @@
 import pytest
 
-from media_dl import Media, Playlist
-from media_dl import extract_search as _extract_search
-from media_dl import extract_url as _extract_url
+from media_dl.models.content.media import Media
+from media_dl.models.content.list import Playlist
+from media_dl.extractor import MediaExtractor
 from media_dl.exceptions import ExtractError
 from media_dl.ydl.extractor import SEARCH_SERVICE
 
+EXTRACTOR = MediaExtractor(use_cache=False)
+
 
 def extract_url(url: str) -> Media | Playlist:
-    result = _extract_url(url, use_cache=False)
+    result = EXTRACTOR.extract_url(url)
     return result
 
 
@@ -16,7 +18,7 @@ def extract_search(
     query: str = "Sub Urban - Rabbit Hole",
     service: SEARCH_SERVICE = "youtube",
 ):
-    search = _extract_search(query, service, use_cache=False)
+    search = EXTRACTOR.extract_search(query, service)
     assert len(search.entries) >= 1
     return search
 
@@ -63,7 +65,7 @@ class TestSearch:
         assert len(result.medias) >= 1
 
         for entry in result.medias:
-            entry = entry.resolve()
+            entry = EXTRACTOR.resolve(entry)
             assert isinstance(entry, Media)
 
     def test_resolve_playlists(self):
@@ -72,7 +74,7 @@ class TestSearch:
         assert len(result.playlists) >= 1
 
         for entry in result.playlists:
-            entry = entry.resolve()
+            entry = EXTRACTOR.resolve(entry)
             assert isinstance(entry, Playlist)
 
 

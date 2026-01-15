@@ -2,17 +2,20 @@ from pathlib import Path
 
 import pytest
 
-from media_dl import MediaDownloader, extract_url
+from media_dl.downloader.main import MediaDownloader
+from media_dl.extractor import MediaExtractor
 
 
 @pytest.fixture
 def download(tmp_path: Path):
     def _wrap(url: str):
-        result = extract_url(url)
+        extractor = MediaExtractor(use_cache=False)
+        result = extractor.extract_url(url)
+
         paths = MediaDownloader(
             quality=1,
             output=tmp_path,
-            use_cache=False,
+            extractor=extractor,
         ).download_all(result)
 
         assert len(paths) >= 1

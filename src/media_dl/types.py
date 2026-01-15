@@ -1,6 +1,8 @@
 from os import PathLike
 from typing import Literal
 
+from pydantic import HttpUrl
+
 # FORMAT
 VIDEO_EXTENSION = Literal["mp4", "mkv", "mov"]
 AUDIO_EXTENSION = Literal["m4a", "opus", "mp3"]
@@ -19,3 +21,4 @@ MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 APPNAME = "media-dl"
 LOGGING_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 StrPath = str | PathLike[str]
+StrUrl = str | HttpUrl

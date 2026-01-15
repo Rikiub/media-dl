@@ -2,15 +2,10 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, TypeAlias
 
-from pydantic import AliasChoices, Field, SkipValidation, computed_field
+from pydantic import AliasChoices, Field, HttpUrl, SkipValidation, computed_field
 
 from media_dl.models.base import YDLSerializable
-from media_dl.models.content.base import (
-    URL_CHOICES,
-    ExtractorField,
-    LazyExtract,
-    TypeField,
-)
+from media_dl.models.content.base import URL_CHOICES, ExtractorField, TypeField
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.metadata import Thumbnail
 
@@ -29,11 +24,11 @@ class MediaList(YDLSerializable):
         return [item for item in self.entries if item.type == "playlist"]
 
 
-class LazyPlaylist(MediaList, LazyExtract["Playlist"]):
+class LazyPlaylist(MediaList):
     type: Annotated[Literal["playlist"], SkipValidation] = "playlist"
 
     url: Annotated[
-        str,
+        HttpUrl,
         Field(
             alias="playlist_url",
             validation_alias=AliasChoices("playlist_url", *URL_CHOICES),
@@ -56,10 +51,6 @@ class LazyPlaylist(MediaList, LazyExtract["Playlist"]):
     ] = ""
     uploader: str | None = None
     thumbnails: list[Thumbnail] = []
-
-    @property
-    def _resolve_class(self):
-        return Playlist
 
 
 class Playlist(LazyPlaylist):

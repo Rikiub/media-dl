@@ -7,6 +7,7 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.pipeline import DownloadPipeline
 from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
+from media_dl.extractor import MediaExtractor
 from media_dl.models.content.list import MediaList
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.types import ExtractResult, MediaListEntries
@@ -24,9 +25,9 @@ class MediaDownloader:
         quality: int | None = None,
         output: StrPath = Path.cwd(),
         threads: int = 4,
-        use_cache: bool = True,
         ffmpeg_path: StrPath | None = None,
         embed_metadata: bool = True,
+        extractor: MediaExtractor | None = None,
     ):
         """Multi-thread media downloader.
 
@@ -37,10 +38,8 @@ class MediaDownloader:
             quality: Quality to filter.
             output: Directory where to save files.
             threads: Maximum processes to execute.
-            use_cache: Extract/save media results from cache.
             ffmpeg_path: Path to FFmpeg executable. By default, it will get the global installed FFmpeg.
             embed_metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
-            show_progress: Choice if render download progress.
 
         Raises:
             FileNotFoundError: `ffmpeg` path not is a FFmpeg executable.
@@ -53,8 +52,8 @@ class MediaDownloader:
             ffmpeg_path=Path(ffmpeg_path) if ffmpeg_path else None,
             embed_metadata=embed_metadata,
         )
+        self.extractor = extractor
         self.threads = threads
-        self.use_cache = use_cache
 
     def download(
         self,
@@ -72,9 +71,9 @@ class MediaDownloader:
         """
 
         pipeline = DownloadPipeline(
-            self.config,
             media,
-            cache=self.use_cache,
+            format_config=self.config,
+            extractor=self.extractor,
             on_progress=on_progress,
         )
         return pipeline.run()

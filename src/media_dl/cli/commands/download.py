@@ -116,23 +116,21 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]"):
-        from media_dl import (
-            DownloadError,
-            ExtractError,
-            MediaDownloader,
-            extract_search,
-            extract_url,
-        )
+        from media_dl.exceptions import DownloadError, ExtractError
+        from media_dl.downloader.main import MediaDownloader
+        from media_dl.extractor import MediaExtractor
 
-    # Initialize Downloader
+    # Initialize
+    extractor = MediaExtractor(use_cache=cache)
+
     try:
         downloader = MediaDownloader(
             format=format,
             quality=quality,
             output=output,
             threads=threads,
-            use_cache=cache,
             ffmpeg_path=ffmpeg_path,
+            extractor=extractor,
         )
     except FileNotFoundError as err:
         raise BadParameter(str(err))
@@ -147,7 +145,7 @@ What format you want request?
             with Status("Please wait[blink]...[/]"):
                 if target == "url":
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
-                    result = extract_url(entry)
+                    result = extractor.extract_url(entry)
 
                     if result.type == "playlist":
                         logger.info('🔎 Playlist title: "{title}".', title=result.title)
@@ -158,11 +156,7 @@ What format you want request?
                         query=entry,
                     )
 
-                    result = extract_search(
-                        entry,
-                        target,
-                        use_cache=cache,
-                    )
+                    result = extractor.extract_search(entry, target)
                     result = result.medias
 
             if CONFIG.quiet:

@@ -2,11 +2,12 @@ import hashlib
 import time
 
 from media_dl.path import CACHE_DIR
+from media_dl.types import StrUrl
 
 EXPIRATION = 24 * 60 * 60
 
 
-def load_info(url: str) -> str | None:
+def load_info(url: StrUrl) -> str | None:
     file = CACHE_DIR / _url_hash(url)
 
     if file.exists():
@@ -22,6 +23,6 @@ def save_info(url: str, content: str):
     file.write_text(content)
 
 
-def _url_hash(url: str) -> str:
-    hash = hashlib.sha256(url.encode()).hexdigest()
+def _url_hash(url: StrUrl) -> str:
+    hash = hashlib.sha256(str(url).encode()).hexdigest()
     return f"{hash}.json"

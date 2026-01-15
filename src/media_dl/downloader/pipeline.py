@@ -9,6 +9,7 @@ from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.selector import FormatSelector
 from media_dl.downloader.states.debug import debug_callback
 from media_dl.exceptions import DownloadError
+from media_dl.extractor import MediaExtractor
 from media_dl.models.content.list import LazyPlaylist, Playlist
 from media_dl.models.content.media import LazyMedia, Media
 from media_dl.models.format.types import AudioFormat, Format, VideoFormat
@@ -38,17 +39,18 @@ class DownloadPipeline:
 
     def __init__(
         self,
-        config: FormatConfig,
         media: LazyMedia,
         playlist: LazyPlaylist | None = None,
+        format_config: FormatConfig | None = None,
+        extractor: MediaExtractor | None = None,
         on_progress: MediaDownloadCallback | None = None,
-        cache: bool = True,
     ):
         self.id = media.id
+
         self.media = media
         self.playlist = playlist
-        self.config = config
-        self.cache = cache
+        self.config = format_config or FormatConfig("video")
+        self.extractor = extractor or MediaExtractor()
         self.progress = lambda d: None
 
         if on_progress:
@@ -90,17 +92,13 @@ class DownloadPipeline:
     def resolve_media(self) -> tuple[Media, Playlist | None]:
         self.progress(ResolvingState(id=self.id, media=self.media))
 
-        media = self.media
-        playlist = self.playlist
+        if not isinstance(self.media, Media):
+            self.media = self.extractor.resolve(self.media)
+        if self.playlist and not isinstance(self.playlist, Playlist):
+            self.playlist = self.extractor.resolve(self.playlist)
 
-        if not isinstance(media, Media):
-            media = media.resolve(self.cache)
-        if playlist and not isinstance(playlist, Playlist):
-            playlist = playlist.resolve(self.cache)
-
-        self.progress(ResolvedState(id=self.id, media=media))
-
-        return media, playlist
+        self.progress(ResolvedState(id=self.id, media=self.media))
+        return self.media, self.playlist
 
     def resolve_output(self) -> Path:
         output = self.config.output
