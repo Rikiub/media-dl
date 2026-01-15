@@ -1,21 +1,10 @@
-from tempfile import TemporaryDirectory
+from pathlib import Path
 
 import pytest
 
-from media_dl import AudioFormat, Media, MediaDownloader, Playlist, VideoFormat
+from media_dl import AudioFormat, MediaDownloader, VideoFormat
+from media_dl.extractor import extract_url
 from media_dl.models.format.list import FormatList
-
-try:
-    from rich import print
-
-    pprint = print
-except ImportError:
-    from pprint import pprint as _pprint
-
-    pprint = _pprint
-
-
-TEMPDIR = TemporaryDirectory()
 
 URL = "https://youtube.com/watch?v=Kx7B-XvmFtE"
 PLAYLIST = (
@@ -23,59 +12,51 @@ PLAYLIST = (
 )
 
 
-def test_simple():
-    with TEMPDIR:
-        media = Media.from_url(URL)
+def test_single(tmp_path: Path):
+    result = extract_url(URL)
 
-        downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
-        path = downloader.download_all(media)
+    assert result.type == "url"
 
-        pprint(path)
-
-
-def test_media():
-    with TEMPDIR:
-        downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
-
-        result = Media.from_url(URL)
-        paths = downloader.download(
+    if result.type == "url":
+        downloader = MediaDownloader("audio", quality=1, output=tmp_path)
+        path = downloader.download(
             result,
-            on_progress=lambda state: pprint(state.id),
+            on_progress=lambda state: print(state.id),
         )
 
-        pprint(paths)
+        assert path.is_file()
 
 
-def test_playlist():
-    with TEMPDIR:
-        downloader = MediaDownloader("audio", quality=1, output=TEMPDIR.name)
+def test_list(tmp_path: Path):
+    result = extract_url(PLAYLIST)
 
-        result = Playlist.from_url(PLAYLIST)
+    assert result.type == "playlist"
+
+    if result.type == "playlist":
+        downloader = MediaDownloader("audio", quality=1, output=tmp_path)
         paths = downloader.download_all(
             result,
-            on_progress=lambda state: pprint(state.id),
+            on_progress=lambda state: print(state.id),
         )
 
-        pprint(paths)
+        assert all(item for item in paths if item.is_file())
 
 
 @pytest.fixture(scope="session")
 def formats():
-    return Media.from_url(URL).formats
+    result = extract_url(URL)
+    assert result.type == "url"
+    return result.formats
 
 
 class TestFormatsFilter:
     def test_video_type(self, formats: FormatList):
         fmt = formats.only_video()
         assert all(isinstance(f, VideoFormat) for f in fmt)
-        pprint("VIDEOS:")
-        pprint(fmt)
 
     def test_audio_type(self, formats: FormatList):
         fmt = formats.only_audio()
         assert all(isinstance(f, AudioFormat) for f in fmt)
-        pprint("AUDIOS:")
-        pprint(fmt)
 
     def test_closest_quality(self, formats: FormatList):
         fmt = formats.get_closest_quality(600)
@@ -89,5 +70,3 @@ class TestFormatsFilter:
         ID = "137"
         fmt = formats.get_by_id(ID)
         assert fmt.id == ID
-        pprint("BY ID:")
-        pprint(fmt)

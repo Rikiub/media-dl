@@ -1,25 +1,37 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal, TypeAlias
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, SkipValidation, computed_field
 
+from media_dl.models.base import Serializable
 from media_dl.models.content.base import (
     URL_CHOICES,
-    ExtractList,
-    ExtractSearch,
     LazyExtract,
+    ExtractorField,
+    TypeField,
 )
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.metadata import Thumbnail
 
 
-class MediaList(ExtractList):
-    medias: LazyMedias = []
-    playlists: LazyPlaylists = []
+class MediaList(Serializable):
+    entries: Entries = []
+
+    @computed_field
+    @property
+    def medias(self) -> list[LazyMedia]:
+        return [item for item in self.entries if item.type == "url"]
+
+    @computed_field
+    @property
+    def playlists(self) -> list[LazyPlaylist]:
+        return [item for item in self.entries if item.type == "playlist"]
 
 
 class LazyPlaylist(MediaList, LazyExtract["Playlist"]):
+    type: Annotated[Literal["playlist"], SkipValidation] = "playlist"
+
     url: Annotated[
         str,
         Field(
@@ -46,27 +58,24 @@ class LazyPlaylist(MediaList, LazyExtract["Playlist"]):
     thumbnails: list[Thumbnail] = []
 
     @property
-    def _target_class(self):
+    def _resolve_class(self):
         return Playlist
 
 
-class Playlist(LazyPlaylist): ...
+class Playlist(LazyPlaylist):
+    type: Annotated[Literal["playlist"], TypeField] = "playlist"  # type: ignore
+    entries: EntriesField  # type: ignore
 
 
-class Search(MediaList, ExtractSearch): ...
+class Search(MediaList):
+    type: Literal["search"] = "search"
+    extractor: ExtractorField
+
+    query: str = ""
+    service: str = ""
+
+    entries: EntriesField  # type: ignore
 
 
-LazyMedias = Annotated[
-    list[LazyMedia],
-    Field(
-        alias="medias",
-        validation_alias=AliasChoices("medias", "entries"),
-    ),
-]
-LazyPlaylists = Annotated[
-    list[LazyPlaylist],
-    Field(
-        alias="playlists",
-        validation_alias=AliasChoices("playlists", "entries"),
-    ),
-]
+Entries: TypeAlias = list[LazyMedia | LazyPlaylist]
+EntriesField = Annotated[Entries, Field(alias="entries", min_length=1)]

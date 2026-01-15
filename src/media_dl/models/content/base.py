@@ -1,16 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Annotated, Any, Generic, Literal, TypeVar
+from typing import Annotated, Generic, TypeVar
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field
 from typing_extensions import Self
 
-from media_dl.cache import load_info, save_info
-from media_dl.extractor import extract_search, extract_url, is_media, is_playlist
 from media_dl.models.base import Serializable
-from media_dl.ydl.extractor import SEARCH_SERVICE
 
 # Types
-URL_CHOICES = ["original_url", "url"]
+PLAYLIST_EXTRACTORS = ["YoutubeTab"]
+URL_CHOICES = ["original_url", "url", "webpage_url"]
+
+# Fields
+TypeField = Field(alias="_type")
 ExtractorField = Annotated[
     str,
     Field(
@@ -18,31 +19,12 @@ ExtractorField = Annotated[
         validation_alias=AliasChoices("extractor_key", "ie_key"),
     ),
 ]
-TypeField = Annotated[
-    Literal["url", "playlist"],
-    Field(alias="_type"),
-]
-
-
-# Helpers
-T = TypeVar("T", bound=Serializable)
-
-
-def _load_cache(cls: type[T], url: str):
-    if info := load_info(url):
-        try:
-            return cls.from_ydl_json(info)
-        except ValueError:
-            raise TypeError(
-                f"'{url}' extracted from cache but data doesn't match with model"
-            )
 
 
 # Items
 class Extract(Serializable):
     """Base identifier for media objects."""
 
-    type: TypeField = "url"
     extractor: ExtractorField
     url: Annotated[str, Field(validation_alias=AliasChoices(*URL_CHOICES))]
     id: str
@@ -53,26 +35,9 @@ class Extract(Serializable):
         url: str,
         use_cache: bool = True,
     ) -> Self:
-        # Load from cache
-        if info := use_cache and _load_cache(cls, url):
-            return info
+        from media_dl.extractor import extract_url
 
-        # Extract info
-        info = extract_url(url)
-        isPlaylist = is_playlist(info)
-
-        try:
-            cls = cls(type="playlist" if isPlaylist else "url", **info)
-        except ValueError:
-            raise TypeError(
-                f"'{url}' extraction was successful but data doesn't match with '{cls.__name__}' model. Please use '{'Playlist' if isPlaylist else 'Media'}' instead."
-            )
-
-        # Save to cache
-        if use_cache:
-            save_info(cls.url, cls.to_ydl_json())
-
-        return cls
+        return extract_url(url, use_cache)  # type: ignore
 
 
 T = TypeVar("T", bound=Extract)
@@ -89,66 +54,8 @@ class LazyExtract(ABC, Extract, Generic[T]):
             ExtractError: Something bad happens when extract.
         """
 
-        return self._target_class.from_url(self.url, use_cache)
+        return self._resolve_class.from_url(self.url, use_cache)
 
     @property
     @abstractmethod
-    def _target_class(self) -> type[T]: ...
-
-
-# Lists
-class ExtractList(Serializable):
-    type: TypeField = "playlist"
-    medias: list
-    playlists: list
-
-    @model_validator(mode="before")
-    @classmethod
-    def _split_entries(cls, data: Any) -> Any:
-        if not isinstance(data, dict):
-            return data
-
-        entries = data.pop("entries", None)
-
-        if entries:
-            data |= {
-                "medias": [],
-                "playlists": [],
-            }
-
-            for item in entries:
-                if is_media(item):
-                    data["medias"].append(item)
-                elif is_playlist(item):
-                    data["playlists"].append(item)
-
-        return data
-
-
-class ExtractSearch(ExtractList):
-    extractor: ExtractorField
-
-    query: str = ""
-    service: str = ""
-
-    @classmethod
-    def from_query(
-        cls,
-        query: str,
-        service: SEARCH_SERVICE,
-        limit: int = 20,
-        use_cache: bool = True,
-    ) -> Self:
-        # Load from cache
-        if info := use_cache and _load_cache(cls, query):
-            return info
-
-        # Extract info
-        info = extract_search(query, service, limit)
-        cls = cls(query=query, service=service, **info)
-
-        # Save to cache
-        if use_cache:
-            save_info(cls.query, cls.to_ydl_json())
-
-        return cls
+    def _resolve_class(self) -> type[T]: ...

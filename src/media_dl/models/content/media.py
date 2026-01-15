@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
     AliasChoices,
-    BeforeValidator,
     Field,
     PlainSerializer,
+    field_validator,
 )
 
-from media_dl.models.content.base import LazyExtract
+from media_dl.models.content.base import PLAYLIST_EXTRACTORS, LazyExtract, TypeField
 from media_dl.models.content.metadata import (
     Chapter,
     MusicMetadata,
@@ -21,17 +21,19 @@ from media_dl.models.content.metadata import (
 from media_dl.models.format.list import FormatList
 from media_dl.types import MUSIC_SITES
 
+
 DatetimeTimestamp = Annotated[
     datetime.datetime, PlainSerializer(lambda d: d.timestamp())
 ]
 
 
 class LazyMedia(MusicMetadata, LazyExtract["Media"]):
+    type: Annotated[Literal["url"], TypeField] = "url"
     title: str = ""
     uploader: Annotated[
         str,
-        BeforeValidator(lambda d: d.split(",")[0] if d else ""),
-        BeforeValidator(lambda d: d.removesuffix(" - Topic") if d else ""),
+        AfterValidator(lambda v: v.split(",")[0] if v else ""),
+        AfterValidator(lambda v: v.removesuffix(" - Topic") if v else ""),
         Field(validation_alias=AliasChoices("creator", "uploader")),
     ] = ""
     uploader_id: str | None = None
@@ -48,8 +50,15 @@ class LazyMedia(MusicMetadata, LazyExtract["Media"]):
             return False
 
     @property
-    def _target_class(self):
+    def _resolve_class(self):
         return Media
+
+    @field_validator("extractor")
+    @classmethod
+    def _validate_extractor(cls, v: str) -> str:
+        if v in PLAYLIST_EXTRACTORS:
+            raise ValueError(f"'{v}' extractor is for playlists only.")
+        return v
 
 
 class Media(LazyMedia):

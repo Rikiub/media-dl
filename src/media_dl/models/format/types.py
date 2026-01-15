@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
@@ -80,6 +80,7 @@ class Format(ABC, YDLArgs, Serializable):
 
 
 class AudioFormat(Format):
+    type: Literal["audio"] = "audio"
     audio_codec: Annotated[  # type: ignore
         Codec, AudioCodecField
     ]
@@ -112,6 +113,7 @@ class AudioFormat(Format):
 
 class VideoFormat(Format):
     video_codec: Annotated[Codec, Field(alias="vcodec")]
+    type: Literal["video"] = "video"
     width: int
     height: int
     fps: float | None = None

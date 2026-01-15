@@ -2,18 +2,39 @@
 
 from loguru import logger
 
-from media_dl.exceptions import ExtractError
+from media_dl.cache import load_info, save_info
+from media_dl.models.content.list import Playlist, Search
+from media_dl.models.content.media import Media
+from media_dl.models.content.types import ExtractAdapter
 from media_dl.ydl.extractor import SEARCH_SERVICE, extract_info, extract_query
-from media_dl.ydl.types import YDLExtractInfo
 
-PLAYLISTS_EXTRACTORS = ["YoutubeTab"]
+
+def extract_url(url: str, use_cache: bool = True) -> Media | Playlist:
+    """Extract info from URL."""
+
+    logger.debug("Extract URL: {url}", url=url)
+
+    # Load from cache
+    if json := use_cache and load_info(url):
+        return ExtractAdapter.validate_json(json, by_alias=True)
+
+    # Extract info
+    info = extract_info(url)
+    result = ExtractAdapter.validate_python(info, by_alias=True)
+
+    # Save to cache
+    if use_cache:
+        save_info(result.url, result.to_ydl_json())
+
+    return result
 
 
 def extract_search(
     query: str,
     service: SEARCH_SERVICE,
     limit: int = 20,
-) -> YDLExtractInfo:
+    use_cache: bool = True,
+) -> Search:
     """Extract info from search provider."""
 
     logger.debug(
@@ -22,49 +43,16 @@ def extract_search(
         query=query,
     )
 
+    # Load from cache
+    if json := use_cache and load_info(query):
+        return Search.from_ydl_json(json)
+
+    # Extract info
     info = extract_query(query, service, limit)
-    info = _validate_info(info)
-    return info
+    result = Search(query=query, service=service, **info)
 
+    # Save to cache
+    if use_cache:
+        save_info(result.query, result.to_ydl_json())
 
-def extract_url(url: str) -> YDLExtractInfo:
-    """Extract info from URL."""
-
-    logger.debug("Extract URL: {url}", url=url)
-
-    info = extract_info(url)
-    info = _validate_info(info)
-    return info
-
-
-def is_playlist(info: YDLExtractInfo) -> bool:
-    """Check if info is a playlist."""
-
-    if (
-        info.get("_type") == "playlist"
-        or info.get("ie_key") in PLAYLISTS_EXTRACTORS
-        or info.get("entries")
-    ):
-        return True
-    else:
-        return False
-
-
-def is_media(info: YDLExtractInfo) -> bool:
-    """Check if info is a single media."""
-
-    if info.get("ie_key", info.get("extractor_key")) in PLAYLISTS_EXTRACTORS:
-        return False
-    if info.get("_type") == "url" or info.get("formats"):
-        return True
-
-    return False
-
-
-def _validate_info(info: YDLExtractInfo) -> YDLExtractInfo:
-    """Base info dict extractor."""
-
-    if not (is_playlist(info) or is_media(info)):
-        raise ExtractError(f"{info['url']} returned nothing.")
-
-    return info
+    return result

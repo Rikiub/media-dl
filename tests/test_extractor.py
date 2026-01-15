@@ -1,33 +1,38 @@
 import pytest
-from rich import print
 
-from media_dl import Media, Playlist, Search
+from media_dl import Media, Playlist
+from media_dl import extract_url as _extract_url
+from media_dl import extract_search as _extract_search
 from media_dl.exceptions import ExtractError
 from media_dl.ydl.extractor import SEARCH_SERVICE
 
 
 def extract_url(url: str) -> Media | Playlist:
-    try:
-        result = Media.from_url(url)
-    except TypeError:
-        result = Playlist.from_url(url)
-
-    print(result)
+    result = _extract_url(url, use_cache=False)
     return result
 
 
-def test_exceptions():
-    # Invalid URL
-    with pytest.raises(ExtractError):
-        extract_url("https://unkdown.link.com/")
+def extract_search(
+    query: str = "Sub Urban - Rabbit Hole",
+    service: SEARCH_SERVICE = "youtube",
+):
+    search = _extract_search(query, service, use_cache=False)
+    assert len(search.entries) >= 1
+    return search
 
-    # YouTube [Private video]
-    with pytest.raises(ExtractError):
-        extract_url("https://www.youtube.com/watch?v=yi50KlsCBio")
 
-    # YouTube [Deleted video]
-    with pytest.raises(ExtractError):
-        extract_url("https://www.youtube.com/watch?v=JUf1zxjR_Qw")
+class TestExceptions:
+    def test_invalid_url(self):
+        with pytest.raises(ExtractError):
+            extract_url("https://unkdown.link.com/")
+
+    def test_private_video(self):
+        with pytest.raises(ExtractError):
+            extract_url("https://www.youtube.com/watch?v=yi50KlsCBio")
+
+    def test_deleted_video(self):
+        with pytest.raises(ExtractError):
+            extract_url("https://www.youtube.com/watch?v=JUf1zxjR_Qw")
 
 
 class TestBase:
@@ -43,37 +48,32 @@ class TestBase:
 
 
 class TestSearch:
-    QUERY = "Sub Urban - Rabbit Hole"
-
-    def search(self, provider: SEARCH_SERVICE):
-        search = Search.from_query(self.QUERY, provider)
-        medias = search.medias
-
-        assert isinstance(medias, list) and len(medias) > 0
-        print(medias)
-
     def test_youtube(self):
-        self.search("youtube")
-
-    def test_soundcloud(self):
-        self.search("soundcloud")
+        extract_search(service="youtube")
 
     def test_ytmusic(self):
-        self.search("ytmusic")
+        extract_search(service="ytmusic")
 
-    def test_extract_medias(self):
-        result = Search.from_query("If Nevermore", "ytmusic", use_cache=False)
+    def test_soundcloud(self):
+        extract_search(service="soundcloud")
+
+    def test_resolve_medias(self):
+        result = extract_search("If Nevermore", service="ytmusic")
+
+        assert len(result.medias) >= 1
 
         for entry in result.medias:
             entry = entry.resolve()
-            print(entry)
+            assert isinstance(entry, Media)
 
-    def test_extract_playlists(self):
-        result = Search.from_query("If Nevermore", "ytmusic", use_cache=False)
+    def test_resolve_playlists(self):
+        result = extract_search("If Nevermore", service="ytmusic")
+
+        assert len(result.playlists) >= 1
 
         for entry in result.playlists:
             entry = entry.resolve()
-            print(entry)
+            assert isinstance(entry, Playlist)
 
 
 class TestSite:
@@ -82,6 +82,9 @@ class TestSite:
 
     def test_ytmusic(self):
         extract_url("https://music.youtube.com/watch?v=Kx7B-XvmFtE")
+
+    def test_soundcloud(self):
+        extract_url("https://api.soundcloud.com/tracks/1269676381")
 
     """
     [facebook] 2868837949958495: Cannot parse data;
@@ -102,6 +105,3 @@ class TestSite:
 
     def test_pinterest(self):
         extract_url("https://www.pinterest.com/pin/762304674460692892/")
-
-    def test_soundcloud(self):
-        extract_url("https://api.soundcloud.com/tracks/1269676381")

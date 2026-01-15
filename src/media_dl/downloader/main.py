@@ -9,10 +9,12 @@ from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.models.content.list import MediaList
 from media_dl.models.content.media import LazyMedia
+from media_dl.models.content.types import ExtractResult, MediaListEntries
 from media_dl.models.progress.media import MediaDownloadCallback
 from media_dl.types import FILE_FORMAT, StrPath
 
-MediaResult = MediaList | LazyMedia
+_MediaResult = ExtractResult | MediaListEntries
+MediaResult = MediaList | _MediaResult | list[LazyMedia]
 
 
 class MediaDownloader:
@@ -145,7 +147,9 @@ class MediaDownloader:
                 medias = [data]
             case MediaList():
                 medias = data.medias
+            case list():
+                return data  # type: ignore
             case _:
-                raise TypeError(data)
+                raise TypeError("Unable to unpack media list.")
 
         return medias

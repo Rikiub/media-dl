@@ -119,10 +119,9 @@ What format you want request?
         from media_dl import (
             DownloadError,
             ExtractError,
-            Media,
             MediaDownloader,
-            Playlist,
-            Search,
+            extract_url,
+            extract_search,
         )
 
     # Initialize Downloader
@@ -148,11 +147,9 @@ What format you want request?
             with Status("Please wait[blink]...[/]"):
                 if target == "url":
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
+                    result = extract_url(entry)
 
-                    try:
-                        result = Media.from_url(entry, cache)
-                    except TypeError:
-                        result = Playlist.from_url(entry, cache)
+                    if result.type == "playlist":
                         logger.info('🔎 Playlist title: "{title}".', title=result.title)
                 else:
                     logger.info(
@@ -160,11 +157,13 @@ What format you want request?
                         extractor=target,
                         query=entry,
                     )
-                    result = Search.from_query(
+
+                    result = extract_search(
                         entry,
                         target,
                         use_cache=cache,
-                    ).medias[0]
+                    )
+                    result = result.medias
 
             if CONFIG.quiet:
                 downloader.download_all(result, None)
