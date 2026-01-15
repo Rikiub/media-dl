@@ -6,7 +6,7 @@ from typing_extensions import Self
 from media_dl.ydl.types import YDLExtractInfo
 
 
-class Serializable(BaseModel):
+class YDLSerializable(BaseModel):
     def to_ydl_dict(self) -> YDLExtractInfo:
         return self.model_dump(by_alias=True)
 

@@ -4,7 +4,7 @@ from typing import Annotated, Generic, TypeVar
 from pydantic import AliasChoices, Field
 from typing_extensions import Self
 
-from media_dl.models.base import Serializable
+from media_dl.models.base import YDLSerializable
 
 # Types
 PLAYLIST_EXTRACTORS = ["YoutubeTab"]
@@ -22,7 +22,7 @@ ExtractorField = Annotated[
 
 
 # Items
-class Extract(Serializable):
+class Extract(YDLSerializable):
     """Base identifier for media objects."""
 
     extractor: ExtractorField

@@ -4,7 +4,7 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import AliasChoices, Field, SkipValidation, computed_field
 
-from media_dl.models.base import Serializable
+from media_dl.models.base import YDLSerializable
 from media_dl.models.content.base import (
     URL_CHOICES,
     LazyExtract,
@@ -15,7 +15,7 @@ from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.metadata import Thumbnail
 
 
-class MediaList(Serializable):
+class MediaList(YDLSerializable):
     entries: Entries = []
 
     @computed_field

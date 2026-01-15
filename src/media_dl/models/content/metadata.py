@@ -3,7 +3,7 @@ from typing import Annotated
 
 from pydantic import BeforeValidator, Field, RootModel
 
-from media_dl.models.content.base import Serializable
+from media_dl.models.content.base import YDLSerializable
 from media_dl.types import StrPath
 from media_dl.ydl.downloader import download_subtitles, download_thumbnail
 
@@ -15,7 +15,7 @@ def _validate_artists(value: list[str]) -> list[str]:
     return value
 
 
-class MusicMetadata(Serializable):
+class MusicMetadata(YDLSerializable):
     track: str = ""
     artists: Annotated[list[str] | None, BeforeValidator(_validate_artists)] = None
     album: str = ""
@@ -23,19 +23,19 @@ class MusicMetadata(Serializable):
     genres: list[str] | None = None
 
 
-class Chapter(Serializable):
+class Chapter(YDLSerializable):
     start_time: int
     end_time: int
     title: str
 
 
-class Subtitle(Serializable):
+class Subtitle(YDLSerializable):
     url: str
     extension: Annotated[str, Field(alias="ext")]
     language: Annotated[str, Field(alias="name")] = ""
 
 
-class Thumbnail(Serializable):
+class Thumbnail(YDLSerializable):
     id: str = ""
     url: str
     width: int = 0
@@ -47,7 +47,7 @@ class Thumbnail(Serializable):
         return path
 
 
-class Subtitles(Serializable, RootModel[dict[str, list[Subtitle]]]):
+class Subtitles(YDLSerializable, RootModel[dict[str, list[Subtitle]]]):
     def download(self, filepath: StrPath) -> list[Path]:
         info = {"subtitles": self.to_ydl_dict()}
         paths = download_subtitles(filepath, info)

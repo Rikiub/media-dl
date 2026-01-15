@@ -12,7 +12,7 @@ from pydantic import (
     model_serializer,
 )
 
-from media_dl.models.base import Serializable
+from media_dl.models.base import YDLSerializable
 from media_dl.models.progress.format import FormatDownloadCallback, FormatState
 from media_dl.types import StrPath
 from media_dl.ydl.downloader import download_format
@@ -28,7 +28,7 @@ class YDLArgs(BaseModel):
     cookies: str | None = None
 
 
-class Format(ABC, YDLArgs, Serializable):
+class Format(ABC, YDLArgs, YDLSerializable):
     """Base Format"""
 
     id: Annotated[str, Field(alias="format_id")]
