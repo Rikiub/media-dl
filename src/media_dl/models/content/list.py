@@ -7,8 +7,8 @@ from pydantic import AliasChoices, Field, SkipValidation, computed_field
 from media_dl.models.base import YDLSerializable
 from media_dl.models.content.base import (
     URL_CHOICES,
-    LazyExtract,
     ExtractorField,
+    LazyExtract,
     TypeField,
 )
 from media_dl.models.content.media import LazyMedia

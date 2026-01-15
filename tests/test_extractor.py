@@ -1,8 +1,8 @@
 import pytest
 
 from media_dl import Media, Playlist
-from media_dl import extract_url as _extract_url
 from media_dl import extract_search as _extract_search
+from media_dl import extract_url as _extract_url
 from media_dl.exceptions import ExtractError
 from media_dl.ydl.extractor import SEARCH_SERVICE
 

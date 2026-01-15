@@ -21,7 +21,6 @@ from media_dl.models.content.metadata import (
 from media_dl.models.format.list import FormatList
 from media_dl.types import MUSIC_SITES
 
-
 DatetimeTimestamp = Annotated[
     datetime.datetime, PlainSerializer(lambda d: d.timestamp())
 ]

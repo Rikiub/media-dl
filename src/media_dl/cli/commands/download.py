@@ -120,8 +120,8 @@ What format you want request?
             DownloadError,
             ExtractError,
             MediaDownloader,
-            extract_url,
             extract_search,
+            extract_url,
         )
 
     # Initialize Downloader
