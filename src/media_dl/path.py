@@ -11,12 +11,12 @@ from media_dl.types import StrPath
 CACHE_DIR = Path(tempfile.gettempdir(), "media-dl")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-TEMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
+TMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
 
 
 # Functions
 def get_tempfile() -> Path:
-    with tempfile.NamedTemporaryFile(dir=TEMP_DIR, delete=False) as file:
+    with tempfile.NamedTemporaryFile(dir=TMP_DIR, delete=False) as file:
         return Path(file.name)
 
 
@@ -49,7 +49,7 @@ def check_executable_exists(file: StrPath) -> bool:
 def _clear_tempdir():
     """Delete global temporary directory."""
 
-    shutil.rmtree(TEMP_DIR)
+    shutil.rmtree(TMP_DIR)
 
 
 atexit.register(_clear_tempdir)
