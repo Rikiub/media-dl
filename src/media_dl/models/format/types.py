@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Annotated, Literal
+from typing_extensions import override
 
 from pydantic import (
     AfterValidator,
     BaseModel,
     Field,
+    HttpUrl,
     SerializerFunctionWrapHandler,
     field_serializer,
     field_validator,
@@ -31,7 +33,7 @@ class Format(ABC, YDLArgs, YDLSerializable):
     """Base Format"""
 
     id: Annotated[str, Field(alias="format_id")]
-    url: str
+    url: HttpUrl
     protocol: str
     extension: Annotated[str, Field(alias="ext")]
     filesize: int | None = None
@@ -75,9 +77,7 @@ class Format(ABC, YDLArgs, YDLSerializable):
 
     @field_serializer("audio_codec")
     def _serialize_acodec(self, value) -> str:
-        if not value:
-            return "none"
-        return value
+        return value if value else "none"
 
 
 class AudioFormat(Format):
@@ -87,14 +87,12 @@ class AudioFormat(Format):
     ]
 
     @property
-    def codec(self) -> str:
-        return self.audio_codec
-
-    @property
+    @override
     def quality(self) -> int:
         return int(self.bitrate)
 
     @property
+    @override
     def display_quality(self) -> str:
         return str(round(self.quality)) + "kbps"
 
@@ -120,14 +118,12 @@ class VideoFormat(Format):
     fps: float | None = None
 
     @property
-    def codec(self) -> str:
-        return self.video_codec
-
-    @property
+    @override
     def quality(self) -> int:
         return self.height
 
     @property
+    @override
     def display_quality(self) -> str:
         return str(self.quality) + "p"
 

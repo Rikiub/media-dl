@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing_extensions import override
 
 from media_dl.models.content.media import Media
 from media_dl.models.format.types import Format
@@ -14,9 +15,11 @@ FormatPaths = list[tuple[Format, Path]]
 
 
 class MediaProcessor(YDLProcessor):
+    @override
     def change_container(self, format: str | EXTENSION):
         return super().change_container(format)
 
+    @override
     def convert_audio(
         self,
         format: str | AUDIO_EXTENSION = "",
@@ -24,6 +27,7 @@ class MediaProcessor(YDLProcessor):
     ):
         return super().convert_audio(format, quality)
 
+    @override
     def embed_metadata(
         self,
         data: YDLExtractInfo | Media,
@@ -39,6 +43,7 @@ class MediaProcessor(YDLProcessor):
         super().embed_metadata(info)
         return self
 
+    @override
     @classmethod
     def from_formats_merge(
         cls,

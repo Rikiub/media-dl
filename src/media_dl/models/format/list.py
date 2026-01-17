@@ -5,7 +5,7 @@ from functools import cached_property
 from typing import Generic, Iterator, Literal, overload
 
 from pydantic import OnErrorOmit
-from typing_extensions import Self, TypeVar
+from typing_extensions import Self, TypeVar, override
 
 from media_dl.models.base import BaseList
 from media_dl.models.format.codecs import get_codec_rank
@@ -38,7 +38,7 @@ def format_sort(format: Format):
         is_video = 0
 
         bitrate = format.bitrate
-        acodec = get_codec_rank(format.codec, "audio")
+        acodec = get_codec_rank(format.audio_codec, "audio")
 
         return (
             is_video,
@@ -59,8 +59,9 @@ class FormatList(BaseList[FormatType], Generic[F]):
         self,
         extension: str | None = None,
         quality: int | None = None,
-        codec: str | None = None,
         protocol: str | None = None,
+        video_codec: str | None = None,
+        audio_codec: str | None = None,
     ) -> Self:
         """Get filtered formats by options."""
 
@@ -70,22 +71,28 @@ class FormatList(BaseList[FormatType], Generic[F]):
             items = (f for f in items if f.extension == extension)
         if quality:
             items = (f for f in items if f.quality == quality)
-        if codec:
-            items = (f for f in items if f.codec.startswith(codec))
+        if video_codec:
+            items = (
+                f
+                for f in items
+                if f.type == "video" and f.video_codec.startswith(video_codec)
+            )
+        if audio_codec:
+            items = (
+                f
+                for f in items
+                if f.type == "audio" and f.audio_codec.startswith(audio_codec)
+            )
         if protocol:
             items = (f for f in items if f.protocol == protocol)
 
         return self.__class__(list(items))
 
     def only_video(self) -> FormatList[VideoFormat]:
-        return FormatList[VideoFormat](
-            [f for f in self.root if isinstance(f, VideoFormat)]
-        )
+        return FormatList[VideoFormat]([f for f in self.root if f.type == "video"])
 
     def only_audio(self) -> FormatList[AudioFormat]:
-        return FormatList[AudioFormat](
-            [f for f in self.root if isinstance(f, AudioFormat)]
-        )
+        return FormatList[AudioFormat]([f for f in self.root if f.type == "audio"])
 
     @cached_property
     def type(self) -> FORMAT_TYPE:
@@ -153,6 +160,7 @@ class FormatList(BaseList[FormatType], Generic[F]):
         else:
             return before
 
+    @override
     def __iter__(self) -> Iterator[F]:  # type: ignore
         return super().__iter__()  # type: ignore
 
@@ -162,5 +170,6 @@ class FormatList(BaseList[FormatType], Generic[F]):
     @overload
     def __getitem__(self, index: slice) -> Self: ...
 
+    @override
     def __getitem__(self, index) -> F | Self:  # type: ignore
         return super().__getitem__(index)

@@ -8,7 +8,7 @@ from media_dl.ydl.types import YDLExtractInfo
 
 class YDLSerializable(BaseModel):
     def to_ydl_dict(self) -> YDLExtractInfo:
-        return self.model_dump(by_alias=True)
+        return self.model_dump(by_alias=True, mode="json")
 
     def to_ydl_json(self) -> str:
         return self.model_dump_json(by_alias=True)
