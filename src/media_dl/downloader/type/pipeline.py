@@ -123,25 +123,33 @@ class DownloadPipeline:
         """Orchestrates the physical download of bytes."""
 
         downloading = DownloadingState(id=self.id)
-        downloading.total_bytes = sum(
-            f.filesize or 0 for f in [video_fmt, audio_fmt] if f
-        )
 
         video_file = None
         audio_file = None
 
         video_bytes = 0
         audio_bytes = 0
+        total_video_bytes = 0
+        total_audio_bytes = 0
+
+        if video_fmt:
+            total_video_bytes = video_fmt.filesize or 0
+        if audio_fmt:
+            total_audio_bytes = audio_fmt.filesize or 0
 
         def _update_progress(fmt_state: FormatState, is_video: bool):
-            nonlocal video_bytes, audio_bytes
+            nonlocal video_bytes, audio_bytes, total_video_bytes, total_audio_bytes
 
             if is_video:
                 video_bytes = fmt_state.downloaded_bytes
+                total_video_bytes = fmt_state.total_bytes
             else:
                 audio_bytes = fmt_state.downloaded_bytes
+                total_audio_bytes = fmt_state.total_bytes
 
             downloading.downloaded_bytes = video_bytes + audio_bytes
+            downloading.total_bytes = total_video_bytes + total_audio_bytes
+
             downloading.speed = fmt_state.speed
             downloading.elapsed = fmt_state.elapsed
 
