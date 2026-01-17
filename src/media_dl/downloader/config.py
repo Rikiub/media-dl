@@ -13,6 +13,8 @@ from media_dl.types import (
     StrPath,
 )
 
+DEFAULT_OUTPUT_TEMPLATE = Path.cwd() / "{uploader} - {title}"
+
 
 @dataclass(slots=True)
 class FormatConfig:
@@ -30,18 +32,14 @@ class FormatConfig:
 
     format: FILE_FORMAT = "video"
     quality: int | None = None
-    output: StrPath = Path.cwd()
+    output: StrPath = DEFAULT_OUTPUT_TEMPLATE
     ffmpeg_path: StrPath | None = None
     embed_metadata: bool = True
 
     def __post_init__(self):
         self.ffmpeg_path = get_ffmpeg(self.ffmpeg_path)
-
         self.output = Path(self.output)
         validate_output(self.output)
-
-        if self.output.is_dir:
-            self.output = self.output / "{uploader} - {title}"
 
     @property
     def type(self) -> FORMAT_TYPE:

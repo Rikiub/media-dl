@@ -30,6 +30,7 @@ def _gen_keys() -> list[str]:
         *extract(YDLArgs),
         "extractor_key",
         "_type",
+        "type",
         "medias",
         "playlists",
         "formats",
@@ -38,7 +39,6 @@ def _gen_keys() -> list[str]:
         "thumbnails",
         "datetime",
         "extension",
-        "codec",
     }
 
     templates = {

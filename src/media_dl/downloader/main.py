@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from media_dl.downloader.config import FormatConfig
+from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE, FormatConfig
 from media_dl.downloader.type.bulk import DownloadBulk
 from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.extractor import MediaExtractor
@@ -22,7 +22,7 @@ class MediaDownloader:
         self,
         format: FILE_FORMAT = "video",
         quality: int | None = None,
-        output: StrPath = Path.cwd(),
+        output: StrPath = DEFAULT_OUTPUT_TEMPLATE,
         threads: int = 4,
         ffmpeg_path: StrPath | None = None,
         embed_metadata: bool = True,
