@@ -49,13 +49,6 @@ class ProgressCallback(DownloadProgress):
                     description=new_name,
                     status="Ready",
                 )
-            case "skipped":
-                logger.info(
-                    'Skipped: "{media}" (Exists as "{extension}").',
-                    media=self.get(progress).name,
-                    extension=progress.extension,
-                )
-                self.update(self.get(progress).task_id, status="Skipped")
             case "downloading":
                 self.update(
                     self.get(progress).task_id,
@@ -69,14 +62,23 @@ class ProgressCallback(DownloadProgress):
                     media=self.get(progress).name,
                     error=progress.message,
                 )
-            case "completed":
-                logger.info('Completed: "{media}".', media=self.get(progress).name)
             case "processing":
                 self.processor_callback(progress)
+            case "completed":
+                task = self.get(progress)
 
-        if progress.status in ("error", "skipped", "completed"):
-            self.update(self.get(progress).task_id, status=progress.status.capitalize())
-            self.advance_counter(progress, 1.0)
+                if progress.reason == "skipped":
+                    logger.info(
+                        'Skipped: "{media}" (Exists as "{extension}").',
+                        media=task.name,
+                        extension=progress.extension,
+                    )
+                    self.update(task.task_id, status="Skipped")
+                elif progress.reason == "completed":
+                    logger.info('Completed: "{media}".', media=self.get(progress).name)
+                    self.update(task.task_id, status="Completed")
+
+                self.advance_counter(progress, 1.0)
 
     def callback_playlist(self, progress: PlaylistDownloadState):
         match progress.stage:

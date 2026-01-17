@@ -3,12 +3,11 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from loguru import logger
-from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessorError
 
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.selector import FormatSelector
 from media_dl.downloader.states.debug import debug_callback
-from media_dl.exceptions import DownloadError
+from media_dl.exceptions import DownloadError, MediaError, ProcessingError
 from media_dl.extractor import MediaExtractor
 from media_dl.models.content.media import LazyMedia, Media
 from media_dl.models.format.types import AudioFormat, Format, VideoFormat
@@ -20,7 +19,6 @@ from media_dl.models.progress.media import (
     MediaDownloadCallback,
     ResolvedState,
     ResolvingState,
-    SkippedState,
 )
 from media_dl.models.progress.processor import (
     MergingProcessorState,
@@ -66,7 +64,7 @@ class DownloadPipeline:
         format = video_fmt or audio_fmt
 
         if not format:
-            raise DownloadError("Format not founded")
+            raise DownloadError("Formats not founded")
 
         #  Calculate Path & Check Existence
         output = generate_output_template(
@@ -87,9 +85,10 @@ class DownloadPipeline:
             if self.config.ffmpeg_path:
                 # Process File
                 downloaded_file = self.process(downloaded_file, media, format)
-        except ConnectionError as e:
+        except MediaError as e:
             self.progress(ErrorState(id=self.id, message=str(e)))
-            raise DownloadError(str(e))
+            self.progress(CompletedState(id=self.id, filepath=output, reason="error"))
+            raise
 
         # Complete (Move to target)
         return self.move_to_final(downloaded_file, output)
@@ -112,7 +111,13 @@ class DownloadPipeline:
                     format.extension in SupportedExtensions.video
                     or format.extension in SupportedExtensions.audio
                 ):
-                    self.progress(SkippedState(id=self.id, filepath=path))
+                    self.progress(
+                        CompletedState(
+                            id=self.id,
+                            filepath=path,
+                            reason="skipped",
+                        )
+                    )
                     return path
 
     def download_formats(
@@ -238,8 +243,8 @@ class DownloadPipeline:
                 state.stage = "completed"
                 state.filepath = prc.filepath
                 self.progress(state)
-            except Exception:
-                raise
+            except Exception as e:
+                self.progress(ErrorState(id=self.id, message=str(e)))
 
         # Remuxing
         if isinstance(format, VideoFormat):
@@ -256,7 +261,7 @@ class DownloadPipeline:
                 try:
                     with track_prc("change_container"):
                         prc.change_container(self.config.convert)
-                except FFmpegPostProcessorError:
+                except ProcessingError:
                     with track_prc("convert_audio"):
                         prc.convert_audio(self.config.convert)
 
@@ -278,6 +283,12 @@ class DownloadPipeline:
         final_path.parent.mkdir(parents=True, exist_ok=True)
 
         shutil.move(src, final_path)
-        self.progress(CompletedState(id=self.id, filepath=final_path))
+        self.progress(
+            CompletedState(
+                id=self.id,
+                filepath=final_path,
+                reason="completed",
+            )
+        )
 
         return final_path

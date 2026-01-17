@@ -12,11 +12,12 @@ def debug_callback(progress: MediaDownloadState):
         case "processing":
             _processor_callback(progress)
         case "completed":
-            _log_debug(
-                progress.id,
-                'Final file saved in: "{filepath}".',
-                filepath=progress.filepath,
-            )
+            if progress.reason == "completed":
+                _log_debug(
+                    progress.id,
+                    'Final file saved in: "{filepath}".',
+                    filepath=progress.filepath,
+                )
 
 
 def _processor_callback(progress: ProcessingState):

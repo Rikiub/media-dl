@@ -30,12 +30,9 @@ class ErrorState(State):
     message: str
 
 
-class SkippedState(HasFile):
-    status: Literal["skipped"] = "skipped"
-
-
 class CompletedState(HasFile):
     status: Literal["completed"] = "completed"
+    reason: Literal["skipped", "error", "completed"]
 
 
 MediaDownloadState = Annotated[
@@ -44,7 +41,6 @@ MediaDownloadState = Annotated[
     | DownloadingState
     | ProcessingState
     | ErrorState
-    | SkippedState
     | CompletedState,
     Field(discriminator="status"),
 ]

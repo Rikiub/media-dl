@@ -8,6 +8,7 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegExtractAudioPP,
     FFmpegMergerPP,
     FFmpegMetadataPP,
+    FFmpegPostProcessorError,
     FFmpegVideoRemuxerPP,
 )
 
@@ -15,6 +16,16 @@ from media_dl.exceptions import ProcessingError
 from media_dl.path import get_ffmpeg
 from media_dl.types import StrPath
 from media_dl.ydl.types import YDLExtractInfo
+
+
+def catch(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except FFmpegPostProcessorError as e:
+            raise ProcessingError(str(e))
+
+    return wrapper
 
 
 class RequestedFormat(TypedDict):
@@ -41,6 +52,7 @@ class YDLProcessor:
     def extension(self) -> str:
         return self.filepath.suffix[1:]
 
+    @catch
     def change_container(self, format: str) -> Self:
         pp = FFmpegVideoRemuxerPP(
             None,
@@ -50,6 +62,7 @@ class YDLProcessor:
         self._update_filepath(data)
         return self
 
+    @catch
     def convert_audio(
         self,
         format: str = "",
@@ -66,6 +79,7 @@ class YDLProcessor:
         self._update_filepath(data)
         return self
 
+    @catch
     def embed_metadata(self, data: YDLExtractInfo):
         pp = FFmpegMetadataPP(
             None,
@@ -75,6 +89,7 @@ class YDLProcessor:
         pp.run(self.params | data)
         return self
 
+    @catch
     def embed_thumbnail(self, thumbnail: StrPath, square: bool = False) -> Self:
         pp = EmbedThumbnailPP()
 
@@ -99,6 +114,7 @@ class YDLProcessor:
         pp.run(info)
         return self
 
+    @catch
     def embed_subtitles(self, subtitles: Sequence[StrPath]) -> Self:
         pp = FFmpegEmbedSubtitlePP()
 
@@ -119,6 +135,7 @@ class YDLProcessor:
         pp.run(self.params | {"requested_subtitles": dict_subs})
         return self
 
+    @catch
     @classmethod
     def from_formats_merge(
         cls,
