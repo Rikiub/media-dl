@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Annotated
 
 from loguru import logger
-from typer import Argument, BadParameter, Option, Typer
+from typer import Argument, BadParameter, Exit, Option, Typer
 
 from media_dl.cli.completions import (
     complete_output,
@@ -117,7 +117,7 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]"):
-        from media_dl.exceptions import DownloadError, ExtractError
+        from media_dl.exceptions import MediaError
         from media_dl.downloader.main import MediaDownloader
         from media_dl.extractor import MediaExtractor
 
@@ -150,6 +150,12 @@ What format you want request?
 
                     if result.type == "playlist":
                         logger.info('🔎 Playlist title: "{title}".', title=result.title)
+
+                        if not result.medias and result.playlists:
+                            logger.warning(
+                                "❗ The URL only have multiple playlists but no medias, please try again with a single playlist."
+                            )
+                            raise Exit()
                 else:
                     logger.info(
                         '🔎 Search from {extractor}: "{query}".',
@@ -166,7 +172,7 @@ What format you want request?
                 downloader.download_all(result)
 
             logger.info("✅ Download Finished.")
-        except (ExtractError, DownloadError) as err:
+        except MediaError as err:
             logger.error("❌ {error}", error=str(err))
         finally:
             logger.info("")
