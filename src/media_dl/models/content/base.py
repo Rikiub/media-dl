@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Annotated
 
 from pydantic import AliasChoices, Field, HttpUrl
@@ -29,4 +28,4 @@ class Extract(YDLSerializable):
     id: str
 
 
-class LazyExtract(ABC, Extract): ...
+class LazyExtract(Extract): ...

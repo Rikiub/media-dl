@@ -4,8 +4,10 @@ from typing import Annotated, Literal
 from pydantic import (
     AfterValidator,
     AliasChoices,
+    BeforeValidator,
     Field,
     PlainSerializer,
+    field_serializer,
     field_validator,
 )
 
@@ -24,8 +26,18 @@ DatetimeTimestamp = Annotated[
 ]
 
 
+def _validate_type(value: str):
+    if value in ("url", "url_transparent", "video"):
+        return "media"
+    return value
+
+
 class LazyMedia(MusicMetadata, LazyExtract):
-    type: Annotated[Literal["url"], TypeField] = "url"
+    type: Annotated[
+        Literal["media"],
+        BeforeValidator(_validate_type),
+        TypeField,
+    ] = "media"
     title: str = ""
     uploader: Annotated[
         str,
@@ -47,6 +59,10 @@ class LazyMedia(MusicMetadata, LazyExtract):
             return True
         else:
             return False
+
+    @field_serializer("type")
+    def _serialize_acodec(self, _value) -> str:
+        return "url"
 
     @field_validator("extractor")
     @classmethod

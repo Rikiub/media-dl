@@ -5,7 +5,12 @@ from typing import Annotated, Literal, TypeAlias
 from pydantic import AliasChoices, Field, HttpUrl, SkipValidation, computed_field
 
 from media_dl.models.base import YDLSerializable
-from media_dl.models.content.base import URL_CHOICES, ExtractorField, TypeField
+from media_dl.models.content.base import (
+    URL_CHOICES,
+    ExtractorField,
+    LazyExtract,
+    TypeField,
+)
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.metadata import Thumbnail
 
@@ -16,7 +21,7 @@ class MediaList(YDLSerializable):
     @computed_field
     @property
     def medias(self) -> list[LazyMedia]:
-        return [item for item in self.entries if item.type == "url"]
+        return [item for item in self.entries if item.type == "media"]
 
     @computed_field
     @property
@@ -24,7 +29,7 @@ class MediaList(YDLSerializable):
         return [item for item in self.entries if item.type == "playlist"]
 
 
-class LazyPlaylist(MediaList):
+class LazyPlaylist(MediaList, LazyExtract):
     type: Annotated[Literal["playlist"], SkipValidation] = "playlist"
 
     url: Annotated[

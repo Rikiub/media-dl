@@ -50,7 +50,7 @@ class MediaExtractor:
         service: SEARCH_SERVICE,
         limit: int = 20,
     ) -> Search:
-        """Extract media from search provider."""
+        """Extract media from search service."""
 
         logger.debug(
             'Search from "{service}": "{query}".',

@@ -164,7 +164,12 @@ What format you want request?
                     )
 
                     result = extractor.extract_search(entry, target)
-                    result = result.medias
+
+                    if not result.medias:
+                        logger.warning("❗ No results found.")
+                        raise Exit()
+
+                    result = result.medias[0]
 
             if CONFIG.quiet:
                 downloader.download_all(result, None)
