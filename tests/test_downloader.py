@@ -58,5 +58,8 @@ class TestSite:
     def test_bandcamp(self, download):
         download("https://gourmetdeluxxx.bandcamp.com/track/nocturnal-hooli")
 
+    """
+    # Multiplaylists, no medias.
     def test_soundcloud_playlist(self, download):
         download("https://soundcloud.com/playlist/sets/sound-of-berlin-01-qs1-x-synth")
+    """
