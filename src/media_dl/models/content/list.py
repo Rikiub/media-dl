@@ -41,7 +41,6 @@ class LazyPlaylist(MediaList):
             validation_alias=AliasChoices("playlist_id", "id"),
         ),
     ]
-
     title: Annotated[
         str,
         Field(
