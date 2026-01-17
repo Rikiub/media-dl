@@ -6,6 +6,7 @@ from rich.progress import TaskID
 
 from media_dl.downloader.progress import DownloadProgress
 from media_dl.models.content.media import LazyMedia
+from media_dl.models.progress.list import PlaylistDownloadState
 from media_dl.models.progress.media import MediaDownloadState, ProcessingState
 
 
@@ -21,7 +22,7 @@ class ProgressCallback(DownloadProgress):
         super().__init__(disable)
         self.ids: dict[str, Task] = {}
 
-    def __call__(self, progress: MediaDownloadState):
+    def callback_media(self, progress: MediaDownloadState):
         match progress.status:
             case "resolving":
                 item = self.ids[progress.id] = Task(
@@ -76,6 +77,16 @@ class ProgressCallback(DownloadProgress):
         if progress.status in ("error", "skipped", "completed"):
             self.update(self.get(progress).task_id, status=progress.status.capitalize())
             self.advance_counter(progress, 1.0)
+
+    def callback_playlist(self, progress: PlaylistDownloadState):
+        match progress.stage:
+            case "started":
+                self.counter.reset(total=progress.total)
+                self.start()
+            case "completed":
+                self.stop()
+            case "update":
+                self.counter.update(completed=progress.completed)
 
     def processor_callback(self, progress: ProcessingState):
         match progress.processor:

@@ -10,4 +10,5 @@ class PlaylistState(State):
     total: int
 
 
+PlaylistDownloadState = PlaylistState
 PlaylistDownloadCallback = Callable[[PlaylistState], None]

@@ -29,7 +29,6 @@ class CounterProgress:
             disable=disable,
             console=CONSOLE,
         )
-
         self._task_id = self._progress.add_task(
             "",
             visible=visible,
@@ -37,8 +36,31 @@ class CounterProgress:
             total=total,
         )
 
-    def reset(self, total: int = 1, visible: bool = True):
-        self._progress.reset(self._task_id, total=total, visible=visible)
+    def update(
+        self,
+        completed: float = 0,
+        total: float | None = None,
+        visible: bool | None = None,
+    ):
+        self._progress.update(
+            self._task_id,
+            completed=completed,
+            total=total,
+            visible=visible,
+        )
+
+    def reset(
+        self,
+        completed: int = 0,
+        total: int | None = None,
+        visible: bool | None = None,
+    ):
+        self._progress.reset(
+            self._task_id,
+            completed=completed,
+            total=total,
+            visible=visible,
+        )
 
     def advance(self, advance: int = 1):
         self._progress.advance(self._task_id, advance)

@@ -65,9 +65,19 @@ class DownloadPipeline:
         video_fmt, audio_fmt = FormatSelector(self.config).resolve(media)
         format = video_fmt or audio_fmt
 
+        if not format:
+            raise DownloadError("Format not founded")
+
         #  Calculate Path & Check Existence
-        output = generate_output_template(self.config.output, media, format=format)
-        if duplicate := self.check_output_duplicate(output):
+        output = generate_output_template(
+            self.config.output,
+            media,
+            format=format,
+            default_missing="NA",
+        )
+        output.parent.mkdir(parents=True, exist_ok=True)
+
+        if duplicate := self.check_output_duplicate(output, format):
             return duplicate
 
         try:
@@ -95,16 +105,12 @@ class DownloadPipeline:
         self.progress(ResolvedState(id=self.id, media=media))
         return media
 
-    def check_output_duplicate(self, output: Path) -> Path | None:
+    def check_output_duplicate(self, output: Path, format: Format) -> Path | None:
         for path in output.parent.iterdir():
             if path.is_file() and path.stem == output.name:
-                extension = path.suffix[1:]
-
                 if (
-                    self.config.type == "video"
-                    and extension in SupportedExtensions.video
-                    or self.config.type == "audio"
-                    and extension in SupportedExtensions.audio
+                    format.extension in SupportedExtensions.video
+                    or format.extension in SupportedExtensions.audio
                 ):
                     self.progress(SkippedState(id=self.id, filepath=path))
                     return path

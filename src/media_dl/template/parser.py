@@ -12,11 +12,24 @@ from media_dl.template.keys import OUTPUT_TEMPLATES
 from media_dl.types import StrPath
 
 
+class FormatterDict(dict):
+    def __init__(self, *args, replace: str | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.replace = replace
+
+    def __missing__(self, key):
+        if self.replace:
+            return self.replace
+        else:
+            return f"{{{key}}}"
+
+
 def generate_output_template(
     output: StrPath,
     media: Media | None = None,
     playlist: Playlist | None = None,
     format: Format | None = None,
+    default_missing: str | None = None,
 ) -> Path:
     validate_output(output)
 
@@ -30,7 +43,9 @@ def generate_output_template(
     if media:
         data |= media.model_dump()
 
-    template = str(output).format(**data)
+    safe_data = FormatterDict(data, replace=default_missing)
+    template = str(output).format_map(safe_data)
+
     path = Path(sanitize_filepath(template, max_len=250))
     return path
 

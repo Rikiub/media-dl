@@ -19,10 +19,7 @@ def test_single(tmp_path: Path):
 
     if result.type == "url":
         downloader = MediaDownloader("audio", quality=1, output=tmp_path)
-        path = downloader.download(
-            result,
-            on_progress=lambda state: print(state.id),
-        )
+        path = downloader.download(result)
 
         assert path.is_file()
 
@@ -34,10 +31,7 @@ def test_list(tmp_path: Path):
 
     if result.type == "playlist":
         downloader = MediaDownloader("audio", quality=1, output=tmp_path)
-        paths = downloader.download_all(
-            result,
-            on_progress=lambda state: print(state.id),
-        )
+        paths = downloader.download_all(result)
 
         assert all(item for item in paths if item.is_file())
 

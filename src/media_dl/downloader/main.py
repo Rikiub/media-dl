@@ -2,7 +2,6 @@ from pathlib import Path
 
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.type.bulk import DownloadBulk
-from media_dl.downloader.type.pipeline import DownloadPipeline
 from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.extractor import MediaExtractor
 from media_dl.models.content.list import MediaList
@@ -14,6 +13,8 @@ from media_dl.types import FILE_FORMAT, StrPath
 
 _MediaResult = ExtractResult | MediaListEntries
 MediaResult = MediaList | _MediaResult | list[LazyMedia]
+
+DEFAULT_PROGRESS = ProgressCallback()
 
 
 class MediaDownloader:
@@ -56,7 +57,7 @@ class MediaDownloader:
     def download(
         self,
         media: LazyMedia,
-        on_progress: MediaDownloadCallback | None = ProgressCallback(),
+        on_progress: MediaDownloadCallback | None = DEFAULT_PROGRESS.callback_media,
     ) -> Path:
         """Single download a `Media` result.
 
@@ -68,19 +69,21 @@ class MediaDownloader:
             Path to downloaded file.
         """
 
-        pipeline = DownloadPipeline(
+        pipeline = DownloadBulk(
             media,
             format_config=self.config,
             extractor=self.extractor,
             on_progress=on_progress,
         )
-        return pipeline.run()
+        paths = pipeline.run()
+        return paths[0]
 
     def download_all(
         self,
         data: MediaResult,
-        on_progress: MediaDownloadCallback | None = ProgressCallback(),
-        on_playlist: PlaylistDownloadCallback | None = None,
+        on_progress: MediaDownloadCallback | None = DEFAULT_PROGRESS.callback_media,
+        on_playlist: PlaylistDownloadCallback
+        | None = DEFAULT_PROGRESS.callback_playlist,
     ) -> list[Path]:
         """Batch download any result.
 
