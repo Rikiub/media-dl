@@ -14,7 +14,7 @@ from media_dl.types import StrPath
 
 def generate_output_template(
     output: StrPath,
-    media: Media,
+    media: Media | None = None,
     playlist: Playlist | None = None,
     format: Format | None = None,
 ) -> Path:

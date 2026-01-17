@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from media_dl.models.format.types import AudioFormat, VideoFormat
-from media_dl.models.progress.base import HasFile
+from media_dl.models.progress.base import HasFile, StageType
 
 ProcessorStateType = Literal[
     "change_container",
@@ -12,12 +12,11 @@ ProcessorStateType = Literal[
     "embed_thumbnail",
     "embed_subtitles",
 ]
-ProcessorStateStage = Literal["started", "completed"]
 
 
 class ProcessorState(HasFile):
     status: Literal["processing"] = "processing"
-    stage: ProcessorStateStage
+    stage: StageType
     processor: ProcessorStateType
 
 

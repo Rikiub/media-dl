@@ -10,7 +10,6 @@ from media_dl.downloader.selector import FormatSelector
 from media_dl.downloader.states.debug import debug_callback
 from media_dl.exceptions import DownloadError
 from media_dl.extractor import MediaExtractor
-from media_dl.models.content.list import LazyPlaylist, Playlist
 from media_dl.models.content.media import LazyMedia, Media
 from media_dl.models.format.types import AudioFormat, Format, VideoFormat
 from media_dl.models.progress.format import FormatState
@@ -39,8 +38,7 @@ class DownloadPipeline:
 
     def __init__(
         self,
-        media: LazyMedia,
-        playlist: LazyPlaylist | None = None,
+        media: LazyMedia | Media,
         format_config: FormatConfig | None = None,
         extractor: MediaExtractor | None = None,
         on_progress: MediaDownloadCallback | None = None,
@@ -48,7 +46,6 @@ class DownloadPipeline:
         self.id = media.id
 
         self.media = media
-        self.playlist = playlist
         self.config = format_config or FormatConfig("video")
         self.extractor = extractor or MediaExtractor()
         self.progress = lambda d: None
@@ -62,16 +59,14 @@ class DownloadPipeline:
 
     def run(self) -> Path:
         # Resolve Data
-        media, playlist = self.resolve_media()
+        media = self.resolve_media()
 
         # Select Formats
         video_fmt, audio_fmt = FormatSelector(self.config).resolve(media)
         format = video_fmt or audio_fmt
 
         #  Calculate Path & Check Existence
-        output = self.resolve_output()
-        output = generate_output_template(output, media, playlist, format)
-
+        output = generate_output_template(self.config.output, media, format=format)
         if duplicate := self.check_output_duplicate(output):
             return duplicate
 
@@ -89,25 +84,16 @@ class DownloadPipeline:
         # Complete (Move to target)
         return self.move_to_final(downloaded_file, output)
 
-    def resolve_media(self) -> tuple[Media, Playlist | None]:
-        self.progress(ResolvingState(id=self.id, media=self.media))
+    def resolve_media(self) -> Media:
+        media = self.media
 
-        if not isinstance(self.media, Media):
-            self.media = self.extractor.resolve(self.media)
-        if self.playlist and not isinstance(self.playlist, Playlist):
-            self.playlist = self.extractor.resolve(self.playlist)
+        self.progress(ResolvingState(id=self.id, media=media))
 
-        self.progress(ResolvedState(id=self.id, media=self.media))
-        return self.media, self.playlist
+        if not isinstance(media, Media):
+            media = self.extractor.resolve(media)
 
-    def resolve_output(self) -> Path:
-        output = self.config.output
-
-        if output.is_dir():
-            # Default template
-            output = output / "{uploader} - {title}"
-
-        return output
+        self.progress(ResolvedState(id=self.id, media=media))
+        return media
 
     def check_output_duplicate(self, output: Path) -> Path | None:
         for path in output.parent.iterdir():

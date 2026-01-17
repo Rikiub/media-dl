@@ -3,12 +3,14 @@ from pathlib import Path
 from typing import Any, cast, get_args
 
 from media_dl.path import get_ffmpeg
+from media_dl.template.parser import validate_output
 from media_dl.types import (
     AUDIO_EXTENSION,
     EXTENSION,
     FILE_FORMAT,
     FORMAT_TYPE,
     VIDEO_EXTENSION,
+    StrPath,
 )
 
 
@@ -26,14 +28,20 @@ class FormatConfig:
         embed_metadata: Embed title, uploader, thumbnail, subtitles, etc. (FFmpeg)
     """
 
-    format: FILE_FORMAT
+    format: FILE_FORMAT = "video"
     quality: int | None = None
-    output: Path = Path.cwd()
-    ffmpeg_path: Path | None = None
+    output: StrPath = Path.cwd()
+    ffmpeg_path: StrPath | None = None
     embed_metadata: bool = True
 
     def __post_init__(self):
         self.ffmpeg_path = get_ffmpeg(self.ffmpeg_path)
+
+        self.output = Path(self.output)
+        validate_output(self.output)
+
+        if self.output.is_dir:
+            self.output = self.output / "{uploader} - {title}"
 
     @property
     def type(self) -> FORMAT_TYPE:

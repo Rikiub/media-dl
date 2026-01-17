@@ -35,18 +35,17 @@ class ProgressCallback(DownloadProgress):
                 )
 
                 self.update(
-                    self.get(progress).task_id,
+                    item.task_id,
                     description=item.name or "Extracting[blink]...[/]",
                     status="Extracting[blink]...[/]",
                 )
             case "resolved":
-                name = self.ids[progress.id].name = self._media_display_name(
-                    progress.media
-                )
+                new_name = self._media_display_name(progress.media)
+                self.ids[progress.id].name = new_name
 
                 self.update(
                     self.get(progress).task_id,
-                    description=name,
+                    description=new_name,
                     status="Ready",
                 )
             case "skipped":
@@ -55,9 +54,7 @@ class ProgressCallback(DownloadProgress):
                     media=self.get(progress).name,
                     extension=progress.extension,
                 )
-
                 self.update(self.get(progress).task_id, status="Skipped")
-                self.advance_counter(progress, 0.6)
             case "downloading":
                 self.update(
                     self.get(progress).task_id,
@@ -76,7 +73,7 @@ class ProgressCallback(DownloadProgress):
             case "processing":
                 self.processor_callback(progress)
 
-        if progress.status in ("error", "completed"):
+        if progress.status in ("error", "skipped", "completed"):
             self.update(self.get(progress).task_id, status=progress.status.capitalize())
             self.advance_counter(progress, 1.0)
 

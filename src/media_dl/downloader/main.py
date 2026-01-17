@@ -1,16 +1,14 @@
-import concurrent.futures as cf
 from pathlib import Path
 
-from loguru import logger
-
 from media_dl.downloader.config import FormatConfig
-from media_dl.downloader.pipeline import DownloadPipeline
+from media_dl.downloader.type.bulk import DownloadBulk
+from media_dl.downloader.type.pipeline import DownloadPipeline
 from media_dl.downloader.states.progress import ProgressCallback
-from media_dl.exceptions import DownloadError, OutputTemplateError
 from media_dl.extractor import MediaExtractor
 from media_dl.models.content.list import MediaList
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.types import ExtractResult, MediaListEntries
+from media_dl.models.progress.list import PlaylistDownloadCallback
 from media_dl.models.progress.media import MediaDownloadCallback
 from media_dl.types import FILE_FORMAT, StrPath
 
@@ -48,8 +46,8 @@ class MediaDownloader:
         self.config = FormatConfig(
             format=format,
             quality=quality,
-            output=Path(output),
-            ffmpeg_path=Path(ffmpeg_path) if ffmpeg_path else None,
+            output=output,
+            ffmpeg_path=ffmpeg_path,
             embed_metadata=embed_metadata,
         )
         self.extractor = extractor
@@ -82,6 +80,7 @@ class MediaDownloader:
         self,
         data: MediaResult,
         on_progress: MediaDownloadCallback | None = ProgressCallback(),
+        on_playlist: PlaylistDownloadCallback | None = None,
     ) -> list[Path]:
         """Batch download any result.
 
@@ -89,66 +88,11 @@ class MediaDownloader:
             List of paths to downloaded files.
         """
 
-        medias = self._data_to_list(data)
-        paths: list[Path] = []
-
-        if on_progress:
-            on_progress = ProgressCallback()
-            on_progress.counter.reset(total=len(medias))
-            on_progress.start()
-
-        success = 0
-        errors = 0
-
-        with (
-            # Temporal workaround
-            on_progress,  # type: ignore
-            cf.ThreadPoolExecutor(max_workers=self.threads) as executor,
-        ):
-            futures = {
-                executor.submit(self.download, media, on_progress): media
-                for media in medias
-            }
-
-            try:
-                for future in cf.as_completed(futures):
-                    try:
-                        paths.append(future.result())
-                        success += 1
-                    except (ConnectionError, DownloadError) as e:
-                        logger.error(f"Failed to download: {e}")
-                        errors += 1
-                    except OutputTemplateError as e:
-                        logger.error(str(e).strip('"'))
-                        executor.shutdown(wait=False, cancel_futures=True)
-                        raise SystemExit()
-            except KeyboardInterrupt:
-                logger.warning(
-                    "❗ Canceling downloads... (press Ctrl+C again to force)"
-                )
-                executor.shutdown(wait=False, cancel_futures=True)
-                raise
-
-        logger.debug(
-            "{current} of {total} medias completed. {errors} errors.",
-            current=success,
-            total=len(medias),
-            errors=errors,
-        )
-
-        return paths
-
-    def _data_to_list(self, data: MediaResult) -> list[LazyMedia]:
-        medias = []
-
-        match data:
-            case LazyMedia():
-                medias = [data]
-            case MediaList():
-                medias = data.medias
-            case list():
-                return data  # type: ignore
-            case _:
-                raise TypeError("Unable to unpack media list.")
-
-        return medias
+        return DownloadBulk(
+            data,
+            self.config,
+            self.extractor,
+            self.threads,
+            on_progress,
+            on_playlist,
+        ).run()
