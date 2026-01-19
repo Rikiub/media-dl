@@ -3,7 +3,7 @@
 from rich.console import RenderableType
 from rich.status import Status as _Status
 
-from media_dl.cli.config import CONFIG
+from media_cli.config import CONFIG
 from media_dl.rich import CONSOLE
 
 

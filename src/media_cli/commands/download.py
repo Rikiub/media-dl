@@ -5,14 +5,14 @@ from typing import Annotated
 from loguru import logger
 from typer import Argument, BadParameter, Exit, Option, Typer
 
-from media_dl.cli.completions import (
+from media_cli.completions import (
     complete_output,
     complete_query,
     complete_resolution,
     parse_queries,
 )
-from media_dl.cli.config import CONFIG
-from media_dl.cli.rich import Status
+from media_cli.config import CONFIG
+from media_cli.rich import Status
 from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE
 from media_dl.types import FILE_FORMAT
 

@@ -20,5 +20,6 @@ MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 # Extra
 APPNAME = "media-dl"
 LOGGING_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
 StrPath = str | PathLike[str]
 StrUrl = str | HttpUrl

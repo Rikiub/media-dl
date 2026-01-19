@@ -355,10 +355,14 @@ dependencies = [
     { name = "pathvalidate" },
     { name = "pydantic" },
     { name = "pyffmpeg-bin" },
-    { name = "rich" },
-    { name = "typer" },
     { name = "typing-extensions" },
     { name = "yt-dlp" },
+]
+
+[package.optional-dependencies]
+cli = [
+    { name = "rich" },
+    { name = "typer" },
 ]
 
 [package.dev-dependencies]
@@ -380,11 +384,12 @@ requires-dist = [
     { name = "pathvalidate", specifier = ">=3.2.1" },
     { name = "pydantic", specifier = ">=2.9.2" },
     { name = "pyffmpeg-bin", specifier = ">=1.8.0.1" },
-    { name = "rich", specifier = ">=13.9.2" },
-    { name = "typer", specifier = ">=0.20.0" },
+    { name = "rich", marker = "extra == 'cli'", specifier = ">=13.9.2" },
+    { name = "typer", marker = "extra == 'cli'", specifier = ">=0.20.0" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
     { name = "yt-dlp", specifier = ">=2024.10.7" },
 ]
+provides-extras = ["cli"]
 
 [package.metadata.requires-dev]
 dev = [

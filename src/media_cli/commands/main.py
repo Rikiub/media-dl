@@ -3,7 +3,7 @@ from typing import Annotated
 
 from typer import Option, Typer
 
-from media_dl.cli.config import CONFIG
+from media_cli.config import CONFIG
 
 
 def show_version(show: bool) -> None:
@@ -54,6 +54,6 @@ def main(
     CONFIG.quiet = quiet
 
     # Setup logger
-    from media_dl.cli.logger import start_logger
+    from media_cli.logger import start_logger
 
     start_logger(CONFIG.log_level)
