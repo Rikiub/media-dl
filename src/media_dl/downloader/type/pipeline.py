@@ -6,7 +6,7 @@ from loguru import logger
 
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.selector import FormatSelector
-from media_dl.downloader.states.debug import debug_callback
+from media_dl.downloader.type.debug import debug_callback
 from media_dl.exceptions import DownloadError, MediaError, ProcessingError
 from media_dl.extractor import MediaExtractor
 from media_dl.models.content.media import LazyMedia, Media

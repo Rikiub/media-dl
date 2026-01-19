@@ -1,10 +1,11 @@
 """Custom `Rich` classes."""
 
-from rich.console import RenderableType
+from rich.console import Console, RenderableType
 from rich.status import Status as _Status
 
 from media_cli.config import CONFIG
-from media_dl.rich import CONSOLE
+
+CONSOLE = Console(stderr=True)
 
 
 class Status(_Status):

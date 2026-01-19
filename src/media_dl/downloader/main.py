@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE, FormatConfig
-from media_dl.downloader.states.progress import ProgressCallback
 from media_dl.downloader.type.bulk import DownloadBulk
 from media_dl.extractor import MediaExtractor
 from media_dl.models.content.list import MediaList
@@ -13,15 +12,6 @@ from media_dl.types import FILE_FORMAT, StrPath
 
 _MediaResult = ExtractResult | MediaListEntries
 MediaResult = MediaList | _MediaResult | list[LazyMedia]
-
-# Import default callback if rich is installed.
-try:
-    _progress = ProgressCallback()
-    _on_progress = _progress.callback_media
-    _on_playlist = _progress.callback_playlist
-except ImportError:
-    _on_progress = lambda v: None  # noqa: E731
-    _on_playlist = lambda v: None  # noqa: E731
 
 
 class MediaDownloader:
@@ -64,7 +54,7 @@ class MediaDownloader:
     def download(
         self,
         media: LazyMedia,
-        on_progress: MediaDownloadCallback | None = _on_progress,
+        on_progress: MediaDownloadCallback | None = None,
     ) -> Path:
         """Single download a `Media` result.
 
@@ -88,8 +78,8 @@ class MediaDownloader:
     def download_all(
         self,
         data: MediaResult,
-        on_progress: MediaDownloadCallback | None = _on_progress,
-        on_playlist: PlaylistDownloadCallback | None = _on_playlist,
+        on_progress: MediaDownloadCallback | None = None,
+        on_playlist: PlaylistDownloadCallback | None = None,
     ) -> list[Path]:
         """Batch download any result.
 

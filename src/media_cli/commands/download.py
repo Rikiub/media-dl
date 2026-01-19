@@ -12,7 +12,8 @@ from media_cli.completions import (
     parse_queries,
 )
 from media_cli.config import CONFIG
-from media_cli.rich import Status
+from media_cli.ui.callback import ProgressCallback
+from media_cli.ui.rich import Status
 from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE
 from media_dl.types import FILE_FORMAT
 
@@ -118,13 +119,20 @@ What format you want request?
     # Lazy Import
     with Status("Starting[blink]...[/]"):
         from media_dl.downloader.main import MediaDownloader
-        from media_dl.exceptions import MediaError
         from media_dl.extractor import MediaExtractor
+        from media_dl.exceptions import MediaError
 
     # Initialize
-    extractor = MediaExtractor(use_cache=cache)
+    progress = ProgressCallback()
+    on_progress = None
+    on_playlist = None
+
+    if not CONFIG.quiet:
+        on_progress = progress.callback_media
+        on_playlist = progress.callback_playlist
 
     try:
+        extractor = MediaExtractor(use_cache=cache)
         downloader = MediaDownloader(
             format=format,
             quality=quality,
@@ -171,11 +179,7 @@ What format you want request?
 
                     result = result.medias[0]
 
-            if CONFIG.quiet:
-                downloader.download_all(result, None)
-            else:
-                downloader.download_all(result)
-
+            downloader.download_all(result, on_progress, on_playlist)
             logger.info("✅ Download Finished.")
         except MediaError as err:
             logger.error("❌ {error}", error=str(err))

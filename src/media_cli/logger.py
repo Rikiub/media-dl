@@ -3,7 +3,7 @@ import logging
 from loguru import logger
 from rich.logging import RichHandler
 
-from media_dl.rich import CONSOLE
+from media_cli.ui.rich import CONSOLE
 from media_dl.types import LOGGING_LEVELS
 
 
