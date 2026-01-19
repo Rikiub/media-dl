@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from yt_dlp.utils import DownloadError as YDLDownloadError
 
@@ -13,7 +14,7 @@ from media_dl.ydl.wrapper import YDL
 def download_format(
     filepath: StrPath,
     format_info: YDLFormatInfo,
-    callback: Callable[[dict[str, str | int]], None] | None = None,
+    callback: Callable[[dict[str, Any]], None] | None = None,
 ) -> Path:
     filepath = Path(filepath)
     params = {}
