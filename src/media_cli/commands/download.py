@@ -11,8 +11,8 @@ from media_cli.completions import (
     complete_resolution,
     parse_queries,
 )
-from media_cli.ui.rich import Status
 from media_cli.config import CONFIG
+from media_cli.ui.rich import Status
 from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE
 from media_dl.types import FILE_FORMAT
 
@@ -117,10 +117,10 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]"):
+        from media_cli.ui.callback import ProgressCallback
         from media_dl.downloader.main import MediaDownloader
         from media_dl.exceptions import MediaError
         from media_dl.extractor import MediaExtractor
-        from media_cli.ui.callback import ProgressCallback
 
     # Initialize
     progress = ProgressCallback()
