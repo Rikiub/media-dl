@@ -1,0 +1,19 @@
+[project]
+name = "rivulet"
+version = "3.0.0"
+requires-python = ">=3.10"
+description = "Download any video/audio you want from a simple URL ✨"
+dependencies = [
+    "yt-dlp>=2024.10.7",
+    "pydantic>=2.9.2",
+    "typing-extensions>=4.12.2",
+    "lazy-imports>=1.0.0",
+    "pyffmpeg-bin>=1.8.0.1",
+    "pathvalidate>=3.2.1",
+    "loguru>=0.7.3",
+    "mutagen>=1.47.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.9"]
+build-backend = "uv_build"

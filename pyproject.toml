@@ -1,40 +1,8 @@
-[project]
-name = "media-dl"
-version = "2.1.1"
-description = "Download any video/audio you want from a simple URL ✨"
-readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "yt-dlp>=2024.10.7",
-    "pydantic>=2.9.2",
-    "typing-extensions>=4.12.2",
-    "lazy-imports>=1.0.0",
-    "pyffmpeg-bin>=1.8.0.1",
-    "pathvalidate>=3.2.1",
-    "loguru>=0.7.3",
-    "mutagen>=1.47.0",
-]
-
-[project.optional-dependencies]
-cli = [
-    "typer>=0.20.0",
-    "rich>=13.9.2",
-]
-
 [dependency-groups]
 dev = [
     "pytest>=8.3.3",
     "ruff>=0.8.0",
 ]
-docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.5.42",
-    "mkdocstrings>=0.26.2",
-]
 
-[project.scripts]
-media-dl = "media_cli:run"
-
-[build-system]
-requires = ["uv_build>=0.8.0,<0.9"]
-build-backend = "uv_build"
+[tool.uv.workspace]
+members = ["packages/*"]
