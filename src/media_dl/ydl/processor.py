@@ -135,8 +135,8 @@ class YDLProcessor:
         pp.run(self.params | {"requested_subtitles": dict_subs})
         return self
 
-    @catch
     @classmethod
+    @catch
     def from_formats_merge(
         cls,
         filepath: StrPath,
