@@ -7,7 +7,6 @@ from pydantic import (
     BeforeValidator,
     Field,
     PlainSerializer,
-    field_serializer,
     field_validator,
 )
 
@@ -36,6 +35,7 @@ class LazyMedia(MusicMetadata, LazyExtract):
     type: Annotated[
         Literal["media"],
         BeforeValidator(_validate_type),
+        PlainSerializer(lambda v: "url"),
         TypeField,
     ] = "media"
     title: str = ""
@@ -59,10 +59,6 @@ class LazyMedia(MusicMetadata, LazyExtract):
             return True
         else:
             return False
-
-    @field_serializer("type")
-    def _serialize_acodec(self, _value) -> str:
-        return "url"
 
     @field_validator("extractor")
     @classmethod
