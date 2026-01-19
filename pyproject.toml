@@ -21,9 +21,6 @@ cli = [
     "rich>=13.9.2",
 ]
 
-[project.scripts]
-media-dl = "media_cli:run"
-
 [dependency-groups]
 dev = [
     "pytest>=8.3.3",
@@ -34,6 +31,9 @@ docs = [
     "mkdocs-material>=9.5.42",
     "mkdocstrings>=0.26.2",
 ]
+
+[project.scripts]
+media-dl = "media_cli:run"
 
 [build-system]
 requires = ["uv_build>=0.8.0,<0.9"]
