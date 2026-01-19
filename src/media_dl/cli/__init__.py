@@ -1,4 +1,8 @@
-from typer import Typer
+try:
+    from typer import Typer
+except ImportError:
+    print("Error: The CLI dependencies are not installed.")
+    raise SystemExit(1)
 
 from media_dl.cli.commands import download, main
 from media_dl.types import APPNAME
