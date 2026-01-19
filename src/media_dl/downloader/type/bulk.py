@@ -1,13 +1,13 @@
-from pathlib import Path
 import concurrent.futures as cf
 import secrets
+from pathlib import Path
 
 from loguru import logger
 
 from media_dl.downloader.config import FormatConfig
 from media_dl.downloader.type.pipeline import DownloadPipeline
 from media_dl.extractor import MediaExtractor
-from media_dl.models.content.list import MediaList, LazyPlaylist, Playlist
+from media_dl.models.content.list import LazyPlaylist, MediaList, Playlist
 from media_dl.models.content.media import LazyMedia
 from media_dl.models.content.types import ExtractResult, MediaListEntries
 from media_dl.models.progress.list import PlaylistDownloadCallback, PlaylistState

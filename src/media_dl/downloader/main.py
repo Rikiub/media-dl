@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE, FormatConfig
-from media_dl.downloader.type.bulk import DownloadBulk
 from media_dl.downloader.states.progress import ProgressCallback
+from media_dl.downloader.type.bulk import DownloadBulk
 from media_dl.extractor import MediaExtractor
 from media_dl.models.content.list import MediaList
 from media_dl.models.content.media import LazyMedia

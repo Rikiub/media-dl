@@ -1,6 +1,7 @@
 """Raw info extractor."""
 
 from typing import overload
+
 from loguru import logger
 
 from media_dl.cache import load_info, save_info

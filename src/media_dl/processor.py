@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from typing_extensions import override
 
 from media_dl.models.content.media import Media

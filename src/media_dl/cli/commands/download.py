@@ -117,8 +117,8 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]"):
-        from media_dl.exceptions import MediaError
         from media_dl.downloader.main import MediaDownloader
+        from media_dl.exceptions import MediaError
         from media_dl.extractor import MediaExtractor
 
     # Initialize

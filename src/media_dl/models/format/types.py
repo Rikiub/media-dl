@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Annotated, Literal
-from typing_extensions import override
 
 from pydantic import (
     AfterValidator,
@@ -13,6 +12,7 @@ from pydantic import (
     field_validator,
     model_serializer,
 )
+from typing_extensions import override
 
 from media_dl.models.base import YDLSerializable
 from media_dl.models.progress.format import FormatDownloadCallback, FormatState
