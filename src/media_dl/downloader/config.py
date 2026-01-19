@@ -2,8 +2,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, cast, get_args
 
-from media_dl.path import get_ffmpeg
-from media_dl.template.parser import validate_output
 from media_dl.types import (
     AUDIO_EXTENSION,
     EXTENSION,
@@ -37,6 +35,9 @@ class FormatConfig:
     embed_metadata: bool = True
 
     def __post_init__(self):
+        from media_dl.path import get_ffmpeg
+        from media_dl.template.parser import validate_output
+
         self.ffmpeg_path = get_ffmpeg(self.ffmpeg_path)
         self.output = Path(self.output)
         validate_output(self.output)

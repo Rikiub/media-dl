@@ -3,7 +3,8 @@
 import json
 from pathlib import Path
 
-_FILEPATH = Path(Path(__file__).parent, f"{Path(__file__).stem}.json")
+_FILEPATH = Path(__file__)
+_FILEPATH = _FILEPATH.parent / f"{_FILEPATH.stem}.json"
 
 
 def _gen_keys() -> list[str]:
