@@ -151,7 +151,7 @@ What format you want request?
 
     for target, entry in parse_queries(query):
         try:
-            with Status("Please wait[blink]...[/]"):
+            with Status("Searching[blink]...[/]"):
                 if target == "url":
                     logger.info('🔎 Extract URL: "{url}".', url=entry)
                     result = extractor.extract_url(entry)
