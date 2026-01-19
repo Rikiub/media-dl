@@ -12,7 +12,7 @@ dependencies = [
 rivulet = { workspace = true }
 
 [project.scripts]
-media-dl = "rivulet-cli:run"
+rivu = "rivulet_cli:run"
 
 [build-system]
 requires = ["uv_build>=0.8.0,<0.9"]
