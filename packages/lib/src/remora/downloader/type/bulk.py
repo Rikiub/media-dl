@@ -32,14 +32,12 @@ class DownloadBulk:
         self.extractor = extractor or MediaExtractor()
         self.threads = threads
 
-        # Callbacks
-        if on_progress:
-            self.on_progress = on_progress
+        self.on_progress = on_progress
+        self.on_playlist = lambda a: None
 
-            if on_playlist:
-                self.on_playlist = on_playlist
-            else:
-                self.on_playlist = lambda a: None
+        # Callbacks
+        if on_playlist:
+            self.on_playlist = on_playlist
 
         # State
         self.medias, self.playlist = self._resolve_data(data)

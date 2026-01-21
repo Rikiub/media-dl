@@ -15,9 +15,9 @@ PLAYLIST = (
 def test_single(tmp_path: Path):
     result = MediaExtractor().extract_url(URL)
 
-    assert result.type == "url"
+    assert result.type == "media"
 
-    if result.type == "url":
+    if result.type == "media":
         downloader = MediaDownloader("audio", quality=1, output=tmp_path)
         path = downloader.download(result)
 
@@ -39,7 +39,7 @@ def test_list(tmp_path: Path):
 @pytest.fixture(scope="session")
 def formats():
     result = MediaExtractor().extract_url(URL)
-    assert result.type == "url"
+    assert result.type == "media"
     assert len(result.formats) >= 1
     return result.formats
 
