@@ -1,11 +1,11 @@
 [project]
-name = "rivulet-cli"
+name = "remora-cli"
 version = "3.0.0"
 description = "Download any video/audio you want from a simple URL ✨"
-dependencies = ["rivulet", "typer", "rich"]
+dependencies = ["remora", "typer", "rich"]
 
 [project.scripts]
-rivu = "rivulet_cli:run"
+remora = "remora_cli:run"
 
 [build-system]
 requires = ["uv_build>=0.8.0,<0.9"]

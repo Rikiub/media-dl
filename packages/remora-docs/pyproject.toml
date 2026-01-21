@@ -1,0 +1,7 @@
+[project]
+name = "remora-docs"
+version = "3.0.0"
+dependencies = ["remora", "mkdocs", "mkdocs-material"]
+
+[tool.uv]
+package = false

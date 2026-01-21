@@ -5,4 +5,4 @@ dev = ["pytest>=8.3.3", "ruff>=0.8.0"]
 members = ["packages/*"]
 
 [tool.uv.sources]
-rivulet = { workspace = true }
+remora = { workspace = true }

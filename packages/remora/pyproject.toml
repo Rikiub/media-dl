@@ -1,5 +1,5 @@
 [project]
-name = "rivulet"
+name = "remora"
 version = "3.0.0"
 requires-python = ">=3.10"
 description = "Download any video/audio you want from a simple URL ✨"
