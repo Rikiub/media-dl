@@ -4,8 +4,9 @@ except ImportError:
     print("Error: The CLI dependencies are not installed.")
     raise SystemExit(1)
 
-from remora_cli.commands import download, main
 from remora.types import APP_NAME
+
+from remora_cli.commands import download, main
 
 app = Typer(
     callback=main.main,

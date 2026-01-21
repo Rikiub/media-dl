@@ -1,8 +1,7 @@
 from typing import Generator, Literal, get_args
 
-from typer import BadParameter
-
 from remora.types import SEARCH_SERVICE, VIDEO_RESOLUTION
+from typer import BadParameter
 
 SEARCH_TARGET = Literal["url", SEARCH_SERVICE]
 

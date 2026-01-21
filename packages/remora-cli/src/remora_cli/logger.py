@@ -1,10 +1,10 @@
 import logging
 
 from loguru import logger
+from remora.types import APP_NAME, LOGGING_LEVELS
 from rich.logging import RichHandler
 
 from remora_cli.ui.rich import CONSOLE
-from remora.types import APP_NAME, LOGGING_LEVELS
 
 
 class ColorFormatter(logging.Formatter):

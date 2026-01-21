@@ -2,12 +2,12 @@ import time
 from dataclasses import dataclass
 
 from loguru import logger
-from rich.progress import TaskID
-
-from remora_cli.ui.bar import DownloadProgress
 from remora.models.content.media import LazyMedia
 from remora.models.progress.list import PlaylistDownloadState
 from remora.models.progress.media import MediaDownloadState, ProcessingState
+from rich.progress import TaskID
+
+from remora_cli.ui.bar import DownloadProgress
 
 
 @dataclass(slots=True)
