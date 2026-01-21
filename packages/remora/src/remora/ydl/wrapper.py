@@ -2,7 +2,7 @@ import logging
 
 from yt_dlp.YoutubeDL import YoutubeDL
 
-from media_dl.ydl.types import YDLParams
+from remora.ydl.types import YDLParams
 
 
 class YDL(YoutubeDL):

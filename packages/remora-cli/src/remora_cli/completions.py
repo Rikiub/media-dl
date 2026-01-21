@@ -2,7 +2,7 @@ from typing import Generator, Literal, get_args
 
 from typer import BadParameter
 
-from media_dl.types import SEARCH_SERVICE, VIDEO_RESOLUTION
+from remora.types import SEARCH_SERVICE, VIDEO_RESOLUTION
 
 SEARCH_TARGET = Literal["url", SEARCH_SERVICE]
 
@@ -20,7 +20,7 @@ def complete_resolution() -> Generator[str, None, None]:
 
 def complete_output(incomplete: str) -> Generator[str, None, None]:
     if incomplete.endswith("{"):
-        from media_dl.template.keys import OUTPUT_TEMPLATES
+        from remora.template.keys import OUTPUT_TEMPLATES
 
         for key in OUTPUT_TEMPLATES:
             yield incomplete + key + "}"

@@ -1,9 +1,9 @@
 from typing import TypeVar, cast
 
-from media_dl.downloader.config import FormatConfig
-from media_dl.models.content.media import Media
-from media_dl.models.format.list import FormatList
-from media_dl.models.format.types import AudioFormat, Format, VideoFormat
+from remora.downloader.config import FormatConfig
+from remora.models.content.media import Media
+from remora.models.format.list import FormatList
+from remora.models.format.types import AudioFormat, Format, VideoFormat
 
 T = TypeVar("T", bound=Format)
 

@@ -11,7 +11,7 @@ from rich.progress import (
 )
 from rich.table import Column
 
-from media_cli.ui.rich import CONSOLE
+from remora_cli.ui.rich import CONSOLE
 
 
 class CounterProgress:

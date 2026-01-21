@@ -4,15 +4,15 @@ from pathlib import Path
 
 from loguru import logger
 
-from media_dl.downloader.config import FormatConfig
-from media_dl.downloader.type.pipeline import DownloadPipeline
-from media_dl.extractor import MediaExtractor
-from media_dl.models.content.list import LazyPlaylist, MediaList, Playlist
-from media_dl.models.content.media import LazyMedia
-from media_dl.models.content.types import ExtractResult, MediaListEntries
-from media_dl.models.progress.list import PlaylistDownloadCallback, PlaylistState
-from media_dl.models.progress.media import MediaDownloadCallback
-from media_dl.template.parser import generate_output_template
+from remora.downloader.config import FormatConfig
+from remora.downloader.type.pipeline import DownloadPipeline
+from remora.extractor import MediaExtractor
+from remora.models.content.list import LazyPlaylist, MediaList, Playlist
+from remora.models.content.media import LazyMedia
+from remora.models.content.types import ExtractResult, MediaListEntries
+from remora.models.progress.list import PlaylistDownloadCallback, PlaylistState
+from remora.models.progress.media import MediaDownloadCallback
+from remora.template.parser import generate_output_template
 
 MediaResult = ExtractResult | MediaListEntries | MediaList | list[LazyMedia]
 

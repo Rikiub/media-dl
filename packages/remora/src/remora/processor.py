@@ -2,15 +2,15 @@ from pathlib import Path
 
 from typing_extensions import override
 
-from media_dl.models.content.media import Media
-from media_dl.models.format.types import Format
-from media_dl.types import AUDIO_EXTENSION, EXTENSION, StrPath
-from media_dl.ydl.processor import (
+from remora.models.content.media import Media
+from remora.models.format.types import Format
+from remora.types import AUDIO_EXTENSION, EXTENSION, StrPath
+from remora.ydl.processor import (
     RequestedFormat,
     RequestedFormats,
     YDLProcessor,
 )
-from media_dl.ydl.types import YDLExtractInfo
+from remora.ydl.types import YDLExtractInfo
 
 FormatPaths = list[tuple[Format, Path]]
 

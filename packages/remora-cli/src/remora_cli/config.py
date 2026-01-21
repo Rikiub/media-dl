@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from media_dl.types import LOGGING_LEVELS
+from remora.types import LOGGING_LEVELS
 
 
 @dataclass(slots=True)

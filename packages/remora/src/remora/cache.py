@@ -1,8 +1,8 @@
 import hashlib
 import time
 
-from media_dl.path import CACHE_DIR
-from media_dl.types import StrUrl
+from remora.path import CACHE_DIR
+from remora.types import StrUrl
 
 EXPIRATION = 24 * 60 * 60
 

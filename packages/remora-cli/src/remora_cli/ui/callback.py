@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from loguru import logger
 from rich.progress import TaskID
 
-from media_cli.ui.bar import DownloadProgress
-from media_dl.models.content.media import LazyMedia
-from media_dl.models.progress.list import PlaylistDownloadState
-from media_dl.models.progress.media import MediaDownloadState, ProcessingState
+from remora_cli.ui.bar import DownloadProgress
+from remora.models.content.media import LazyMedia
+from remora.models.progress.list import PlaylistDownloadState
+from remora.models.progress.media import MediaDownloadState, ProcessingState
 
 
 @dataclass(slots=True)

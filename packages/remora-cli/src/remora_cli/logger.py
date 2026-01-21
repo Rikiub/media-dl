@@ -3,8 +3,8 @@ import logging
 from loguru import logger
 from rich.logging import RichHandler
 
-from media_cli.ui.rich import CONSOLE
-from media_dl.types import LOGGING_LEVELS
+from remora_cli.ui.rich import CONSOLE
+from remora.types import LOGGING_LEVELS
 
 
 class ColorFormatter(logging.Formatter):
@@ -52,4 +52,4 @@ def start_logger(level: LOGGING_LEVELS):
         backtrace=False,
     )
 
-    logger.enable("media_dl")
+    logger.enable("remora")

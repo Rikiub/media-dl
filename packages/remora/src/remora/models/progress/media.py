@@ -5,10 +5,10 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from media_dl.models.content.media import LazyMedia, Media
-from media_dl.models.progress.base import HasFile, State
-from media_dl.models.progress.format import FormatState
-from media_dl.models.progress.processor import ProcessingState
+from remora.models.content.media import LazyMedia, Media
+from remora.models.progress.base import HasFile, State
+from remora.models.progress.format import FormatState
+from remora.models.progress.processor import ProcessingState
 
 
 class ResolvingState(State):

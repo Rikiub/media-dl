@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from media_dl import AudioFormat, MediaDownloader, VideoFormat
-from media_dl.extractor import MediaExtractor
-from media_dl.models.format.list import FormatList
+from remora import AudioFormat, MediaDownloader, VideoFormat
+from remora.extractor import MediaExtractor
+from remora.models.format.list import FormatList
 
 URL = "https://youtube.com/watch?v=Kx7B-XvmFtE"
 PLAYLIST = (

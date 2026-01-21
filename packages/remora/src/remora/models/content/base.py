@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import AliasChoices, Field, HttpUrl
 
-from media_dl.models.base import YDLSerializable
+from remora.models.base import YDLSerializable
 
 # Types
 PLAYLIST_EXTRACTORS = ["YoutubeTab"]

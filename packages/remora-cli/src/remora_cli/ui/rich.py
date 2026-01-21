@@ -3,7 +3,7 @@
 from rich.console import Console, RenderableType
 from rich.status import Status as _Status
 
-from media_cli.config import CONFIG
+from remora_cli.config import CONFIG
 
 CONSOLE = Console(stderr=True)
 

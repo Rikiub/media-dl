@@ -5,10 +5,10 @@ import tempfile
 from functools import cache
 from pathlib import Path
 
-from media_dl.types import StrPath
+from remora.types import StrPath
 
 # Constants
-CACHE_DIR = Path(tempfile.gettempdir(), "media-dl")
+CACHE_DIR = Path(tempfile.gettempdir(), "remora")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 TMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))

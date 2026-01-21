@@ -1,10 +1,10 @@
 import pytest
 
-from media_dl.exceptions import ExtractError
-from media_dl.extractor import MediaExtractor
-from media_dl.models.content.list import Playlist
-from media_dl.models.content.media import Media
-from media_dl.ydl.extractor import SEARCH_SERVICE
+from remora.exceptions import ExtractError
+from remora.extractor import MediaExtractor
+from remora.models.content.list import Playlist
+from remora.models.content.media import Media
+from remora.ydl.extractor import SEARCH_SERVICE
 
 EXTRACTOR = MediaExtractor(use_cache=False)
 

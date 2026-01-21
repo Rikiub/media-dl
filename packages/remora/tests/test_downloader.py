@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from media_dl.downloader.main import MediaDownloader
-from media_dl.extractor import MediaExtractor
+from remora.downloader.main import MediaDownloader
+from remora.extractor import MediaExtractor
 
 
 @pytest.fixture

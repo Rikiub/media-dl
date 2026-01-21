@@ -12,9 +12,9 @@ def _gen_keys() -> list[str]:
 
     from pydantic import BaseModel
 
-    from media_dl.models.content.list import Playlist
-    from media_dl.models.content.media import Media
-    from media_dl.models.format.types import AudioFormat, Format, VideoFormat, YDLArgs
+    from remora.models.content.list import Playlist
+    from remora.models.content.media import Media
+    from remora.models.format.types import AudioFormat, Format, VideoFormat, YDLArgs
 
     def extract(model: type[BaseModel], by_alias: bool = False) -> list[str]:
         keys: list[str] = []

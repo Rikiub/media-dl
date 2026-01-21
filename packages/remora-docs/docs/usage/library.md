@@ -1,3 +1,0 @@
-# Library API
-
-*Comming soon...*

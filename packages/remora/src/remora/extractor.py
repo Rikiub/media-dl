@@ -4,12 +4,12 @@ from typing import overload
 
 from loguru import logger
 
-from media_dl.cache import load_info, save_info
-from media_dl.models.content.list import LazyPlaylist, Playlist, Search
-from media_dl.models.content.media import LazyMedia, Media
-from media_dl.models.content.types import ExtractAdapter
-from media_dl.types import StrUrl
-from media_dl.ydl.extractor import SEARCH_SERVICE, extract_info, extract_query
+from remora.cache import load_info, save_info
+from remora.models.content.list import LazyPlaylist, Playlist, Search
+from remora.models.content.media import LazyMedia, Media
+from remora.models.content.types import ExtractAdapter
+from remora.types import StrUrl
+from remora.ydl.extractor import SEARCH_SERVICE, extract_info, extract_query
 
 
 class MediaExtractor:

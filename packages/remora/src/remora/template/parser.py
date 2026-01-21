@@ -4,12 +4,12 @@ from typing import Literal
 
 from pathvalidate import sanitize_filepath
 
-from media_dl.exceptions import OutputTemplateError
-from media_dl.models.content.list import Playlist
-from media_dl.models.content.media import Media
-from media_dl.models.format.types import Format
-from media_dl.template.keys import OUTPUT_TEMPLATES
-from media_dl.types import StrPath
+from remora.exceptions import OutputTemplateError
+from remora.models.content.list import Playlist
+from remora.models.content.media import Media
+from remora.models.format.types import Format
+from remora.template.keys import OUTPUT_TEMPLATES
+from remora.types import StrPath
 
 
 class FormatterDict(dict):

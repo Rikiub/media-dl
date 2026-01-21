@@ -5,16 +5,16 @@ from typing import Annotated
 from loguru import logger
 from typer import Argument, BadParameter, Exit, Option, Typer
 
-from media_cli.completions import (
+from remora_cli.completions import (
     complete_output,
     complete_query,
     complete_resolution,
     parse_queries,
 )
-from media_cli.config import CONFIG
-from media_cli.ui.rich import Status
-from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE
-from media_dl.types import FILE_FORMAT
+from remora_cli.config import CONFIG
+from remora_cli.ui.rich import Status
+from remora.downloader.config import DEFAULT_OUTPUT_TEMPLATE
+from remora.types import FILE_FORMAT
 
 
 class HelpPanel(str, Enum):
@@ -117,10 +117,10 @@ What format you want request?
 
     # Lazy Import
     with Status("Starting[blink]...[/]"):
-        from media_cli.ui.callback import ProgressCallback
-        from media_dl.downloader.main import MediaDownloader
-        from media_dl.exceptions import MediaError
-        from media_dl.extractor import MediaExtractor
+        from remora_cli.ui.callback import ProgressCallback
+        from remora.downloader.main import MediaDownloader
+        from remora.exceptions import MediaError
+        from remora.extractor import MediaExtractor
 
     # Initialize
     progress = ProgressCallback()

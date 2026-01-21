@@ -12,10 +12,10 @@ from yt_dlp.postprocessor.ffmpeg import (
     FFmpegVideoRemuxerPP,
 )
 
-from media_dl.exceptions import ProcessingError
-from media_dl.path import get_ffmpeg
-from media_dl.types import StrPath
-from media_dl.ydl.types import YDLExtractInfo
+from remora.exceptions import ProcessingError
+from remora.path import get_ffmpeg
+from remora.types import StrPath
+from remora.ydl.types import YDLExtractInfo
 
 
 def catch(func):

@@ -1,4 +1,4 @@
-from media_dl.types import FORMAT_TYPE
+from remora.types import FORMAT_TYPE
 
 VIDEO_CODEC_RANK = {
     "vp9": 10,

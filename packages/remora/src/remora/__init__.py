@@ -1,4 +1,4 @@
-"""Media-DL API. Handler for URLs extraction, serialization and medias download."""
+"""Remora API. Handler for URLs extraction, serialization and medias download."""
 
 from typing import TYPE_CHECKING
 
@@ -8,7 +8,7 @@ else:
     from lazy_imports import LazyModule, as_package, load, module_source
     from loguru import logger
 
-    logger.disable("media_dl")
+    logger.disable("remora")
 
     load(
         LazyModule(

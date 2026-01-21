@@ -1,6 +1,6 @@
 from loguru import logger
 
-from media_dl.models.progress.media import MediaDownloadState, ProcessingState
+from remora.models.progress.media import MediaDownloadState, ProcessingState
 
 
 def debug_callback(progress: MediaDownloadState):

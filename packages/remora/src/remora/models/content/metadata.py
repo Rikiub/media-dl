@@ -3,8 +3,8 @@ from typing import Annotated
 
 from pydantic import BeforeValidator, Field, RootModel
 
-from media_dl.models.content.base import YDLSerializable
-from media_dl.types import StrPath
+from remora.models.content.base import YDLSerializable
+from remora.types import StrPath
 
 
 def _validate_artists(value: list[str]) -> list[str]:
@@ -41,7 +41,7 @@ class Thumbnail(YDLSerializable):
     height: int = 0
 
     def download(self, filepath: StrPath) -> Path:
-        from media_dl.ydl.downloader import download_thumbnail
+        from remora.ydl.downloader import download_thumbnail
 
         info = {"thumbnails": [self.to_ydl_dict()]}
         path = download_thumbnail(filepath, info)
@@ -50,7 +50,7 @@ class Thumbnail(YDLSerializable):
 
 class Subtitles(YDLSerializable, RootModel[dict[str, list[Subtitle]]]):
     def download(self, filepath: StrPath) -> list[Path]:
-        from media_dl.ydl.downloader import download_subtitles
+        from remora.ydl.downloader import download_subtitles
 
         info = {"subtitles": self.to_ydl_dict()}
         paths = download_subtitles(filepath, info)

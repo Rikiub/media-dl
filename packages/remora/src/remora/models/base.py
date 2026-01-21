@@ -3,7 +3,7 @@ from typing import Generic, TypeVar, overload
 from pydantic import BaseModel, RootModel
 from typing_extensions import Self
 
-from media_dl.ydl.types import YDLExtractInfo
+from remora.ydl.types import YDLExtractInfo
 
 
 class YDLSerializable(BaseModel):

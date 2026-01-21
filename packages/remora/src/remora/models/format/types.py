@@ -14,10 +14,10 @@ from pydantic import (
 )
 from typing_extensions import override
 
-from media_dl.models.base import YDLSerializable
-from media_dl.models.progress.format import FormatDownloadCallback, FormatState
-from media_dl.types import StrPath
-from media_dl.ydl.types import SupportedExtensions, YDLFormatInfo
+from remora.models.base import YDLSerializable
+from remora.models.progress.format import FormatDownloadCallback, FormatState
+from remora.types import StrPath
+from remora.ydl.types import SupportedExtensions, YDLFormatInfo
 
 Codec = Annotated[str, AfterValidator(lambda v: None if v == "none" else v)]
 AudioCodecField = Field(alias="acodec")
@@ -45,7 +45,7 @@ class Format(ABC, YDLArgs, YDLSerializable):
         filepath: StrPath,
         on_progress: FormatDownloadCallback | None = None,
     ) -> Path:
-        from media_dl.ydl.downloader import download_format
+        from remora.ydl.downloader import download_format
 
         state = FormatState()
         path = download_format(

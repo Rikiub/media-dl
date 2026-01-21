@@ -1,4 +1,4 @@
-"""Media-DL exceptions."""
+"""Remora exceptions."""
 
 
 class MediaError(Exception):

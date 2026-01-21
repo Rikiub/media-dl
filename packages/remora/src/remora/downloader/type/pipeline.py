@@ -4,15 +4,15 @@ from pathlib import Path
 
 from loguru import logger
 
-from media_dl.downloader.config import FormatConfig
-from media_dl.downloader.selector import FormatSelector
-from media_dl.downloader.type.debug import debug_callback
-from media_dl.exceptions import DownloadError, MediaError, ProcessingError
-from media_dl.extractor import MediaExtractor
-from media_dl.models.content.media import LazyMedia, Media
-from media_dl.models.format.types import AudioFormat, Format, VideoFormat
-from media_dl.models.progress.format import FormatState
-from media_dl.models.progress.media import (
+from remora.downloader.config import FormatConfig
+from remora.downloader.selector import FormatSelector
+from remora.downloader.type.debug import debug_callback
+from remora.exceptions import DownloadError, MediaError, ProcessingError
+from remora.extractor import MediaExtractor
+from remora.models.content.media import LazyMedia, Media
+from remora.models.format.types import AudioFormat, Format, VideoFormat
+from remora.models.progress.format import FormatState
+from remora.models.progress.media import (
     CompletedState,
     DownloadingState,
     ErrorState,
@@ -20,15 +20,15 @@ from media_dl.models.progress.media import (
     ResolvedState,
     ResolvingState,
 )
-from media_dl.models.progress.processor import (
+from remora.models.progress.processor import (
     MergingProcessorState,
     ProcessorState,
     ProcessorStateType,
 )
-from media_dl.path import get_tempfile
-from media_dl.processor import MediaProcessor
-from media_dl.template.parser import generate_output_template
-from media_dl.ydl.types import SupportedExtensions, ThumbnailSupport
+from remora.path import get_tempfile
+from remora.processor import MediaProcessor
+from remora.template.parser import generate_output_template
+from remora.ydl.types import SupportedExtensions, ThumbnailSupport
 
 
 class DownloadPipeline:

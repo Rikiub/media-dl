@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from media_dl.downloader.config import DEFAULT_OUTPUT_TEMPLATE, FormatConfig
-from media_dl.downloader.type.bulk import DownloadBulk
-from media_dl.extractor import MediaExtractor
-from media_dl.models.content.list import MediaList
-from media_dl.models.content.media import LazyMedia
-from media_dl.models.content.types import ExtractResult, MediaListEntries
-from media_dl.models.progress.list import PlaylistDownloadCallback
-from media_dl.models.progress.media import MediaDownloadCallback
-from media_dl.types import FILE_FORMAT, StrPath
+from remora.downloader.config import DEFAULT_OUTPUT_TEMPLATE, FormatConfig
+from remora.downloader.type.bulk import DownloadBulk
+from remora.extractor import MediaExtractor
+from remora.models.content.list import MediaList
+from remora.models.content.media import LazyMedia
+from remora.models.content.types import ExtractResult, MediaListEntries
+from remora.models.progress.list import PlaylistDownloadCallback
+from remora.models.progress.media import MediaDownloadCallback
+from remora.types import FILE_FORMAT, StrPath
 
 _MediaResult = ExtractResult | MediaListEntries
 MediaResult = MediaList | _MediaResult | list[LazyMedia]

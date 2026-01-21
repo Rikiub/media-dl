@@ -2,8 +2,8 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from media_dl.models.format.types import AudioFormat, VideoFormat
-from media_dl.models.progress.base import HasFile, StageType
+from remora.models.format.types import AudioFormat, VideoFormat
+from remora.models.progress.base import HasFile, StageType
 
 ProcessorStateType = Literal[
     "change_container",

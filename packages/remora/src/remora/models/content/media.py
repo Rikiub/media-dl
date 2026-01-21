@@ -10,15 +10,15 @@ from pydantic import (
     field_validator,
 )
 
-from media_dl.models.content.base import PLAYLIST_EXTRACTORS, LazyExtract, TypeField
-from media_dl.models.content.metadata import (
+from remora.models.content.base import PLAYLIST_EXTRACTORS, LazyExtract, TypeField
+from remora.models.content.metadata import (
     Chapter,
     MusicMetadata,
     Subtitles,
     Thumbnail,
 )
-from media_dl.models.format.list import FormatList
-from media_dl.types import MUSIC_SITES
+from remora.models.format.list import FormatList
+from remora.types import MUSIC_SITES
 
 DatetimeTimestamp = Annotated[
     datetime.datetime, PlainSerializer(lambda d: d.timestamp())

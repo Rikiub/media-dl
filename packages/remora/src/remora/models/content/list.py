@@ -4,15 +4,15 @@ from typing import Annotated, Literal, TypeAlias
 
 from pydantic import AliasChoices, Field, HttpUrl, SkipValidation, computed_field
 
-from media_dl.models.base import YDLSerializable
-from media_dl.models.content.base import (
+from remora.models.base import YDLSerializable
+from remora.models.content.base import (
     URL_CHOICES,
     ExtractorField,
     LazyExtract,
     TypeField,
 )
-from media_dl.models.content.media import LazyMedia
-from media_dl.models.content.metadata import Thumbnail
+from remora.models.content.media import LazyMedia
+from remora.models.content.metadata import Thumbnail
 
 
 class MediaList(YDLSerializable):
