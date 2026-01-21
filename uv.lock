@@ -835,7 +835,7 @@ wheels = [
 [[package]]
 name = "remora"
 version = "3.0.0"
-source = { editable = "packages/core" }
+source = { editable = "packages/lib" }
 dependencies = [
     { name = "lazy-imports" },
     { name = "loguru" },
@@ -871,7 +871,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "remora", editable = "packages/core" },
+    { name = "remora", editable = "packages/lib" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -892,7 +892,7 @@ requires-dist = [
     { name = "mkdocs" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extras = ["python"] },
-    { name = "remora", editable = "packages/core" },
+    { name = "remora", editable = "packages/lib" },
 ]
 
 [[package]]
