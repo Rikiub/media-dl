@@ -18,7 +18,7 @@ SEARCH_SERVICE = Literal["soundcloud", "youtube", "ytmusic"]
 MUSIC_SITES = frozenset({"music.youtube.com", "soundcloud.com", "bandcamp.com"})
 
 # Extra
-APPNAME = "remora"
+APP_NAME = "remora"
 LOGGING_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 StrPath = str | PathLike[str]

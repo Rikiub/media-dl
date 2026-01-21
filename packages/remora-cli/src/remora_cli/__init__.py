@@ -5,7 +5,7 @@ except ImportError:
     raise SystemExit(1)
 
 from remora_cli.commands import download, main
-from remora.types import APPNAME
+from remora.types import APP_NAME
 
 app = Typer(
     callback=main.main,
@@ -16,4 +16,4 @@ app.add_typer(download.app)
 
 
 def run():
-    app(prog_name=APPNAME)
+    app(prog_name=APP_NAME)

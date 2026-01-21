@@ -4,7 +4,7 @@ from loguru import logger
 from rich.logging import RichHandler
 
 from remora_cli.ui.rich import CONSOLE
-from remora.types import LOGGING_LEVELS
+from remora.types import APP_NAME, LOGGING_LEVELS
 
 
 class ColorFormatter(logging.Formatter):
@@ -52,4 +52,4 @@ def start_logger(level: LOGGING_LEVELS):
         backtrace=False,
     )
 
-    logger.enable("remora")
+    logger.enable(APP_NAME)

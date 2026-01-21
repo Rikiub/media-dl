@@ -5,13 +5,13 @@ import tempfile
 from functools import cache
 from pathlib import Path
 
-from remora.types import StrPath
+from remora.types import APP_NAME, StrPath
 
 # Constants
-CACHE_DIR = Path(tempfile.gettempdir(), "remora")
+CACHE_DIR = Path(tempfile.gettempdir(), APP_NAME)
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-TMP_DIR = Path(tempfile.mkdtemp(prefix="ydl-"))
+TMP_DIR = Path(tempfile.mkdtemp(prefix=f"{APP_NAME}-"))
 
 
 # Functions

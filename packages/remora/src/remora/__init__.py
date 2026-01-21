@@ -2,13 +2,15 @@
 
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from .__init_exports import *  # noqa: F403
 else:
     from lazy_imports import LazyModule, as_package, load, module_source
     from loguru import logger
+    from remora.types import APPNAME
 
-    logger.disable("remora")
+    logger.disable(APPNAME)
 
     load(
         LazyModule(
