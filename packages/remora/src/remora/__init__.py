@@ -8,9 +8,9 @@ if TYPE_CHECKING:
 else:
     from lazy_imports import LazyModule, as_package, load, module_source
     from loguru import logger
-    from remora.types import APPNAME
+    from remora.types import APP_NAME
 
-    logger.disable(APPNAME)
+    logger.disable(APP_NAME)
 
     load(
         LazyModule(
