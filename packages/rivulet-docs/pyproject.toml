@@ -1,15 +1,7 @@
 [project]
 name = "rivulet-docs"
 version = "3.0.0"
-dependencies = [
-	"rivulet",
-    "mkdocs",
-    "mkdocs-material",
-]
+dependencies = ["rivulet", "mkdocs", "mkdocs-material"]
 
-[tool.uv.sources]
-rivulet = { workspace = true }
-
-[build-system]
-requires = ["uv_build>=0.8.0,<0.9"]
-build-backend = "uv_build"
+[tool.uv]
+package = false

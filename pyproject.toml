@@ -1,9 +1,8 @@
 [dependency-groups]
-dev = [
-    "pytest>=8.3.3",
-    "ruff>=0.8.0",
-]
+dev = ["pytest>=8.3.3", "ruff>=0.8.0"]
 
 [tool.uv.workspace]
 members = ["packages/*"]
-exclude = ["packages/rivulet-docs"]
+
+[tool.uv.sources]
+rivulet = { workspace = true }

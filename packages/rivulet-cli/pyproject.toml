@@ -2,14 +2,7 @@
 name = "rivulet-cli"
 version = "3.0.0"
 description = "Download any video/audio you want from a simple URL ✨"
-dependencies = [
-	"rivulet",
-    "typer",
-    "rich",
-]
-
-[tool.uv.sources]
-rivulet = { workspace = true }
+dependencies = ["rivulet", "typer", "rich"]
 
 [project.scripts]
 rivu = "rivulet_cli:run"
