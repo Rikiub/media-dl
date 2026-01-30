@@ -1,3 +1,3 @@
-from media_cli import run
+import remora_cli
 
-run()
+remora_cli.run()
