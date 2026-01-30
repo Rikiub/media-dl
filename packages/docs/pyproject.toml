@@ -1,7 +1,12 @@
 [project]
 name = "remora-docs"
 version = "3.0.0"
-dependencies = ["remora", "mkdocs", "mkdocs-material", "mkdocstrings[python]"]
+dependencies = [
+	"remora",
+	"mkdocs>=1.6.1",
+	"mkdocs-material>=9.7.1",
+	"mkdocstrings[python]",
+]
 
 [tool.uv]
 package = false
