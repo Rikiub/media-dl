@@ -8,7 +8,7 @@ from remora.exceptions import OutputTemplateError
 from remora.models.content.list import Playlist
 from remora.models.content.media import Media
 from remora.models.format.types import Format
-from remora.template.keys import OUTPUT_TEMPLATES
+from remora.template.keys import get_keys
 from remora.types import StrPath
 
 
@@ -55,7 +55,7 @@ def validate_output(output: StrPath) -> Literal[True]:
     keys: list[str] = re.findall(pattern, str(output))
 
     for key in keys:
-        if key not in OUTPUT_TEMPLATES:
+        if key not in get_keys():
             raise OutputTemplateError(f"Key '{{{key}}}' from '{output}' is invalid.")
 
     return True

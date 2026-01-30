@@ -1,14 +1,27 @@
 """Read pre-serialized keys from JSON to improve startup time on shell autocomplete."""
 
-import json
-from pathlib import Path
 
-_FILEPATH = Path(__file__)
-_FILEPATH = _FILEPATH.parent / f"{_FILEPATH.stem}.json"
+def get_keys() -> list[str]:
+    import json
+    from pathlib import Path
+
+    keys: list[str]
+
+    filepath = Path(__file__)
+    filepath = filepath.parent / f"{filepath.stem}.json"
+
+    if filepath.is_file():
+        with filepath.open() as f:
+            keys = json.load(f)
+    else:
+        keys = list(_generate_keys())
+        filepath.write_text(json.dumps(keys))
+
+    return keys
 
 
-def _gen_keys() -> list[str]:
-    """Should be executed only one time if the file not exists."""
+def _generate_keys() -> set[str]:
+    """Should be executed only one time."""
 
     from pydantic import BaseModel
 
@@ -41,7 +54,6 @@ def _gen_keys() -> list[str]:
         "datetime",
         "extension",
     }
-
     templates = {
         *extract(Playlist, True),
         *extract(Media),
@@ -53,12 +65,4 @@ def _gen_keys() -> list[str]:
     for key in EXCLUDED_KEYS:
         templates.discard(key)
 
-    return list(templates)
-
-
-if not _FILEPATH.is_file():
-    keys = _gen_keys()
-    _FILEPATH.write_text(json.dumps(keys))
-
-with _FILEPATH.open() as f:
-    OUTPUT_TEMPLATES: frozenset[str] = frozenset(json.load(f))
+    return templates
