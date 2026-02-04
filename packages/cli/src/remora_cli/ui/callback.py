@@ -59,7 +59,7 @@ class ProgressCallback(DownloadProgress):
                 )
             case "error":
                 logger.error(
-                    'Error: "{media}": {error}',
+                    '"{media}": Error: {error}',
                     media=self.get(progress).name,
                     error=progress.message,
                 )
@@ -70,20 +70,20 @@ class ProgressCallback(DownloadProgress):
 
                 if progress.reason == "skipped":
                     logger.info(
-                        'Skipped: "{media}" (Exists as "{extension}").',
+                        '"{media}": Skipped (Exists as "{extension}").',
                         media=task.name,
                         extension=progress.extension,
                     )
                     self.update(task.task_id, status="Skipped")
                 elif progress.reason == "error":
                     logger.warning(
-                        'Completed with errors: "{media}".',
+                        '"{media}": Completed with errors.',
                         media=task.name,
                         extension=progress.extension,
                     )
                     self.update(task.task_id, status="Completed")
                 else:
-                    logger.info('Completed: "{media}".', media=self.get(progress).name)
+                    logger.info('"{media}": Completed.', media=self.get(progress).name)
                     self.update(task.task_id, status="Completed")
 
                 self.counter.advance()
