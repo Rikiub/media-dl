@@ -86,7 +86,9 @@ class ProgressCallback(DownloadProgress):
                     logger.info('Completed: "{media}".', media=self.get(progress).name)
                     self.update(task.task_id, status="Completed")
 
-                self.advance_counter(progress, 1.0)
+                self.counter.advance()
+                time.sleep(1.0)
+                self.remove_task(self.get(progress).task_id)
 
     def callback_playlist(self, progress: PlaylistDownloadState):
         match progress.stage:
@@ -120,11 +122,6 @@ class ProgressCallback(DownloadProgress):
 
     def get(self, progress: MediaDownloadState):
         return self.ids[progress.id]
-
-    def advance_counter(self, progress: MediaDownloadState, delay: float):
-        self.counter.advance()
-        time.sleep(delay)
-        self.remove_task(self.get(progress).task_id)
 
     def log_debug(self, id: str, log: str, **kwargs):
         text = f'"{id}": {log}'
