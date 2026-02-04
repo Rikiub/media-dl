@@ -47,6 +47,7 @@ class DownloadPipeline:
         self.media = media
         self.config = format_config or FormatConfig("video")
         self.extractor = extractor or MediaExtractor()
+        self.error: bool = False
         self.progress = lambda d: None
 
         if on_progress:
@@ -244,8 +245,9 @@ class DownloadPipeline:
                 state.stage = "completed"
                 state.filepath = prc.filepath
                 self.progress(state)
-            except Exception as e:
-                self.progress(ErrorState(id=self.id, message=str(e)))
+            except ProcessingError as error:
+                self.error = True
+                self.progress(ErrorState(id=self.id, message=str(error)))
 
         # Remuxing
         if isinstance(format, VideoFormat):
@@ -288,7 +290,7 @@ class DownloadPipeline:
             CompletedState(
                 id=self.id,
                 filepath=final_path,
-                reason="completed",
+                reason="error" if self.error else "completed",
             )
         )
 
