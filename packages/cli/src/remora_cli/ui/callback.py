@@ -75,7 +75,14 @@ class ProgressCallback(DownloadProgress):
                         extension=progress.extension,
                     )
                     self.update(task.task_id, status="Skipped")
-                elif progress.reason == "completed":
+                elif progress.reason == "error":
+                    logger.warning(
+                        'Completed with errors: "{media}".',
+                        media=task.name,
+                        extension=progress.extension,
+                    )
+                    self.update(task.task_id, status="Completed")
+                else:
                     logger.info('Completed: "{media}".', media=self.get(progress).name)
                     self.update(task.task_id, status="Completed")
 
