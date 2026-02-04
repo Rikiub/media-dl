@@ -41,20 +41,16 @@ class Thumbnail(YDLSerializable):
     height: int = 0
 
     def download(self, filepath: StrPath) -> Path:
-        from remora.ydl.downloader import download_thumbnail
+        from remora.downloader.metadata import download_thumbnail
 
-        info = {"thumbnails": [self.to_ydl_dict()]}
-        path = download_thumbnail(filepath, info)
-        return path
+        download_thumbnail(filepath, self)
 
 
 class Subtitles(YDLSerializable, RootModel[dict[str, list[Subtitle]]]):
     def download(self, filepath: StrPath) -> list[Path]:
-        from remora.ydl.downloader import download_subtitles
+        from remora.downloader.metadata import download_subtitles
 
-        info = {"subtitles": self.to_ydl_dict()}
-        paths = download_subtitles(filepath, info)
-        return paths
+        download_subtitles(filepath, self)
 
     def __getitem__(self, index: int | str) -> list[Subtitle]:
         match index:

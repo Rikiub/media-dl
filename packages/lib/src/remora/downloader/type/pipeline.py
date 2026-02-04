@@ -5,6 +5,7 @@ from pathlib import Path
 from loguru import logger
 
 from remora.downloader.config import FormatConfig
+from remora.downloader.metadata import download_subtitles, download_thumbnail
 from remora.downloader.selector import FormatSelector
 from remora.downloader.type.debug import debug_callback
 from remora.exceptions import DownloadError, MediaError, ProcessingError
@@ -253,7 +254,7 @@ class DownloadPipeline:
 
             if media.subtitles:
                 with track_prc("embed_subtitles"):
-                    subtitles = media.subtitles.download(get_tempfile())
+                    subtitles = download_subtitles(get_tempfile(), media.subtitles)
                     prc.embed_subtitles(subtitles)
 
         elif isinstance(format, AudioFormat):
@@ -269,7 +270,7 @@ class DownloadPipeline:
         if media.thumbnails:
             if prc.filepath.suffix[1:] in ThumbnailSupport:
                 with track_prc("embed_thumbnail"):
-                    thumbnail = media.thumbnails[-1].download(get_tempfile())
+                    thumbnail = download_thumbnail(get_tempfile(), media.thumbnails[-1])
                     prc.embed_thumbnail(thumbnail, square=media.is_music)
 
         if self.config.embed_metadata:
