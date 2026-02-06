@@ -36,12 +36,12 @@ def generate_output_template(
     data = {}
 
     if format:
-        data |= format.model_dump()
-        data |= format.model_dump(by_alias=True)
+        data |= format.model_dump(exclude_none=True)
+        data |= format.model_dump(by_alias=True, exclude_none=True)
     if playlist:
-        data |= playlist.model_dump(by_alias=True)
+        data |= playlist.model_dump(by_alias=True, exclude_none=True)
     if media:
-        data |= media.model_dump()
+        data |= media.model_dump(exclude_none=True)
 
     safe_data = FormatterDict(data, replace=default_missing)
     template = str(output).format_map(safe_data)
