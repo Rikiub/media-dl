@@ -59,9 +59,10 @@ class ProgressCallback(DownloadProgress):
                 )
             case "error":
                 logger.error(
-                    '"{media}": Error: {error}',
-                    media=self.get(progress).name,
-                    error=progress.message,
+                    self.fmt_log(
+                        progress,
+                        "Error: {progress.message}",
+                    )
                 )
             case "processing":
                 self.processor_callback(progress)
@@ -70,20 +71,22 @@ class ProgressCallback(DownloadProgress):
 
                 if progress.reason == "skip":
                     logger.info(
-                        '"{media}": Skipped (Exists as "{extension}").',
-                        media=task.name,
-                        extension=progress.extension,
+                        self.fmt_log(
+                            progress,
+                            f'Skipped (Exists as "{progress.extension}")',
+                        )
                     )
                     self.update(task.task_id, status="Skipped")
                 elif progress.reason == "error":
                     logger.warning(
-                        '"{media}": Completed with errors.',
-                        media=task.name,
-                        extension=progress.extension,
+                        self.fmt_log(
+                            progress,
+                            "Completed with errors",
+                        )
                     )
                     self.update(task.task_id, status="Completed")
                 elif progress.reason == "success":
-                    logger.info('"{media}": Completed.', media=self.get(progress).name)
+                    logger.info(self.fmt_log(progress, "Completed"))
                     self.update(task.task_id, status="Completed")
 
                 self.counter.advance()
@@ -123,9 +126,9 @@ class ProgressCallback(DownloadProgress):
     def get(self, progress: MediaDownloadState):
         return self.ids[progress.id]
 
-    def log_debug(self, id: str, log: str, **kwargs):
-        text = f'"{id}": {log}'
-        logger.debug(text, **kwargs)
+    def fmt_log(self, progress: MediaDownloadState, text: str) -> str:
+        task = self.get(progress)
+        return f'   "{task.name}": {text}.'
 
     def _media_display_name(self, media: LazyMedia) -> str:
         """Get pretty representation of media name."""
