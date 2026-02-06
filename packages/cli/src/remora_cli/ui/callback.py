@@ -74,19 +74,17 @@ class ProgressCallback(DownloadProgress):
                         self.fmt_log(
                             progress,
                             f'Skipped (Exists as "{progress.extension}")',
+                            "🔄",
                         )
                     )
                     self.update(task.task_id, status="Skipped")
                 elif progress.reason == "error":
                     logger.warning(
-                        self.fmt_log(
-                            progress,
-                            "Completed with errors",
-                        )
+                        self.fmt_log(progress, "Completed with errors", "❌")
                     )
                     self.update(task.task_id, status="Completed")
                 elif progress.reason == "success":
-                    logger.info(self.fmt_log(progress, "Completed"))
+                    logger.info(self.fmt_log(progress, "Completed", "☑️"))
                     self.update(task.task_id, status="Completed")
 
                 self.counter.advance()
@@ -126,9 +124,9 @@ class ProgressCallback(DownloadProgress):
     def get(self, progress: MediaDownloadState):
         return self.ids[progress.id]
 
-    def fmt_log(self, progress: MediaDownloadState, text: str) -> str:
+    def fmt_log(self, progress: MediaDownloadState, text: str, prefix: str = "") -> str:
         task = self.get(progress)
-        return f'   "{task.name}": {text}.'
+        return f'   {prefix} "{task.name}": {text}.'
 
     def _media_display_name(self, media: LazyMedia) -> str:
         """Get pretty representation of media name."""
