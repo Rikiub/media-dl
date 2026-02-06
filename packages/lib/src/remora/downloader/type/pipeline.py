@@ -117,7 +117,7 @@ class DownloadPipeline:
                         CompletedState(
                             id=self.id,
                             filepath=path,
-                            reason="skipped",
+                            reason="skip",
                         )
                     )
                     return path
@@ -290,7 +290,7 @@ class DownloadPipeline:
             CompletedState(
                 id=self.id,
                 filepath=final_path,
-                reason="error" if self.error else "completed",
+                reason="error" if self.error else "success",
             )
         )
 

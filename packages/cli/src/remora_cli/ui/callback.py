@@ -68,7 +68,7 @@ class ProgressCallback(DownloadProgress):
             case "completed":
                 task = self.get(progress)
 
-                if progress.reason == "skipped":
+                if progress.reason == "skip":
                     logger.info(
                         '"{media}": Skipped (Exists as "{extension}").',
                         media=task.name,
@@ -82,7 +82,7 @@ class ProgressCallback(DownloadProgress):
                         extension=progress.extension,
                     )
                     self.update(task.task_id, status="Completed")
-                else:
+                elif progress.reason == "success":
                     logger.info('"{media}": Completed.', media=self.get(progress).name)
                     self.update(task.task_id, status="Completed")
 

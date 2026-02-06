@@ -32,7 +32,7 @@ class ErrorState(State):
 
 class CompletedState(HasFile):
     status: Literal["completed"] = "completed"
-    reason: Literal["skipped", "error", "completed"]
+    reason: Literal["skip", "error", "success"]
 
 
 MediaDownloadState = Annotated[
