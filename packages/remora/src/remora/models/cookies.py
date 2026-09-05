@@ -141,7 +141,7 @@ class CookieList(BaseList[Cookie]):
 
     @classmethod
     def from_cookie_header(cls, data: str) -> Self:
-        from remora._ydl.cookies import LenientSimpleCookie
+        from remora._cookies import LenientSimpleCookie
 
         parsed = LenientSimpleCookie(data)
         return cls(
@@ -157,7 +157,7 @@ class CookieList(BaseList[Cookie]):
         )
 
     def to_cookie_header(self) -> str:
-        from remora._ydl.cookies import LenientSimpleCookie
+        from remora._cookies import LenientSimpleCookie
 
         encoder = LenientSimpleCookie()
         values = []

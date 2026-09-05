@@ -31,6 +31,8 @@ def sanitize_ydl_error(error: YoutubeDLError) -> str:
         "Use --cookies-from-browser or --cookies",
         "See https://github.com/yt-dlp/yt-dlp/wiki",
         "for how to manually pass cookies",
+        # Cut off load cookies from browser error
+        "See  https://github.com/yt-dlp/yt-dlp/issues/7271  for more info",
     )
     for cutoff in cutoffs:
         if cutoff in msg:
