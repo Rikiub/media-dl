@@ -4,6 +4,7 @@ from typing import overload
 
 from anyio.to_thread import run_sync
 from loguru import logger
+from pydantic import AnyUrl
 
 from remora.models.media import (
     ExtractAdapter,
@@ -49,6 +50,15 @@ class MediaExtractor:
                     "Using cookies list with {cookies_length} items",
                     cookies_length=len(cookies),
                 )
+
+                if (url_host := AnyUrl(url).host) and (
+                    cookies.get_expired_cookies(url_host)
+                ):
+                    logger.warning(
+                        f"The given cookies for the domain '{url_host}' are expired. "
+                        "It could do unexpected behaviour. "
+                        "Please update your cookies the next time."
+                    )
             if proxy := self.network_options.proxy:
                 logger.info('Using proxy: "{proxy_url}"', proxy=proxy)
             if impersonate := self.network_options.impersonate:
