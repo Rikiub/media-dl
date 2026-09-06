@@ -8,7 +8,7 @@ from pydantic import ValidatorFunctionWrapHandler, WrapValidator
 from pydantic_core import PydanticOmit
 from typing_extensions import TypeVar
 
-from remora.models._base import BaseList, FilterValue, to_tuple
+from remora.models._base import BaseList, FilterValue, rgetattr, to_tuple
 from remora.models.container import (
     AudioCodec,
     AVContainerLike,
@@ -151,14 +151,21 @@ class StreamList(BaseList[Annotated[_Stream, _LogOnErrorOmit]], Generic[_Stream]
     ) -> Self:
         """Sort by `Stream` attribute."""
 
-        if attribute == "best":
-            filter = get_stream_rank
-        elif attribute == "video_codec":
-            filter = lambda codec: get_codec_rank(VideoInfo(codec=codec))
-        elif attribute == "audio_codec":
-            filter = lambda codec: get_codec_rank(AudioInfo(codec=codec))
-        else:
-            filter = lambda s: getattr(s, attribute)
+        match attribute:
+            case "best":
+                filter = get_stream_rank
+            case "quality":
+                filter = lambda stream: stream.quality if stream.quality else 0
+            case "video_codec":
+                filter = lambda stream: get_codec_rank(
+                    VideoInfo(codec=rgetattr(stream, "video.codec.original"))
+                )
+            case "audio_codec":
+                filter = lambda stream: get_codec_rank(
+                    AudioInfo(codec=rgetattr(stream, "audio.codec.original"))
+                )
+            case _:
+                filter = lambda s: getattr(s, attribute)
 
         return self.__class__(
             sorted(
