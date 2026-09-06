@@ -6,7 +6,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal
 
-from cyclopts import App, Parameter, validators
+from cyclopts import App, CycloptsError, Parameter, validators
 from loguru import logger
 
 from remora.constants import DEFAULT_TEMPLATE, DEFAULT_WORKERS
@@ -168,7 +168,12 @@ async def download(
 
     async for target, result in extract_queries(query, remora.network_options):
         if isinstance(result, (Playlist, SearchList)) and not result.entries.medias():
-            logger.error("'{}' don't have streams to download", target)
+            url = (
+                result.url
+                if isinstance(result, Playlist)
+                else f"{result.service}:{result.query}"
+            )
+            raise CycloptsError(f"{url} don't have medias to download")
 
         if isinstance(result, SearchList):
             result = result.entries.medias()[0]
