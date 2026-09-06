@@ -13,11 +13,7 @@ from remora.models.metadata import (
 )
 
 # Types
-PLAYLIST_EXTRACTOR_IDS = ("YoutubeTab",)
 URL_CHOICES = ("webpage_url", "original_url", "url")
-
-# Fields
-TypeField = Field(alias="_type")
 
 
 def is_ydl_media(data) -> TypeIs[dict]:

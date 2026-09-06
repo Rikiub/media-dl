@@ -1,21 +1,9 @@
 from typing import Annotated, Literal
 
-from pydantic import (
-    AfterValidator,
-    BeforeValidator,
-    Field,
-    field_validator,
-    model_validator,
-)
+from pydantic import AfterValidator, BeforeValidator, Field, model_validator
 
 from remora.models._base import EnsureList, EnsureNone
-from remora.models.media._base import (
-    PLAYLIST_EXTRACTOR_IDS,
-    ExtractID,
-    ExtractorInfo,
-    TypeField,
-    is_ydl_media,
-)
+from remora.models.media._base import ExtractID, is_ydl_media
 from remora.models.metadata import (
     Chapter,
     Heatmap,
@@ -60,14 +48,17 @@ class LazyMedia(ExtractID):
     type: Annotated[
         Literal["media"],
         BeforeValidator(_normalize_type),
-        TypeField,
+        Field(alias="_type"),
     ] = "media"
     title: Annotated[str | None, EnsureNone] = None
     description: Annotated[str | None, EnsureNone] = None
 
     # Status
     live_status: LiveStatus = "not_live"
-    availability: Availability = "public"
+    availability: Annotated[
+        Availability,
+        BeforeValidator(lambda v: v if v else "public"),
+    ] = "public"
 
     # Metadata
     license: str | None = None
@@ -79,13 +70,6 @@ class LazyMedia(ExtractID):
 
     categories: Annotated[list[str], EnsureList] = []  # noqa: RUF012
     tags: Annotated[list[str], EnsureList] = []  # noqa: RUF012
-
-    @field_validator("extractor")
-    @classmethod
-    def _validate_extractor(cls, extractor: ExtractorInfo) -> ExtractorInfo:
-        if extractor.id in PLAYLIST_EXTRACTOR_IDS:
-            raise ValueError(f"'{extractor.id}' extractor is for playlists only.")
-        return extractor
 
     @model_validator(mode="before")
     @classmethod
