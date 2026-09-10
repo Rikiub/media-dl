@@ -1,5 +1,6 @@
 """Raw info extractor."""
 
+from functools import partial
 from typing import overload
 
 from anyio.to_thread import run_sync
@@ -69,7 +70,13 @@ class MediaExtractor:
             # Extract info
             from remora._ydl.extractor import extract_info
 
-            info = await run_sync(extract_info, url, self.network_options)
+            info = await run_sync(
+                partial(
+                    extract_info,
+                    query=url,
+                    network_options=self.network_options,
+                )
+            )
             result = ExtractAdapter.validate_python(info, by_alias=True)
 
             logger.success("Extraction successful")
@@ -97,7 +104,15 @@ class MediaExtractor:
             # Extract info
             from remora._ydl.extractor import extract_query
 
-            info = await run_sync(extract_query, query, service, limit)
+            info = await run_sync(
+                partial(
+                    extract_query,
+                    query=query,
+                    service=service,
+                    limit=limit,
+                    network_options=self.network_options,
+                )
+            )
             result = SearchList.model_validate(
                 {"query": query, "service": service, **info},
                 by_alias=True,
