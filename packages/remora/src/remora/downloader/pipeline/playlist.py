@@ -26,7 +26,6 @@ from remora.models.progress import (
     MediaEnded,
     MediaExtracting,
     MediaFailed,
-    PlaylistCancelled,
     PlaylistCompleted,
     PlaylistEnded,
     PlaylistInProgress,
@@ -68,16 +67,6 @@ class PlaylistDownloader(BaseDownloader[BatchState]):
     async def _emit(self, state) -> None:
         await log_event_playlist(state)
         await super()._emit(state)
-
-    @override
-    async def _on_cancelled(self) -> None:
-        await self._emit(
-            PlaylistCancelled(
-                id=self.id,
-                completed=self.completed,
-                total=self.total,
-            )
-        )
 
     @override
     async def _run_pipeline(self) -> None:

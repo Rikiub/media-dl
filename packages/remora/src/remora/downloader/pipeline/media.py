@@ -36,7 +36,6 @@ from remora.models.options.network import NetworkOptions
 from remora.models.progress import (
     BatchStreamCompleted,
     BatchStreamDownloading,
-    MediaCancelled,
     MediaCompleted,
     MediaDownloading,
     MediaEnded,
@@ -103,16 +102,6 @@ class MediaDownloader(BaseDownloader[MediaState]):
                         media=self.media,
                     )
                 )
-
-    @override
-    async def _on_cancelled(self):
-        await self._emit(MediaCancelled(id=self.id, media=self.media))
-        await self._emit(
-            MediaEnded(
-                id=self.id,
-                media=self.media,
-            )
-        )
 
     @override
     async def _emit(self, state) -> None:
