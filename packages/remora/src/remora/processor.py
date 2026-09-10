@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from functools import partial
 from pathlib import Path
 from typing import Self
 
@@ -43,7 +44,7 @@ class MediaProcessor:
         container: RichAVContainer | AVContainer,
     ) -> Self:
         extension = get_container(container).extension
-        result = await run_sync(self._prc.video_remuxer, extension)
+        result = await run_sync(partial(self._prc.video_remuxer, extension))
         return self._sync(result)
 
     async def convert_audio(
@@ -52,7 +53,9 @@ class MediaProcessor:
         quality: StreamQuality | int | None = None,
     ) -> Self:
         container = AudioContainer(container)
-        result = await run_sync(self._prc.extract_audio, container.extension, quality)
+        result = await run_sync(
+            partial(self._prc.extract_audio, container.extension, quality)
+        )
         return self._sync(result)
 
     async def embed_metadata(self, media: Media) -> Self:
@@ -60,15 +63,15 @@ class MediaProcessor:
         if media.music:
             info |= _media_to_ydl_music(media, media.music)
 
-        result = await run_sync(self._prc.embed_metadata, info)
+        result = await run_sync(partial(self._prc.embed_metadata, info))
         return self._sync(result)
 
     async def embed_thumbnail(self, thumbnail: StrPath, square: bool = False) -> Self:
-        result = await run_sync(self._prc.embed_thumbnail, thumbnail, square)
+        result = await run_sync(partial(self._prc.embed_thumbnail, thumbnail, square))
         return self._sync(result)
 
     async def embed_subtitles(self, subtitles: Iterable[StrPath]) -> Self:
-        result = await run_sync(self._prc.embed_subtitle, subtitles)
+        result = await run_sync(partial(self._prc.embed_subtitle, subtitles))
         return self._sync(result)
 
     async def merge_streams(
@@ -103,9 +106,11 @@ class MediaProcessor:
 
         # Start post-processing
         result = await run_sync(
-            self._prc.merge_formats,
-            container.extension,
-            real_streams,
+            partial(
+                self._prc.merge_formats,
+                container.extension,
+                real_streams,
+            )
         )
         return self._sync(result)
 

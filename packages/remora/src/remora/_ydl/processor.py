@@ -1,6 +1,6 @@
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Self, TypedDict
+from typing import ParamSpec, Self, TypedDict, TypeVar
 
 from yt_dlp.postprocessor.embedthumbnail import EmbedThumbnailPP
 from yt_dlp.postprocessor.ffmpeg import (
@@ -20,8 +20,11 @@ from remora.exceptions import ProcessorError
 from remora.ffmpeg import validate_ffmpeg_dir
 from remora.models.types import StrPath
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def catch(func):
+
+def catch(func: Callable[_P, _R]) -> Callable[_P, _R]:
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
