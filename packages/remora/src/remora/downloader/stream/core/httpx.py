@@ -1,4 +1,5 @@
 import pathlib
+from functools import partial
 from urllib.parse import urljoin
 
 import anyio
@@ -51,10 +52,7 @@ class HttpxStreamDownloader(BaseStreamDownloader[StreamState]):
             retries=retries,
             network_options=network_options,
         )
-
-        # Workers
         self.max_workers = max_workers or DEFAULT_SEGMENT_WORKERS
-        self.limiter = anyio.CapacityLimiter(self.max_workers)
 
         # Progress
         self.is_continuous = False
@@ -155,23 +153,26 @@ class HttpxStreamDownloader(BaseStreamDownloader[StreamState]):
                         )
 
                         tg.start_soon(
-                            self._save_range,
-                            self.file_path,
-                            str(self.stream.url),
-                            start,
-                            end,
-                            True,
-                            name=f"Stream-Part-{i}",
+                            partial(
+                                self._save_range,
+                                self.file_path,
+                                str(self.stream.url),
+                                start,
+                                end,
+                                True,
+                            )
                         )
                 else:
                     # Single-stream download
                     tg.start_soon(
-                        self._save_range,
-                        self.file_path,
-                        str(self.stream.url),
-                        0,
-                        None,
-                        False,
+                        partial(
+                            self._save_range,
+                            self.file_path,
+                            str(self.stream.url),
+                            0,
+                            None,
+                            False,
+                        )
                     )
 
         return self.file_path
@@ -261,63 +262,62 @@ class HttpxStreamDownloader(BaseStreamDownloader[StreamState]):
     ):
         """Downloads a specific byte range to a file with resume support."""
 
-        async with self.limiter:
-            downloaded = 0
+        downloaded = 0
 
-            # Support resuming part files across application restarts
-            if not is_continuous:
-                stats = await path.stat()
-                downloaded = stats.st_size
-                self.downloaded_bytes += downloaded
+        # Support resuming part files across application restarts
+        if not is_continuous:
+            stats = await path.stat()
+            downloaded = stats.st_size
+            self.downloaded_bytes += downloaded
 
-            # Use "r+b" universally
-            async with await path.open("r+b") as f:
-                for attempt in range(self.retries):
-                    current_start = start + downloaded
+        # Use "r+b" universally
+        async with await path.open("r+b") as f:
+            for attempt in range(self.retries):
+                current_start = start + downloaded
 
-                    # Formulate Range correctly even if end is None
-                    headers = {}
-                    if current_start > 0 or end is not None:
-                        range_end = end if end is not None else ""
-                        headers = {"Range": f"bytes={current_start}-{range_end}"}
+                # Formulate Range correctly even if end is None
+                headers = {}
+                if current_start > 0 or end is not None:
+                    range_end = end if end is not None else ""
+                    headers = {"Range": f"bytes={current_start}-{range_end}"}
 
-                    try:
-                        async with self.client.stream(
-                            "GET",
-                            url,
-                            headers=headers,
-                        ) as res:
-                            res.raise_for_status()
+                try:
+                    async with self.client.stream(
+                        "GET",
+                        url,
+                        headers=headers,
+                    ) as res:
+                        res.raise_for_status()
 
-                            # Handle server ignoring the Range request (returns 200 instead of 206)
-                            if res.status_code == 200 and current_start > start:
-                                self.downloaded_bytes -= downloaded
-                                downloaded = 0
-                                current_start = start
-                                if not is_continuous:
-                                    await f.truncate(0)
+                        # Handle server ignoring the Range request (returns 200 instead of 206)
+                        if res.status_code == 200 and current_start > start:
+                            self.downloaded_bytes -= downloaded
+                            downloaded = 0
+                            current_start = start
+                            if not is_continuous:
+                                await f.truncate(0)
 
-                            # Always seek to the correct write position
-                            await f.seek(current_start)
+                        # Always seek to the correct write position
+                        await f.seek(current_start)
 
-                            async for chunk in res.aiter_bytes():
-                                await f.write(chunk)
-                                downloaded += len(chunk)
-                                self.downloaded_bytes += len(chunk)
+                        async for chunk in res.aiter_bytes():
+                            await f.write(chunk)
+                            downloaded += len(chunk)
+                            self.downloaded_bytes += len(chunk)
 
-                                await self._update_progress()
-
-                        # Update segment progress upon successful download
-                        if not is_continuous:
-                            self.current_segment += 1
                             await self._update_progress()
 
-                        return
+                    # Update segment progress upon successful download
+                    if not is_continuous:
+                        self.current_segment += 1
+                        await self._update_progress()
 
-                    except Exception:
-                        if attempt == self.retries - 1:
-                            raise
-                        await anyio.sleep(2**attempt)
+                    return
+
+                except Exception:
+                    if attempt == self.retries - 1:
+                        raise
+                    await anyio.sleep(2**attempt)
 
     async def _build_parts(self, parts: list[Path]) -> Path:
         async with await self.file_path.open("wb") as final_file:
