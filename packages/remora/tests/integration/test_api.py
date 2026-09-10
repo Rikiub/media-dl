@@ -42,7 +42,7 @@ async def test_playlist(tmp_path: Path):
         ),
     )
 
-    async with remora.download_batch(PLAYLIST) as progress:
+    async with remora.download_playlist(PLAYLIST) as progress:
         async for state in progress:
             if state.type == "media" and state.status == "completed":
                 assert state.file_path.is_file()

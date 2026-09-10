@@ -55,16 +55,16 @@ class Remora:
         """Extract media from search service."""
         return await self._extractor.extract_search(query, service, limit)
 
-    def download_media(self, media: Media) -> MediaDownloader:
-        return MediaDownloader(
-            media,
+    def download_playlist(self, item: StrUrl | AnyExtractResult) -> PlaylistDownloader:
+        return PlaylistDownloader(
+            item,
             download_options=self.download_options,
             network_options=self.network_options,
         )
 
-    def download_batch(self, item: StrUrl | AnyExtractResult) -> PlaylistDownloader:
-        return PlaylistDownloader(
-            item,
+    def download_media(self, media: Media) -> MediaDownloader:
+        return MediaDownloader(
+            media,
             download_options=self.download_options,
             network_options=self.network_options,
         )

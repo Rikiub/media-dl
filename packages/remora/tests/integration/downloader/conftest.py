@@ -17,7 +17,7 @@ def download(tmp_path: Path):
         )
         result = await remora.extract(url)
 
-        async with remora.download_batch(result) as progress:
+        async with remora.download_playlist(result) as progress:
             async for state in progress:
                 if isinstance(state, MediaState):
                     if (

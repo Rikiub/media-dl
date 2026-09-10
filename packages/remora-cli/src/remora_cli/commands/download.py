@@ -180,7 +180,7 @@ async def download(
 
         async with (
             ProgressCallback(display.quiet) as wrapper,
-            remora.download_batch(result) as progress,
+            remora.download_playlist(result) as progress,
         ):
             async for state in progress:
                 await wrapper.playlist_callback(state)
