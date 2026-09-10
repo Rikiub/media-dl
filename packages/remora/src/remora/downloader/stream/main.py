@@ -1,7 +1,6 @@
 from loguru import logger
 from typing_extensions import override
 
-from remora.constants import DEFAULT_RETRIES, DEFAULT_SEGMENT_WORKERS
 from remora.downloader.stream.base import BaseStreamDownloader
 from remora.exceptions import DownloaderError
 from remora.models.options.network import NetworkOptions
@@ -17,8 +16,8 @@ class StreamDownloader(BaseStreamDownloader[StreamState]):
         self,
         stream: Stream,
         output_path: StrPath,
-        retries: int = DEFAULT_RETRIES,
-        max_workers: int = DEFAULT_SEGMENT_WORKERS,
+        retries: int | None = None,
+        max_workers: int | None = None,
         network_options: NetworkOptions | None = None,
     ):
         super().__init__(

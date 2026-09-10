@@ -4,6 +4,7 @@ import anyio
 from loguru import logger
 from typing_extensions import override
 
+from remora.constants import DEFAULT_WORKERS
 from remora.downloader.pipeline._logs import log_event_playlist
 from remora.downloader.pipeline.base import BaseDownloader
 from remora.downloader.pipeline.media import MediaDownloader
@@ -47,9 +48,10 @@ class PlaylistDownloader(BaseDownloader[BatchState]):
         # Internals
         super().__init__(download_options=download_options)
         self.extractor = MediaExtractor(network_options)
-        self._buffer_size = 100 * self.download_options.max_workers
+        self.max_workers = self.download_options.max_workers or DEFAULT_WORKERS
+        self._buffer_size = 100 * self.max_workers
 
-        self.limiter = anyio.CapacityLimiter(self.download_options.max_workers)
+        self.limiter = anyio.CapacityLimiter(self.max_workers)
         self._unresolved_item = item
 
         # Fields

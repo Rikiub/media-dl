@@ -19,13 +19,13 @@ class BaseStreamDownloader(AsyncStateStreamer[T], ABC):
         self,
         stream: Stream,
         output_path: StrPath,
-        retries: int = DEFAULT_RETRIES,
+        retries: int | None = None,
         network_options: NetworkOptions | None = None,
     ) -> None:
         # General
         self.file_path = Path(output_path)
         self.stream = stream
-        self.retries = retries
+        self.retries = retries or DEFAULT_RETRIES
         self.network_options = network_options or NetworkOptions()
         super().__init__(buffer_size=_DEFAULT_BUFFER_SIZE)
 

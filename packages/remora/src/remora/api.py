@@ -1,8 +1,12 @@
 from pathlib import Path
 from typing import overload
 
-from remora.constants import DEFAULT_SEGMENT_WORKERS
-from remora.downloader import MediaDownloader, PlaylistDownloader, StreamDownloader
+from remora.downloader import (
+    MediaDownloader,
+    PlaylistDownloader,
+    StreamDownloader,
+    download_resource,
+)
 from remora.extractor import MediaExtractor
 from remora.models.media import (
     AnyExtractResult,
@@ -80,7 +84,7 @@ class Remora:
             stream=stream,
             output_path=output_path,
             retries=retries or self.download_options.retries,
-            max_workers=max_workers or DEFAULT_SEGMENT_WORKERS,
+            max_workers=max_workers,
             network_options=self.network_options,
         )
 
@@ -89,6 +93,5 @@ class Remora:
         item: Subtitle | Thumbnail | Storyboard,
         output_path: StrPath,
     ) -> Path:
-        from remora.downloader.metadata import download_resource
 
         return await download_resource(item, output_path)

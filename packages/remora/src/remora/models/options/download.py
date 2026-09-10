@@ -3,9 +3,7 @@ from typing import Annotated
 from pydantic import AfterValidator
 
 from remora.constants import (
-    DEFAULT_RETRIES,
     DEFAULT_TEMPLATE,
-    DEFAULT_WORKERS,
 )
 from remora.models._base import RemoraModel
 from remora.models.container import AVContainer, AVContainerFormat, RichAVContainer
@@ -59,5 +57,5 @@ class DownloadOptions(RemoraModel):
     embed_metadata: bool = True
     ffmpeg_location: Annotated[StrPath | None, AfterValidator(_validate_ffmpeg)] = None
 
-    max_workers: int = DEFAULT_WORKERS
-    retries: int = DEFAULT_RETRIES
+    max_workers: int | None = None
+    retries: int | None = None

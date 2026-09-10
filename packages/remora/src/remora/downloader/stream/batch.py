@@ -33,14 +33,14 @@ class BatchStreamDownloader(AsyncStateStreamer[BatchStreamState]):
     def __init__(
         self,
         stream: Iterable[StreamContext],
-        retries: int = DEFAULT_RETRIES,
+        retries: int | None = None,
         network_options: NetworkOptions | None = None,
     ):
         super().__init__(buffer_size=_DEFAULT_BUFFER_SIZE)
 
         self.streams = [_StreamManager(stream=s.stream, path=s.path) for s in stream]
         self.network_options = network_options
-        self.retries = retries
+        self.retries = retries or DEFAULT_RETRIES
 
         self._last_sync_time = 0.0
 
