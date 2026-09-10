@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from abc import ABC
 from typing import Annotated, Literal
 
@@ -24,27 +25,30 @@ __all__ = [
 ]
 
 # Discriminator
-_PLAYLIST_EXTRACTOR_KEYS = ("YoutubeTab",)
+_PLAYLIST_EXTRACTOR_RE = re.compile(
+    "Tab|Notification|Search|Playlist|Channel|User|Category|Collection"
+)
 
 
 def _infer_extract_type(data) -> str:
     if is_ydl_media(data):
         extractor_key = data.get("extractor_key") or data.get("ie_key")
 
-        if (
-            data.get("_type") == "playlist"
-            or (extractor_key in _PLAYLIST_EXTRACTOR_KEYS)
-            or data.get("entries")
-        ):
+        # Match playlist
+        if data.get("_type") == "playlist" or data.get("entries"):
             return "playlist"
 
-        elif data.get("formats"):
+        if _PLAYLIST_EXTRACTOR_RE.search(extractor_key):
+            return "lazy_playlist"
+
+        # Match media
+        if data.get("formats"):
             return "media"
 
         return "lazy_media"
     elif isinstance(data, (LazyMedia, LazyPlaylist)):
         return data.type
-    raise ValueError("Unable to determine media type")
+    raise ValueError("Unable to determine data type")
 
 
 _ExtractDiscriminator = Annotated[
