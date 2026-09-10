@@ -64,9 +64,9 @@ def extract_info(
                 "cookiefile": StringIO(cookies.to_netscape_cookies())
                 if (cookies := network_options.cookies)
                 else None,
-                "proxy": str(network_options.proxy) if network_options.proxy else None,
-                "impersonate": ImpersonateTarget.from_str(network_options.impersonate)
-                if network_options.impersonate
+                "proxy": str(proxy) if (proxy := network_options.proxy) else None,
+                "impersonate": ImpersonateTarget.from_str(impersonate)
+                if (impersonate := network_options.impersonate)
                 else None,
             },
             auto_init=True,
