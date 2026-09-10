@@ -1,3 +1,4 @@
+from functools import partial
 from pathlib import Path
 
 from anyio.to_thread import run_sync
@@ -65,14 +66,18 @@ class YDLStreamDownloader(BaseStreamDownloader[StreamState]):
         from remora._ydl.downloader import download_format
 
         return await run_sync(
-            download_format,
-            self.file_path,
-            self.stream._to_ydl_dict(),
-            self._ydl_progress,
-            self.retries,
-            self.network_options.model_copy(update={"impersonate": impersonate})
-            if impersonate
-            else self.network_options,
+            partial(
+                download_format,
+                filepath=self.file_path,
+                format_info=self.stream._to_ydl_dict(),
+                callback=self._ydl_progress,
+                retries=self.retries,
+                network_options=self.network_options.model_copy(
+                    update={"impersonate": impersonate}
+                )
+                if impersonate
+                else self.network_options,
+            )
         )
 
     def _ydl_progress(self, data: dict) -> None:
