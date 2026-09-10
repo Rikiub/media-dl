@@ -70,7 +70,9 @@ class YDLStreamDownloader(BaseStreamDownloader[StreamState]):
             self.stream._to_ydl_dict(),
             self._ydl_progress,
             self.retries,
-            impersonate,
+            self.network_options.model_copy(update={"impersonate": impersonate})
+            if impersonate
+            else self.network_options,
         )
 
     def _ydl_progress(self, data: dict) -> None:
