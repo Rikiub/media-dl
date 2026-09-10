@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Literal, Self
+from typing import Literal, NoReturn, Self, TypeVar, overload
 
 from typing_extensions import override
 
@@ -12,6 +12,10 @@ class _BaseContainer(GetterEnum):
     @property
     def extension(self) -> str:
         return self.value.lower()
+
+    @property
+    @abstractmethod
+    def is_common(self) -> bool: ...
 
     @property
     @abstractmethod
@@ -60,6 +64,12 @@ class VideoContainer(_BaseContainer):
 
     @override
     @property
+    def is_common(self) -> bool:
+        """Checks if container is common."""
+        return self in {VideoContainer.MP4, VideoContainer.MKV}
+
+    @override
+    @property
     def supports_subtitles(self) -> bool:
         """Checks if container reliably supports embedded subtitles."""
         return self in {
@@ -98,6 +108,17 @@ class AudioContainer(_BaseContainer):
 
     @override
     @property
+    def is_common(self) -> bool:
+        """Checks if container is common."""
+        return self in {
+            AudioContainer.FLAC,
+            AudioContainer.MKA,
+            AudioContainer.M4A,
+            AudioContainer.MP3,
+        }
+
+    @override
+    @property
     def supports_subtitles(self) -> bool:
         """Checks if container reliably supports embedded subtitles."""
         return self in {
@@ -122,10 +143,27 @@ class AudioContainer(_BaseContainer):
         return _AUDIO_MAP
 
 
+# Both types
 AVContainer = VideoContainer | AudioContainer
+_T = TypeVar("_T", bound=AVContainer)
 
 
-def get_container(value: str | None) -> AVContainer:
+@overload
+def get_container(value: _T) -> _T: ...
+
+
+@overload
+def get_container(value: str) -> AVContainer: ...
+
+
+@overload
+def get_container(value: None) -> NoReturn: ...
+
+
+def get_container(value: AVContainer | str | None):
+    if isinstance(value, AVContainer):
+        return value
+
     container = VideoContainer.get(value) or AudioContainer.get(value)
     if not container:
         raise ValueError(f"'{value}' is a invalid container")

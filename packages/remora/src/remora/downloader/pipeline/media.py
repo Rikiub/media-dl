@@ -26,6 +26,7 @@ from remora.exceptions import (
 from remora.models import VideoContainer
 from remora.models.container import (
     AudioContainer,
+    AVContainer,
 )
 from remora.models.container.av import get_container
 from remora.models.media import Media
@@ -422,6 +423,18 @@ class MediaDownloader(BaseDownloader[MediaState]):
                     )
                 )
 
+        async def remux_or_convert(target_container: AVContainer | str) -> None:
+            target_container = get_container(target_container)
+            stream_container = stream.container if stream else None
+
+            if target_container != stream_container:
+                try:
+                    async with track_prc("change_container", True):
+                        await prc.change_container(target_container)
+                except ProcessorError:
+                    async with track_prc("convert_audio"):
+                        await prc.convert_audio(target_container)  # ty: ignore[invalid-argument-type]
+
         if isinstance(stream, VideoStream):
             # If user requested a container, then convert to it.
             if convert_container:
@@ -433,21 +446,23 @@ class MediaDownloader(BaseDownloader[MediaState]):
                 async with track_prc("convert_audio"):
                     await prc.convert_audio(AudioContainer(DEFAULT_AUDIO_CONTAINER))
 
+            # If the file isn't in a common container, normalize it.
+            elif not prc.file_container.is_common:
+                async with track_prc("change_container"):
+                    await prc.change_container(VideoContainer(DEFAULT_VIDEO_CONTAINER))
+
             if subtitles and prc.file_container.supports_subtitles:
                 async with track_prc("embed_subtitles"):
                     await prc.embed_subtitles(subtitles)
 
-        elif (
-            isinstance(stream, AudioStream)
-            and isinstance(convert_container, AudioContainer)
-            and convert_container != stream.container
-        ):
-            try:
-                async with track_prc("change_container", True):
-                    await prc.change_container(convert_container)
-            except ProcessorError:
-                async with track_prc("convert_audio"):
-                    await prc.convert_audio(convert_container)
+        elif isinstance(stream, AudioStream):
+            if (
+                isinstance(convert_container, AudioContainer)
+                and convert_container != stream.container
+            ):
+                await remux_or_convert(convert_container)
+            elif not prc.file_container.is_common:
+                await remux_or_convert(DEFAULT_AUDIO_CONTAINER)
 
         # Metadata
         # Must run before embed the thumbnail.
