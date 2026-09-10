@@ -58,7 +58,7 @@ class PlaylistDownloader(BaseDownloader[BatchState]):
         self.playlist: Playlist | None
 
         self.completed: int
-        self.totat: int
+        self.total: int
 
         self.failed: int
 
@@ -120,38 +120,35 @@ class PlaylistDownloader(BaseDownloader[BatchState]):
     async def _worker(self, media: LazyMedia):
         async with self.limiter:
             # Resolve media
+            resolved_media = None
+
             if type(media) is LazyMedia:
-                await self._emit(
-                    MediaExtracting(
-                        id=media.id,
-                        media=media,
-                    )
-                )
+                await self._emit(MediaExtracting(id=media.id, media=media))
 
                 try:
                     resolved_media = await self.extractor.extract(media)
                 except ExtractorError as error:
+                    self.failed += 1
+
                     await self._emit(
                         MediaFailed(id=media.id, media=media, message=str(error))
                     )
                     await self._emit(MediaEnded(id=media.id, media=media))
-
-                    self.failed += 1
-                    return
             elif isinstance(media, Media):
                 resolved_media = media
 
-            # Start downloader
-            async with MediaDownloader(
-                resolved_media,
-                self.download_options,
-            ) as progress:
-                async for state in progress:
-                    if isinstance(state, MediaFailed):
-                        self.failed += 1
-                    elif isinstance(state, MediaEnded):
-                        self.completed += 1
-                    await self._emit(state)
+            if resolved_media:
+                # Start downloader
+                async with MediaDownloader(
+                    resolved_media,
+                    self.download_options,
+                ) as progress:
+                    async for state in progress:
+                        if isinstance(state, MediaFailed):
+                            self.failed += 1
+                        elif isinstance(state, MediaEnded):
+                            self.completed += 1
+                        await self._emit(state)
 
             await self._emit(
                 PlaylistInProgress(
