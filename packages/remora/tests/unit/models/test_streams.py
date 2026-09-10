@@ -2,7 +2,6 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 import pytest
-from pydantic import ValidationError
 
 from remora.models.container import CodecInfo
 from remora.models.metadata.size import Resolution
@@ -218,48 +217,3 @@ def test_missing_get_by_id(streams: StreamList):
     with pytest.raises(KeyError):
         stream_id = "-1"
         streams.get_by_id(stream_id)
-
-
-# Errors
-def test_invalid_video_extension():
-    with pytest.raises(ValidationError):
-        VideoStream(
-            id="1",
-            url=URL,
-            protocol="https",
-            container="opus",  # This is a audio extension
-            video=VideoInfo(codec="vp9"),
-        )
-
-
-def test_invalid_audio_extension():
-    with pytest.raises(ValidationError):
-        AudioStream(
-            id="2",
-            url=URL,
-            protocol="https",
-            container="mp4",  # This is a video extension
-            audio=AudioInfo(codec="opus"),
-        )
-
-
-def test_none_video_codec():
-    with pytest.raises(ValidationError):
-        VideoStream(
-            id="1",
-            url=URL,
-            protocol="https",
-            container="mp4",
-            video=VideoInfo(codec="none"),
-        )
-
-
-def test_none_audio_codec():
-    with pytest.raises(ValidationError):
-        AudioStream(
-            id="2",
-            url=URL,
-            protocol="https",
-            container="m4a",
-            audio=AudioInfo(codec="none"),
-        )

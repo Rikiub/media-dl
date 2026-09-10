@@ -12,6 +12,7 @@ from remora.models._base import BaseList, FilterValue, rgetattr, to_tuple
 from remora.models.container import (
     AudioCodec,
     AVContainerLike,
+    CodecInfo,
     VideoCodec,
     get_container,
 )
@@ -158,7 +159,11 @@ class StreamList(BaseList[Annotated[_Stream, _LogOnErrorOmit]], Generic[_Stream]
                 filter = lambda stream: stream.quality if stream.quality else 0
             case "video_codec":
                 filter = lambda stream: get_codec_rank(
-                    VideoInfo(codec=rgetattr(stream, "video.codec.original"))
+                    VideoInfo(
+                        codec=CodecInfo(
+                            original=rgetattr(stream, "video.codec.original")
+                        )
+                    )
                 )
             case "audio_codec":
                 filter = lambda stream: get_codec_rank(

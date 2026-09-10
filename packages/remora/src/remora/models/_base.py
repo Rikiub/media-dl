@@ -1,6 +1,6 @@
 import functools
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Generic, Self, TypeVar, overload
+from typing import Any, Generic, Self, TypeVar, overload
 
 from pydantic import (
     BaseModel,
@@ -61,14 +61,26 @@ class BaseList(RootModel[Sequence], Sequence[_T], Generic[_T]):
             raise TypeError(f"Invalid argument type: {type(index)}")
 
 
-# Helpers
-def rgetattr(obj: object, attr: str, *args) -> object | None:
+# Recursive getattr
+_R = TypeVar("_R")
+
+
+@overload
+def rgetattr(obj: Any, attr: str) -> Any: ...
+
+
+# Overload 2: Called with a default value. Returns either the found type or the default type
+@overload
+def rgetattr(obj: Any, attr: str, default: _R) -> Any | _R: ...
+
+
+def rgetattr(obj: Any, attr: str, *args: Any) -> Any:
     """Get attribute recursively."""
 
     def _getattr(obj, attr):
         return getattr(obj, attr, *args)
 
-    return functools.reduce(_getattr, attr.split("."), obj)
+    return functools.reduce(_getattr, [obj] + attr.split("."))
 
 
 # Validators
