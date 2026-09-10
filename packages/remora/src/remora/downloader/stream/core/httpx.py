@@ -136,7 +136,6 @@ class HttpxStreamDownloader(BaseStreamDownloader[StreamState]):
                 file_size=self.total_bytes,
                 size_type=self.size_type,
             )
-
             workers = self.max_workers if (supports_range and self.total_bytes) else 1
 
             async with anyio.create_task_group() as tg:
@@ -240,13 +239,14 @@ class HttpxStreamDownloader(BaseStreamDownloader[StreamState]):
                 part_files.append(part)
 
                 tg.start_soon(
-                    self._save_range,
-                    part,
-                    url,
-                    0,
-                    None,
-                    False,
-                    name=f"Stream-Segment-{index}",
+                    partial(
+                        self._save_range,
+                        part,
+                        url,
+                        0,
+                        None,
+                        False,
+                    )
                 )
 
         file = await self._build_parts(part_files)
