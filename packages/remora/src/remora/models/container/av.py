@@ -91,7 +91,7 @@ class AudioContainer(_BaseContainer):
     MKA = "MKA"
     M4A = "M4A"
     MP3 = "MP3"
-    WEBA = "WEBA"
+    WEBM = "WEBM"
     WAV = "WAV"
     AAC = "AAC"
     APE = "APE"
@@ -163,7 +163,7 @@ _AUDIO_MAP: dict[str, AudioContainer] = {
     alias: canonical
     for canonical, aliases in {
         AudioContainer.MKA: {"mkv"},
-        AudioContainer.WEBA: {"webm"},
+        AudioContainer.WEBM: {"weba"},
         AudioContainer.M4A: {"mp4"},
         AudioContainer.MP3: {"mpeg3", "mpg3", "mp1", "mp2"},
         AudioContainer.OGG: {"oga", "ogx", "opus", "vorbis", "spx"},
