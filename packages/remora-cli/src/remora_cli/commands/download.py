@@ -166,21 +166,25 @@ async def download(
             network_options=network.build_options(),
         )
 
-    async for target, result in extract_queries(query, remora.network_options):
-        if isinstance(result, (Playlist, SearchList)) and not result.entries.medias():
-            url = (
-                result.url
-                if isinstance(result, Playlist)
-                else f"{result.service}:{result.query}"
-            )
-            raise CycloptsError(f"{url} don't have medias to download")
+    async with remora:
+        async for target, result in extract_queries(query, remora.network_options):
+            if (
+                isinstance(result, (Playlist, SearchList))
+                and not result.entries.medias()
+            ):
+                url = (
+                    result.url
+                    if isinstance(result, Playlist)
+                    else f"{result.service}:{result.query}"
+                )
+                raise CycloptsError(f"{url} don't have medias to download")
 
-        if isinstance(result, SearchList):
-            result = result.entries.medias()[0]
+            if isinstance(result, SearchList):
+                result = result.entries.medias()[0]
 
-        async with (
-            ProgressCallback(display.quiet) as wrapper,
-            remora.download_playlist(result) as progress,
-        ):
-            async for state in progress:
-                await wrapper.playlist_callback(state)
+            async with (
+                ProgressCallback(display.quiet) as wrapper,
+                remora.download_playlist(result) as progress,
+            ):
+                async for state in progress:
+                    await wrapper.playlist_callback(state)

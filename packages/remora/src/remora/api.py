@@ -1,6 +1,11 @@
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import overload
+from typing import Self, overload
 
+from anyio import AsyncContextManagerMixin
+
+from remora._http import get_httpx_client
 from remora.downloader import (
     MediaDownloader,
     PlaylistDownloader,
@@ -25,7 +30,7 @@ from remora.models.types import StrPath, StrUrl
 __all__ = ["Remora"]
 
 
-class Remora:
+class Remora(AsyncContextManagerMixin):
     def __init__(
         self,
         download_options: DownloadOptions | None = None,
@@ -34,6 +39,13 @@ class Remora:
         self.download_options = download_options or DownloadOptions()
         self.network_options = network_options or NetworkOptions()
         self._extractor = MediaExtractor(self.network_options)
+
+    @asynccontextmanager
+    async def __asynccontextmanager__(
+        self,
+    ) -> AsyncGenerator[Self, None]:
+        async with get_httpx_client(self.network_options):
+            yield self
 
     @overload
     async def extract(self, item: StrUrl) -> Media | Playlist: ...

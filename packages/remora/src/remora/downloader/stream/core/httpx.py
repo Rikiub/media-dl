@@ -4,10 +4,10 @@ from urllib.parse import urljoin
 import anyio
 import httpx
 from anyio import Path
-from httpx_curl_cffi import AsyncCurlTransport
 from loguru import logger
 from typing_extensions import override
 
+from remora._http import get_httpx_client
 from remora.constants import DEFAULT_SEGMENT_WORKERS
 from remora.downloader.stream.base import BaseStreamDownloader
 from remora.exceptions import DownloaderError
@@ -70,45 +70,13 @@ class HttpxStreamDownloader(BaseStreamDownloader[StreamState]):
         self._log_stream()
 
     @override
-    async def _on_exit(self):
-        await self.client.aclose()
-
-    @override
     async def _run_pipeline(self) -> None:
-        # Setup impersonate
-        transport = None
-
-        if self.network_options.impersonate:
-            transport = AsyncCurlTransport(impersonate=self.network_options.impersonate)  # ty: ignore[invalid-argument-type]
-
-        # Parse cookies
-        cookies = None
-
-        if c := self.stream.request_context.cookies:
-            cookies = httpx.Cookies()
-            for cookie in c:
-                cookies.set(
-                    name=cookie.name,
-                    value=cookie.value,
-                    domain=cookie.domain,
-                    path=cookie.path,
-                )
-
-        # Initialize client
-        self.client = httpx.AsyncClient(
-            headers=self.stream.request_context.headers,
-            cookies=cookies,
-            proxy=str(self.network_options.proxy)
-            if self.network_options.proxy
-            else None,
-            transport=transport,
-            follow_redirects=True,
-        )
-
         protocol = Protocol(self.stream.protocol)
         logger.debug('Stream protocol is "{}"', str(protocol))
 
-        async with self.client:
+        async with get_httpx_client(self.network_options) as client:
+            self.client = client
+
             try:
                 if protocol.is_segmented:
                     logger.debug("Downloading stream segments")
