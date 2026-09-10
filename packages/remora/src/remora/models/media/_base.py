@@ -22,6 +22,10 @@ def is_ydl_media(data) -> TypeIs[dict]:
     )
 
 
+def get_ydl_extractor_key(data: dict) -> str | None:
+    return data.get("extractor_key") or data.get("ie_key")
+
+
 # Base
 class ExtractorInfo(RemoraModel):
     id: str
@@ -46,7 +50,7 @@ class BaseExtract(YDLSerializable):
                 extractor = extractor.get("name")
 
             data["extractor"] = {
-                "id": data.get("extractor_key") or data.get("ie_key"),
+                "id": get_ydl_extractor_key(data),
                 "name": extractor,
             }
         return data

@@ -13,6 +13,7 @@ from remora.models.media._base import (
     URL_CHOICES,
     BaseExtract,
     ExtractData,
+    get_ydl_extractor_key,
     is_ydl_media,
 )
 from remora.models.media.item import LazyMedia
@@ -32,7 +33,7 @@ _PLAYLIST_EXTRACTOR_RE = re.compile(
 
 def _infer_extract_type(data) -> str:
     if is_ydl_media(data):
-        extractor_key = data.get("extractor_key") or data.get("ie_key")
+        extractor_key = get_ydl_extractor_key(data) or ""
 
         # Match playlist
         if data.get("_type") == "playlist" or data.get("entries"):
