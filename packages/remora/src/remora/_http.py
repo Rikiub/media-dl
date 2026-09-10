@@ -17,7 +17,7 @@ _HTTPX_CLIENT: ContextVar[httpx.AsyncClient | None] = ContextVar(
 @asynccontextmanager
 async def get_httpx_client(
     network_options: NetworkOptions | None = None,
-    max_connections: int | None = None,
+    max_connections: int | None = 20,
 ) -> AsyncGenerator[httpx.AsyncClient]:
     if client := _HTTPX_CLIENT.get():
         # SHARED CLIENT: Yield it, but do not close it when done.
