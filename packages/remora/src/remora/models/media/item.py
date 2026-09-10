@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BeforeValidator, Field, model_validator
 
 from remora.models._base import EnsureList, EnsureNone
-from remora.models.media._base import ExtractID, is_ydl_media
+from remora.models.media._base import ExtractData, is_ydl_media
 from remora.models.metadata import (
     Chapter,
     Heatmap,
@@ -21,9 +21,9 @@ __all__ = [
 ]
 
 
-def _normalize_type(value: str):
+def _normalize_type(value: str, literal: str) -> str:
     if value in ("url", "url_transparent", "video"):
-        return "media"
+        return literal
     return value
 
 
@@ -43,13 +43,14 @@ Availability = Literal[
 ]
 
 
-class LazyMedia(ExtractID):
+class LazyMedia(ExtractData):
     # Identity
     type: Annotated[
-        Literal["media"],
-        BeforeValidator(_normalize_type),
+        Literal["lazy_media"],
+        BeforeValidator(lambda v: _normalize_type(v, "lazy_media")),
         Field(alias="_type"),
-    ] = "media"
+    ] = "lazy_media"
+
     title: Annotated[str | None, EnsureNone] = None
     description: Annotated[str | None, EnsureNone] = None
 
@@ -107,6 +108,12 @@ class LazyMedia(ExtractID):
 
 class Media(LazyMedia):
     """Online media representation."""
+
+    type: Annotated[
+        Literal["media"],
+        BeforeValidator(lambda v: _normalize_type(v, "media")),
+        Field(alias="_type"),
+    ] = "media"
 
     subtitles: Annotated[
         SubtitleList,

@@ -52,7 +52,7 @@ class BaseExtract(YDLSerializable):
         return data
 
 
-class ExtractID(BaseExtract):
+class ExtractData(BaseExtract):
     """Base identifier for media objects."""
 
     # Identifier

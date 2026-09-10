@@ -25,5 +25,4 @@ LazyExtractResult = LazyMedia | LazyPlaylist
 ExtractResult = Media | Playlist
 AnyExtractResult = LazyExtractResult | ExtractResult | SearchList | Sequence[LazyMedia]
 
-_ExtractType = _ExtractDiscriminator[Media, Playlist]
-ExtractAdapter = TypeAdapter[ExtractResult](_ExtractType)
+ExtractAdapter = TypeAdapter[ExtractResult](_ExtractDiscriminator)

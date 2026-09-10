@@ -7,10 +7,11 @@ from pydantic import AliasChoices, AnyUrl, Discriminator, Field, Tag
 from typing_extensions import TypeVar
 
 from remora.models._base import BaseList
+from remora.models.media import Media
 from remora.models.media._base import (
     URL_CHOICES,
     BaseExtract,
-    ExtractID,
+    ExtractData,
     is_ydl_media,
 )
 from remora.models.media.item import LazyMedia
@@ -37,21 +38,23 @@ def _infer_extract_type(data) -> str:
         ):
             return "playlist"
 
-        return "media"
+        elif data.get("formats"):
+            return "media"
+
+        return "lazy_media"
     elif isinstance(data, (LazyMedia, LazyPlaylist)):
         return data.type
     raise ValueError("Unable to determine media type")
 
 
-_TMedia = TypeVar("_TMedia", bound=LazyMedia)
-_TPlaylist = TypeVar("_TPlaylist", bound="LazyPlaylist")
 _ExtractDiscriminator = Annotated[
-    Annotated[_TMedia, Tag("media")] | Annotated[_TPlaylist, Tag("playlist")],
+    Annotated[LazyMedia, Tag("lazy_media")]
+    | Annotated[Media, Tag("media")]
+    | Annotated["LazyPlaylist", Tag("lazy_playlist")]
+    | Annotated["Playlist", Tag("playlist")],
     Discriminator(_infer_extract_type),
 ]
-
-_ExtractType = _ExtractDiscriminator[LazyMedia, "LazyPlaylist"]
-_Entry = TypeVar("_Entry", bound=_ExtractType, default=_ExtractType)
+_Entry = TypeVar("_Entry", bound=_ExtractDiscriminator, default=_ExtractDiscriminator)
 
 
 # Entries List
@@ -75,8 +78,8 @@ class SearchList(_BaseList):
 
 
 # Playlist
-class LazyPlaylist(_BaseList, ExtractID):
-    type: Literal["playlist"] = "playlist"
+class LazyPlaylist(_BaseList, ExtractData):
+    type: Literal["lazy_playlist"] = "lazy_playlist"
 
     id: Annotated[str, Field(alias="playlist_id")]
     url: Annotated[
@@ -86,4 +89,5 @@ class LazyPlaylist(_BaseList, ExtractID):
     title: Annotated[str, Field(alias="playlist_title")] = ""
 
 
-class Playlist(LazyPlaylist): ...
+class Playlist(LazyPlaylist):
+    type: Literal["playlist"] = "playlist"
