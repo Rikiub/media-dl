@@ -2,8 +2,7 @@ from pathlib import Path
 from typing import overload
 
 from remora.constants import DEFAULT_SEGMENT_WORKERS
-from remora.downloader.pipeline import BatchDownloader, MediaDownloader
-from remora.downloader.stream import StreamDownloader
+from remora.downloader import MediaDownloader, PlaylistDownloader, StreamDownloader
 from remora.extractor import MediaExtractor
 from remora.models.media import (
     AnyExtractResult,
@@ -14,8 +13,7 @@ from remora.models.media import (
     SearchList,
 )
 from remora.models.metadata import Storyboard, Subtitle, Thumbnail
-from remora.models.options.download import DownloadOptions
-from remora.models.options.network import NetworkOptions
+from remora.models.options import DownloadOptions, NetworkOptions
 from remora.models.search import SearchService
 from remora.models.stream import Stream
 from remora.models.types import StrPath, StrUrl
@@ -64,8 +62,8 @@ class Remora:
             network_options=self.network_options,
         )
 
-    def download_batch(self, item: StrUrl | AnyExtractResult) -> BatchDownloader:
-        return BatchDownloader(
+    def download_batch(self, item: StrUrl | AnyExtractResult) -> PlaylistDownloader:
+        return PlaylistDownloader(
             item,
             download_options=self.download_options,
             network_options=self.network_options,

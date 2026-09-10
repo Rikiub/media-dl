@@ -34,10 +34,10 @@ from remora.models.progress import (
 from remora.models.types import StrUrl
 from remora.template import format_template
 
-__all__ = ["BatchDownloader"]
+__all__ = ["PlaylistDownloader"]
 
 
-class BatchDownloader(BaseDownloader[BatchState]):
+class PlaylistDownloader(BaseDownloader[BatchState]):
     def __init__(
         self,
         item: StrUrl | AnyExtractResult,
