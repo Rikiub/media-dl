@@ -444,12 +444,12 @@ class MediaDownloader(BaseDownloader[MediaState]):
             # If user requested audio and there is only a VideoStream, then extract audio from it.
             elif self.download_options.format_type == "audio":
                 async with track_prc("convert_audio"):
-                    await prc.convert_audio(AudioContainer(DEFAULT_AUDIO_CONTAINER))
+                    await prc.convert_audio(DEFAULT_AUDIO_CONTAINER)
 
             # If the file isn't in a common container, normalize it.
             elif not prc.file_container.is_common:
                 async with track_prc("change_container"):
-                    await prc.change_container(VideoContainer(DEFAULT_VIDEO_CONTAINER))
+                    await prc.change_container(DEFAULT_VIDEO_CONTAINER)
 
             if subtitles and prc.file_container.supports_subtitles:
                 async with track_prc("embed_subtitles"):
